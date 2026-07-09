@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environment
+.venv/
+
+# Environment
+.env
+
+# Cache DB (SQLite, created by later phases)
+*.db
+*.sqlite3
