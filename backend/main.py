@@ -1,13 +1,24 @@
-"""PartSourcer API — application entry point.
+"""PartSourcer API — application entry point."""
 
-Scaffold phase: exposes only GET /health. Routers for the real endpoints
-(/api/search, /api/part/<code>, /api/part/<code>/equivalent) are added in
-their respective build-order phases via app.include_router(...).
-"""
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-app = FastAPI(title="PartSourcer API")
+from api.search import router as search_router
+from services import deps
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await deps.startup()
+    try:
+        yield
+    finally:
+        await deps.shutdown()
+
+
+app = FastAPI(title="PartSourcer API", lifespan=lifespan)
+app.include_router(search_router)
 
 
 @app.get("/health")
