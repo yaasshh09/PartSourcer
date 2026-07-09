@@ -1,0 +1,108 @@
+{
+  "_source_url": "https://jlcsearch.tscircuit.com/api/search?q=STM32F103",
+  "_fetched_at": "2026-07-09T21:17:24.481822+00:00",
+  "_original_count": 67,
+  "_note": "list truncated to first 10 items for readability",
+  "components": [
+    {
+      "lcsc": 8734,
+      "mfr": "STM32F103C8T6",
+      "package": "LQFP-48(7x7)",
+      "is_basic": false,
+      "is_preferred": true,
+      "description": "",
+      "stock": 214596,
+      "price": 1.037142857
+    },
+    {
+      "lcsc": 8735,
+      "mfr": "STM32F103RBT6",
+      "package": "LQFP-64(10x10)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 17983,
+      "price": 2.007142857
+    },
+    {
+      "lcsc": 8322,
+      "mfr": "STM32F103RET6",
+      "package": "LQFP-64(10x10)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 16560,
+      "price": 2.654285714
+    },
+    {
+      "lcsc": 22396880,
+      "mfr": "LCKFB-DKX-STM32F103C8T6",
+      "package": "-",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 14921,
+      "price": 1.637142857
+    },
+    {
+      "lcsc": 8314,
+      "mfr": "STM32F103VBT6",
+      "package": "LQFP-100(14x14)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 6135,
+      "price": 2.422857143
+    },
+    {
+      "lcsc": 8287,
+      "mfr": "STM32F103ZET6",
+      "package": "LQFP-144(20x20)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 6051,
+      "price": 3.984285714
+    },
+    {
+      "lcsc": 8294,
+      "mfr": "STM32F103VFT6",
+      "package": "LQFP-100(14x14)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 4383,
+      "price": 7.121428571
+    },
+    {
+      "lcsc": 2969777,
+      "mfr": "STM32F103C8T6TR",
+      "package": "LQFP-48(7x7)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 3976,
+      "price": 1.292857143
+    },
+    {
+      "lcsc": 8313,
+      "mfr": "STM32F103VCT6",
+      "package": "LQFP-100(14x14)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 3885,
+      "price": 1.68
+    },
+    {
+      "lcsc": 1121900,
+      "mfr": "STM32F103C8T7",
+      "package": "LQFP-48(7x7)",
+      "is_basic": false,
+      "is_preferred": false,
+      "description": "",
+      "stock": 3834,
+      "price": 3.894285714
+    }
+  ]
+}
