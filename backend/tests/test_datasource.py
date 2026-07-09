@@ -1,0 +1,104 @@
+import httpx
+import pytest
+
+from services.datasource import JlcSearchDataSource, UpstreamError, PAGE_SIZE
+
+RAW = {"lcsc": 8734, "mfr": "STM32F103C8T6", "package": "LQFP-48(7x7)",
+       "is_basic": False, "is_preferred": True, "description": "",
+       "stock": 214596, "price": 1.037142857}
+
+
+def make_ds(handler):
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(
+        base_url="https://jlcsearch.tscircuit.com", transport=transport)
+    return JlcSearchDataSource(client)
+
+
+def items_handler(items):
+    def handler(request):
+        return httpx.Response(200, json={"components": items})
+    return handler
+
+
+@pytest.mark.anyio
+async def test_maps_fields():
+    ds = make_ds(items_handler([RAW]))
+    results = await ds.search("STM32F103", page=1)
+    r = results[0]
+    assert r.lcsc == "C8734"
+    assert r.mpn == "STM32F103C8T6"
+    assert r.brand is None and r.datasheet_url is None
+    assert r.price_usd == 1.0371
+    assert r.stock == 214596
+    assert r.as_of is not None
+
+
+@pytest.mark.anyio
+async def test_pagination_windows():
+    items = [dict(RAW, lcsc=i) for i in range(1, 51)]  # 50 items
+    ds = make_ds(items_handler(items))
+    p1 = await ds.search("x", page=1)
+    p2 = await ds.search("x", page=2)
+    p9 = await ds.search("x", page=9)
+    assert len(p1) == PAGE_SIZE and p1[0].lcsc == "C1"
+    assert len(p2) == PAGE_SIZE and p2[0].lcsc == "C21"
+    assert p9 == []
+
+
+@pytest.mark.anyio
+async def test_empty_query_skips_upstream():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={"components": []})
+
+    ds = make_ds(handler)
+    assert await ds.search("", page=1) == []
+    assert await ds.search("   ", page=1) == []
+    assert calls == []
+
+
+@pytest.mark.anyio
+async def test_timeout_raises_upstream_error():
+    def handler(request):
+        raise httpx.ConnectTimeout("boom")
+
+    ds = make_ds(handler)
+    with pytest.raises(UpstreamError) as ei:
+        await ds.search("x", page=1)
+    assert ei.value.kind == "timeout"
+
+
+@pytest.mark.anyio
+async def test_upstream_500_raises_unavailable():
+    ds = make_ds(lambda req: httpx.Response(500, text="oops"))
+    with pytest.raises(UpstreamError) as ei:
+        await ds.search("x", page=1)
+    assert ei.value.kind == "unavailable"
+
+
+@pytest.mark.anyio
+async def test_malformed_body_raises_unavailable():
+    ds = make_ds(lambda req: httpx.Response(200, text="<html>not json</html>"))
+    with pytest.raises(UpstreamError) as ei:
+        await ds.search("x", page=1)
+    assert ei.value.kind == "unavailable"
+
+
+@pytest.mark.anyio
+async def test_get_part_exact_match():
+    def handler(request):
+        assert request.url.params["q"] == "8734"
+        return httpx.Response(200, json={"components": [RAW]})
+
+    ds = make_ds(handler)
+    part = await ds.get_part("C8734")
+    assert part is not None and part.lcsc == "C8734"
+
+
+@pytest.mark.anyio
+async def test_get_part_not_found():
+    ds = make_ds(items_handler([]))
+    assert await ds.get_part("C000000") is None
