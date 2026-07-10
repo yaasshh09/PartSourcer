@@ -44,12 +44,19 @@ def test_not_found_returns_404():
     c = client_with(lambda req: httpx.Response(200, json={"components": []}))
     resp = c.get("/api/part/C000000")
     assert resp.status_code == 404
-    assert "not found" in resp.json()["detail"].lower()
+    assert resp.json()["detail"] == "Part C000000 not found"
 
 
 def test_malformed_code_returns_404():
-    c = client_with(lambda req: httpx.Response(200, json={"components": []}))
-    assert c.get("/api/part/not-a-code").status_code == 404
+    # A non-numeric code is rejected in the datasource before any upstream
+    # call — this handler must never run, so it fails loudly if it does.
+    def handler(request):
+        raise AssertionError("upstream must not be called for a malformed code")
+
+    c = client_with(handler)
+    resp = c.get("/api/part/not-a-code")
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Part not-a-code not found"
 
 
 def test_timeout_maps_to_504():

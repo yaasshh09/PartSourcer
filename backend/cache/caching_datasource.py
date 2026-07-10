@@ -5,6 +5,12 @@ fresh for stock_ttl_secs; part specs for specs_ttl_secs (one upstream
 fetch renews both — upstream has no stock-only call). Served as_of is
 always the stored fetch time. Never stale-serves: a stale entry plus an
 upstream failure propagates the UpstreamError.
+
+get_part additionally applies a completeness check: a row warmed only by
+the search write-through lacks the is_basic/is_preferred flags, so it is
+served for detail only when fresh AND both flags are present (not None).
+An incomplete row is a detail miss and triggers one upstream fetch — the
+flags are never a stale guess.
 """
 
 from datetime import datetime, timezone
