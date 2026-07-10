@@ -15,10 +15,11 @@ _STATUS = {"timeout": 504, "unavailable": 502}
 async def search(
     q: str = "",
     page: int = Query(1, ge=1),
+    refresh: bool = False,
     ds: PartDataSource = Depends(get_datasource),
 ) -> SearchResponse:
     try:
-        results = await ds.search(q, page)
+        results = await ds.search(q, page, refresh=refresh)
     except UpstreamError as exc:
         raise HTTPException(status_code=_STATUS[exc.kind], detail=str(exc)) from exc
     return SearchResponse(page=page, results=results)
