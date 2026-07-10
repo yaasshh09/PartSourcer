@@ -83,9 +83,22 @@ Consequences:
 The parametric endpoints give clean, filterable specs — the equivalent-matcher's core input:
 
 - **Resistor:** `resistance` (ohms), `tolerance_fraction`, `power_watts`, `package`. Filter via `?package=&resistance=`.
-- **Capacitor:** `capacitance_farads`, `voltage_rating` (V), `tolerance_fraction`, `temperature_coefficient` (dielectric, e.g. `X7R`), `package`. Filter via `?package=` (plus additional spec params).
+- **Capacitor:** `capacitance_farads`, `voltage_rating` (V), `tolerance_fraction`, `temperature_coefficient` (dielectric, e.g. `X7R`), `package`. Filter via `?package=` only (see gotchas — value filter does NOT work).
 
-These map directly onto the §10 matcher rules (same package hard requirement; exact resistance/capacitance; equal-or-tighter tolerance; equal-or-higher power/voltage; equal-or-better dielectric).
+These map onto the §10 matcher rules (same package hard requirement; exact resistance/capacitance; equal-or-tighter tolerance; equal-or-higher power/voltage; equal-or-better dielectric).
+
+### Verified upstream constraints (live-probed 2026-07-11, Prompt 6 de-risking)
+
+These four facts hard-shape the matcher design — all confirmed against live upstream:
+
+1. **`limit` is hard-capped at 100** on parametric endpoints. `?limit=1000` and `?limit=100000` both return exactly 100 rows. There is no visible offset/pagination param. **A parametric query can only ever see the top 100 rows** (appears stock-sorted). Consequence: the matcher sees the highest-stock 100 candidates for a given filter — good for finding a cheap in-stock part, but it cannot enumerate an entire package.
+2. **`resistance` must be queried in RAW OHMS.** `?resistance=10000` correctly returns 10 kΩ parts (stored `resistance` field = `10000`). `?resistance=10k` is **buggy upstream** — it returns 10 Ω parts (`resistance=10`), silently wrong. Always format the query value as an integer ohm string; never use `k`/`M` suffixes.
+3. **The capacitor endpoint has NO working capacitance filter.** `?capacitance=100nF` (and variants) returns **0 rows**. Capacitors can only be narrowed by `?package=`; the exact `capacitance_farads` match must be done **in memory** over the ≤100 returned rows.
+4. **`lcsc` is ignored as a filter** on parametric endpoints (same as `page` on `/api/search`) — `?lcsc=25077` returns the default list, not that part. You cannot look a part up by code parametrically; to read a specific part's specs you must fetch its `?package=` list and scan for the `lcsc` (only works if it is within the top-100 rows).
+
+**Also confirmed:** `resistance` is stored in raw ohms (10 kΩ → `10000`); `capacitance_farads` is a float with FP noise (100 nF → `1.0000000000000001e-07`) so exact match needs a relative epsilon; `price1` (not `price`) is the parametric unit-price field; `in_stock` (bool) rides alongside numeric `stock`.
+
+**Direct consequence for the v1 matcher:** honest matching is limited to **resistors and capacitors** (the only types with queryable specs). ICs and everything else carry no parametric specs here, so they return `equivalent: null` with a clear reason — never a guessed "similar part." An arbitrary part's own specs are only recoverable if it appears in the top-100 of its package list; otherwise the matcher honestly reports it could not identify the part's specs.
 
 ---
 
