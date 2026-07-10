@@ -102,3 +102,16 @@ async def test_get_part_exact_match():
 async def test_get_part_not_found():
     ds = make_ds(items_handler([]))
     assert await ds.get_part("C000000") is None
+
+
+@pytest.mark.anyio
+async def test_get_part_returns_detail_with_flags():
+    from models.part import PartDetail
+    ds = make_ds(items_handler([RAW]))
+    part = await ds.get_part("C8734")
+    assert isinstance(part, PartDetail)
+    assert part.lcsc == "C8734"
+    assert part.is_basic is False and part.is_preferred is True
+    assert part.price_breaks is None and part.stock_breakdown is None
+    assert part.price_usd == 1.0371
+    assert part.brand is None and part.datasheet_url is None

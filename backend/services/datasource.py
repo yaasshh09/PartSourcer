@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+from models.part import PartDetail
 from models.search import SearchResult
 
 PAGE_SIZE = 20
@@ -31,7 +32,7 @@ class PartDataSource(ABC):
 
     @abstractmethod
     async def get_part(self, lcsc_code: str,
-                       refresh: bool = False) -> SearchResult | None: ...
+                       refresh: bool = False) -> PartDetail | None: ...
 
 
 def _to_result(raw: dict, as_of: datetime) -> SearchResult:
@@ -44,6 +45,25 @@ def _to_result(raw: dict, as_of: datetime) -> SearchResult:
         description=raw.get("description") or "",
         stock=raw.get("stock") or 0,
         price_usd=round(raw.get("price") or raw.get("price1") or 0.0, 4),
+        datasheet_url=None,  # not in upstream data (documented gap)
+        as_of=as_of,
+    )
+
+
+def _to_detail(raw: dict, as_of: datetime) -> PartDetail:
+    """Map one upstream item to the §9 detail shape (see docs/jlcsearch-notes.md)."""
+    return PartDetail(
+        lcsc=f"C{raw['lcsc']}",
+        mpn=raw.get("mfr") or "",
+        brand=None,  # not in upstream data (documented gap)
+        package=raw.get("package") or "",
+        description=raw.get("description") or "",
+        stock=raw.get("stock") or 0,
+        price_usd=round(raw.get("price") or raw.get("price1") or 0.0, 4),
+        price_breaks=None,   # no upstream ladder (honest gap)
+        stock_breakdown=None,  # no upstream breakdown (honest gap)
+        is_basic=raw.get("is_basic"),
+        is_preferred=raw.get("is_preferred"),
         datasheet_url=None,  # not in upstream data (documented gap)
         as_of=as_of,
     )
@@ -85,7 +105,7 @@ class JlcSearchDataSource(PartDataSource):
         return [_to_result(raw, as_of) for raw in items[start:start + PAGE_SIZE]]
 
     async def get_part(self, lcsc_code: str,
-                       refresh: bool = False) -> SearchResult | None:
+                       refresh: bool = False) -> PartDetail | None:
         code = lcsc_code.strip().upper().lstrip("C")
         if not code.isdigit():
             return None
@@ -93,5 +113,5 @@ class JlcSearchDataSource(PartDataSource):
         as_of = datetime.now(timezone.utc)
         for raw in items:
             if str(raw.get("lcsc")) == code:
-                return _to_result(raw, as_of)
+                return _to_detail(raw, as_of)
         return None
