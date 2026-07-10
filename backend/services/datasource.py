@@ -26,10 +26,12 @@ class UpstreamError(Exception):
 
 class PartDataSource(ABC):
     @abstractmethod
-    async def search(self, query: str, page: int) -> list[SearchResult]: ...
+    async def search(self, query: str, page: int,
+                     refresh: bool = False) -> list[SearchResult]: ...
 
     @abstractmethod
-    async def get_part(self, lcsc_code: str) -> SearchResult | None: ...
+    async def get_part(self, lcsc_code: str,
+                       refresh: bool = False) -> SearchResult | None: ...
 
 
 def _to_result(raw: dict, as_of: datetime) -> SearchResult:
@@ -71,7 +73,8 @@ class JlcSearchDataSource(PartDataSource):
             raise UpstreamError("unavailable", "jlcsearch response missing 'components'")
         return items
 
-    async def search(self, query: str, page: int) -> list[SearchResult]:
+    async def search(self, query: str, page: int,
+                     refresh: bool = False) -> list[SearchResult]:
         query = query.strip()
         if not query:
             return []
@@ -81,7 +84,8 @@ class JlcSearchDataSource(PartDataSource):
         start = (page - 1) * PAGE_SIZE
         return [_to_result(raw, as_of) for raw in items[start:start + PAGE_SIZE]]
 
-    async def get_part(self, lcsc_code: str) -> SearchResult | None:
+    async def get_part(self, lcsc_code: str,
+                       refresh: bool = False) -> SearchResult | None:
         code = lcsc_code.strip().upper().lstrip("C")
         if not code.isdigit():
             return None
