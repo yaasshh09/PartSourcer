@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Callable
 
 from cache.store import SqliteCacheStore
+from models.part import PartDetail
 from models.search import SearchResult
 from services.datasource import PartDataSource
 
@@ -22,6 +23,12 @@ def _utc_now() -> datetime:
 def _specs(r: SearchResult) -> dict:
     return {"mpn": r.mpn, "brand": r.brand, "package": r.package,
             "description": r.description, "datasheet_url": r.datasheet_url}
+
+
+def _detail_specs(d: PartDetail) -> dict:
+    return {"mpn": d.mpn, "brand": d.brand, "package": d.package,
+            "description": d.description, "datasheet_url": d.datasheet_url,
+            "is_basic": d.is_basic, "is_preferred": d.is_preferred}
 
 
 class CachingPartDataSource(PartDataSource):
@@ -41,6 +48,10 @@ class CachingPartDataSource(PartDataSource):
         await self._store.upsert_part(r.lcsc, _specs(r), r.stock,
                                       r.price_usd, r.as_of, r.as_of)
 
+    async def _upsert_detail(self, d: PartDetail) -> None:
+        await self._store.upsert_part(d.lcsc, _detail_specs(d), d.stock,
+                                      d.price_usd, d.as_of, d.as_of)
+
     async def search(self, query: str, page: int,
                      refresh: bool = False) -> list[SearchResult]:
         key = query.strip().lower()
@@ -59,19 +70,25 @@ class CachingPartDataSource(PartDataSource):
         return results
 
     async def get_part(self, lcsc_code: str,
-                       refresh: bool = False) -> SearchResult | None:
+                       refresh: bool = False) -> PartDetail | None:
         digits = lcsc_code.strip().upper().lstrip("C")
         if not digits.isdigit():
             return None
         key = f"C{digits}"
         if not refresh:
             p = await self._store.get_part(key)
-            if (p is not None and self._fresh(p.stock_as_of, self._stock_ttl)
-                    and self._fresh(p.specs_as_of, self._specs_ttl)):
-                return SearchResult(lcsc=p.lcsc, stock=p.stock,
-                                    price_usd=p.price_usd,
-                                    as_of=p.stock_as_of, **p.specs)
-        result = await self._inner.get_part(lcsc_code)
-        if result is not None:
-            await self._upsert(result)
-        return result
+            # Completeness: a search-warmed row lacks the flags. Only serve a
+            # row that is fresh AND carries real flags — never a stale guess.
+            if (p is not None
+                    and self._fresh(p.stock_as_of, self._stock_ttl)
+                    and self._fresh(p.specs_as_of, self._specs_ttl)
+                    and p.specs.get("is_basic") is not None
+                    and p.specs.get("is_preferred") is not None):
+                return PartDetail(lcsc=p.lcsc, stock=p.stock,
+                                  price_usd=p.price_usd,
+                                  price_breaks=None, stock_breakdown=None,
+                                  as_of=p.stock_as_of, **p.specs)
+        detail = await self._inner.get_part(lcsc_code)
+        if detail is not None:
+            await self._upsert_detail(detail)
+        return detail
