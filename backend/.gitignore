@@ -11,4 +11,6 @@ __pycache__/
 
 # Cache DB (SQLite, created by later phases)
 *.db
+*.db-wal
+*.db-shm
 *.sqlite3
