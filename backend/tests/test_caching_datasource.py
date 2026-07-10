@@ -6,6 +6,7 @@ import pytest
 
 from cache.caching_datasource import CachingPartDataSource
 from cache.store import SqliteCacheStore
+from models.part import PartDetail
 from models.search import SearchResult
 from services.datasource import PartDataSource, UpstreamError
 
@@ -20,6 +21,14 @@ def result(as_of, stock=214596):
     return SearchResult(lcsc="C8734", mpn="STM32F103C8T6", brand=None,
                         package="LQFP-48(7x7)", description="", stock=stock,
                         price_usd=1.0371, datasheet_url=None, as_of=as_of)
+
+
+def detail(as_of, stock=214596):
+    return PartDetail(lcsc="C8734", mpn="STM32F103C8T6", brand=None,
+                      package="LQFP-48(7x7)", description="", stock=stock,
+                      price_usd=1.0371, price_breaks=None, stock_breakdown=None,
+                      is_basic=False, is_preferred=True, datasheet_url=None,
+                      as_of=as_of)
 
 
 class FakeClock:
@@ -47,7 +56,7 @@ class FakeDataSource(PartDataSource):
 
     async def get_part(self, lcsc_code, refresh=False):
         self.get_part_calls += 1
-        return result(self.clock())
+        return detail(self.clock())
 
 
 @pytest.fixture
@@ -124,7 +133,7 @@ async def test_empty_results_are_cached(ds, inner, clock):
 async def test_get_part_miss_fetches_and_stores(ds, inner):
     got = await ds.get_part("C8734")
     assert inner.get_part_calls == 1
-    assert got == result(T0)
+    assert got == detail(T0)
 
 
 async def test_get_part_hit_skips_inner_and_keeps_as_of(ds, inner, clock):
@@ -168,11 +177,21 @@ async def test_get_part_none_is_returned_without_caching(ds, inner):
     assert inner.get_part_calls == 2        # a miss is never cached
 
 
-async def test_search_write_through_warms_part_cache(ds, inner):
+async def test_search_warmed_row_is_incomplete_so_detail_fetches_flags(ds, inner):
+    # Search write-through stores no flags; get_part must re-fetch to fill them.
     await ds.search("STM32", 1)
     got = await ds.get_part("C8734")
-    assert inner.get_part_calls == 0        # served from write-through
-    assert got == result(T0)
+    assert inner.get_part_calls == 1
+    assert got.is_basic is False and got.is_preferred is True
+
+
+async def test_get_part_complete_row_hits_cache(ds, inner, clock):
+    await ds.get_part("C8734")            # miss -> fetch -> stores flags
+    clock.advance(600)                    # still < stock TTL
+    got = await ds.get_part("C8734")
+    assert inner.get_part_calls == 1      # complete row served from cache
+    assert got.as_of == T0
+    assert got.is_basic is False and got.is_preferred is True
 
 
 async def test_stale_cache_never_softens_upstream_failure(ds, inner, clock):
