@@ -195,6 +195,12 @@ async def find_equivalent(ds: PartDataSource,
     resistors = await ds.list_parametric("resistors", original.package)
     orig_r = _find(resistors, original.lcsc)
     if orig_r is not None:
+        if (orig_r.specs.get("resistance") is None
+                or orig_r.specs.get("tolerance_fraction") is None
+                or orig_r.specs.get("power_watts") is None):
+            # Any unreadable key spec on the ORIGINAL means a drop-in can't
+            # be verified — honest null, never a guess (strict, confirmed).
+            return _null(_NO_TYPE_REASON)
         pool = await ds.list_parametric(
             "resistors", original.package,
             resistance_ohms=orig_r.specs.get("resistance"))
@@ -208,6 +214,11 @@ async def find_equivalent(ds: PartDataSource,
     caps = await ds.list_parametric("capacitors", original.package)
     orig_c = _find(caps, original.lcsc)
     if orig_c is not None:
+        if (orig_c.specs.get("capacitance_farads") is None
+                or orig_c.specs.get("voltage_rating") is None
+                or not orig_c.specs.get("temperature_coefficient")):
+            # Same strict rule for capacitors.
+            return _null(_NO_TYPE_REASON)
         best = rank_best(capacitor_candidates(orig_c, caps, original.price_usd))
         if best is None:
             return _null(_NO_MATCH_REASON)

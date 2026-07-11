@@ -200,6 +200,19 @@ async def test_find_equivalent_resistor_returns_cheaper_match():
 
 
 @pytest.mark.anyio
+async def test_find_equivalent_resistor_missing_original_power_is_honest_null():
+    orig_row = rp("C100", price=0.0010, stock=1000, power=None)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C100")
+    assert resp.equivalent is None
+    assert "could not be identified" in resp.reason
+    # Never falls through to the misleading "no cheaper drop-in" reason.
+    assert "no cheaper" not in resp.reason.lower()
+
+
+@pytest.mark.anyio
 async def test_find_equivalent_ic_returns_null_with_reason():
     ds = FakeDS(detail("C8734", "LQFP-48(7x7)", 1.0371, 214596, mpn="STM32"),
                 {})   # not found in resistors or capacitors
