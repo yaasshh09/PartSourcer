@@ -220,3 +220,40 @@ async def test_list_parametric_passthrough_not_cached(ds, inner):
     # Uncached in v1: inner is hit every time.
     assert inner.parametric_calls == [
         ("resistors", "0603", 10000), ("resistors", "0603", 10000)]
+
+
+async def test_get_part_stale_plus_upstream_failure_propagates(clock, tmp_path):
+    from cache.store import SqliteCacheStore
+    store = SqliteCacheStore(str(tmp_path / "c.db"))
+    store.open()
+    # Warm a complete part row at T0.
+    warm = CachingPartDataSource(FakeDataSource(clock), store,
+                                 SPECS_TTL, STOCK_TTL, now=clock)
+    await warm.get_part("C8734")
+    clock.advance(STOCK_TTL + 1)  # stock row now stale
+
+    class Boom(PartDataSource):
+        async def search(self, q, page, refresh=False):
+            raise UpstreamError("unavailable", "down")
+        async def get_part(self, code, refresh=False):
+            raise UpstreamError("unavailable", "down")
+        async def list_parametric(self, category, package, resistance_ohms=None):
+            return []
+
+    ds = CachingPartDataSource(Boom(), store, SPECS_TTL, STOCK_TTL, now=clock)
+    with pytest.raises(UpstreamError):  # never stale-serve
+        await ds.get_part("C8734")
+    store.close()
+
+
+async def test_ttl_exact_boundary_is_not_fresh(clock, tmp_path):
+    from cache.store import SqliteCacheStore
+    store = SqliteCacheStore(str(tmp_path / "c.db"))
+    store.open()
+    inner = FakeDataSource(clock)
+    ds = CachingPartDataSource(inner, store, SPECS_TTL, STOCK_TTL, now=clock)
+    await ds.search("stm32", 1)            # cached at T0, search_calls == 1
+    clock.advance(STOCK_TTL)               # exactly at the boundary
+    await ds.search("stm32", 1)            # strict < ttl -> not fresh -> refetch
+    assert inner.search_calls == 2
+    store.close()
