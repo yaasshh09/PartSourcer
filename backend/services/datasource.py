@@ -26,6 +26,10 @@ class UpstreamError(Exception):
         self.kind = kind  # "timeout" | "unavailable"
 
 
+# Shared by all route handlers: maps UpstreamError.kind -> HTTP status.
+UPSTREAM_STATUS: dict[str, int] = {"timeout": 504, "unavailable": 502}
+
+
 class PartDataSource(ABC):
     @abstractmethod
     async def search(self, query: str, page: int,
