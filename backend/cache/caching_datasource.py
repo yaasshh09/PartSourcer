@@ -18,6 +18,7 @@ from typing import Callable
 
 from cache.store import SqliteCacheStore
 from models.part import PartDetail
+from models.parametric import ParametricPart
 from models.search import SearchResult
 from services.datasource import PartDataSource
 
@@ -98,3 +99,10 @@ class CachingPartDataSource(PartDataSource):
         if detail is not None:
             await self._upsert_detail(detail)
         return detail
+
+    async def list_parametric(self, category: str, package: str,
+                              resistance_ohms: float | None = None
+                              ) -> list[ParametricPart]:
+        # Uncached in v1 (design D6): parametric caching is a Prompt 7 item.
+        return await self._inner.list_parametric(
+            category, package, resistance_ohms)
