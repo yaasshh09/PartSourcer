@@ -102,6 +102,14 @@ def test_capacitor_exact_cap_absorbs_fp_noise():
     assert len(capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd)) == 1
 
 
+def test_capacitor_unranked_dielectric_only_matches_own_exact_string():
+    orig = cp("C200", price=0.0030, stock=1000, tc="X8R")
+    worse = cp("C6", price=0.0010, stock=5000, tc="Y5V")     # ranked but "worse"
+    same = cp("C7", price=0.0010, stock=5000, tc="x8r")      # own string, any case
+    assert capacitor_candidates(orig, [worse], orig.price_usd) == []
+    assert [c.lcsc for c in capacitor_candidates(orig, [same], orig.price_usd)] == ["C7"]
+
+
 def test_rank_best_price_then_stock():
     a = rp("A", price=0.0005, stock=1000)
     b = rp("B", price=0.0004, stock=10)

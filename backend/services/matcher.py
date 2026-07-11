@@ -67,7 +67,8 @@ def resistor_candidates(orig, pool, orig_price: float) -> list:
 def capacitor_candidates(orig, pool, orig_price: float) -> list:
     cap = orig.specs.get("capacitance_farads")
     volt = orig.specs.get("voltage_rating")
-    orig_rank = dielectric_rank(orig.specs.get("temperature_coefficient"))
+    orig_tc = orig.specs.get("temperature_coefficient")
+    orig_rank = dielectric_rank(orig_tc)
     if cap is None:
         return []
     out = []
@@ -84,9 +85,13 @@ def capacitor_candidates(orig, pool, orig_price: float) -> list:
         cv = c.specs.get("voltage_rating")
         if volt is not None and (cv is None or cv < volt):   # equal or higher
             continue
+        ctc = c.specs.get("temperature_coefficient")
         if orig_rank is not None:                            # equal or better
-            crank = dielectric_rank(c.specs.get("temperature_coefficient"))
+            crank = dielectric_rank(ctc)
             if crank is None or crank < orig_rank:
+                continue
+        elif orig_tc:   # unranked original: only its own exact string (D7)
+            if not ctc or ctc.upper().strip() != orig_tc.upper().strip():
                 continue
         out.append(c)
     return out
