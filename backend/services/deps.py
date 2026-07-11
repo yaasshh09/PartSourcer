@@ -11,6 +11,7 @@ from cache.caching_datasource import CachingPartDataSource
 from cache.store import SqliteCacheStore
 from config import settings
 from services.datasource import JlcSearchDataSource, PartDataSource
+from services.throttle import RefreshThrottle
 
 _client: httpx.AsyncClient | None = None
 _store: SqliteCacheStore | None = None
@@ -31,6 +32,7 @@ async def startup() -> None:
         store=_store,
         specs_ttl_secs=settings.specs_cache_ttl_secs,
         stock_ttl_secs=settings.stock_cache_ttl_secs,
+        throttle=RefreshThrottle(settings.refresh_cooldown_secs),
     )
 
 

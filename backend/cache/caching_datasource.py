@@ -21,6 +21,7 @@ from models.part import PartDetail
 from models.parametric import ParametricPart
 from models.search import SearchResult
 from services.datasource import PartDataSource
+from services.throttle import RefreshThrottle
 
 
 def _utc_now() -> datetime:
@@ -41,12 +42,14 @@ def _detail_specs(d: PartDetail) -> dict:
 class CachingPartDataSource(PartDataSource):
     def __init__(self, inner: PartDataSource, store: SqliteCacheStore,
                  specs_ttl_secs: int, stock_ttl_secs: int,
-                 now: Callable[[], datetime] = _utc_now):
+                 now: Callable[[], datetime] = _utc_now,
+                 throttle: RefreshThrottle | None = None):
         self._inner = inner
         self._store = store
         self._specs_ttl = specs_ttl_secs
         self._stock_ttl = stock_ttl_secs
         self._now = now
+        self._throttle = throttle
 
     def _fresh(self, as_of: datetime, ttl_secs: int) -> bool:
         return (self._now() - as_of).total_seconds() < ttl_secs
@@ -64,6 +67,9 @@ class CachingPartDataSource(PartDataSource):
         key = query.strip().lower()
         if not key:
             return []
+        if refresh and self._throttle is not None \
+                and not self._throttle.allow(f"search:{key}:{page}"):
+            refresh = False  # throttled: serve honest cached data instead
         if not refresh:
             cached = await self._store.get_search(key, page)
             if cached is not None and self._fresh(cached[1], self._stock_ttl):
@@ -82,6 +88,9 @@ class CachingPartDataSource(PartDataSource):
         if not digits.isdigit():
             return None
         key = f"C{digits}"
+        if refresh and self._throttle is not None \
+                and not self._throttle.allow(f"part:{key}"):
+            refresh = False  # throttled: serve honest cached data instead
         if not refresh:
             p = await self._store.get_part(key)
             # Completeness: a search-warmed row lacks the flags. Only serve a
