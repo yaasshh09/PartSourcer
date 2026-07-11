@@ -234,6 +234,21 @@ async def test_find_equivalent_passive_but_no_qualifying_candidate():
 
 
 @pytest.mark.anyio
+async def test_find_equivalent_capacitor_returns_cheaper_match():
+    orig_row = cp("C200", price=0.0030, stock=1000)
+    cheaper = cp("C1", price=0.0012, stock=500000, volt=25, tc="C0G")
+    ds = FakeDS(detail("C200", "0402", 0.0030, 1000, mpn="C-orig"),
+                {("capacitors", "0402"): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C200")
+    assert resp.equivalent is not None
+    assert resp.equivalent.lcsc == "C1"
+    assert resp.equivalent.percent_cheaper == 60   # (1 - 0.0012/0.0030)*100
+    assert resp.reason is None
+    assert "0402" in resp.equivalent.match_reason
+    assert "% cheaper" in resp.equivalent.match_reason
+
+
+@pytest.mark.anyio
 async def test_find_equivalent_unknown_code_returns_none():
     ds = FakeDS(None, {})
     assert await find_equivalent(ds, "C000000") is None
