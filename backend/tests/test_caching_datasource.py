@@ -49,6 +49,8 @@ class FakeDataSource(PartDataSource):
         self.clock = clock
         self.search_calls = 0
         self.get_part_calls = 0
+        self.parametric_calls = []
+        self._parametric = []
 
     async def search(self, query, page, refresh=False):
         self.search_calls += 1
@@ -57,6 +59,10 @@ class FakeDataSource(PartDataSource):
     async def get_part(self, lcsc_code, refresh=False):
         self.get_part_calls += 1
         return detail(self.clock())
+
+    async def list_parametric(self, category, package, resistance_ohms=None):
+        self.parametric_calls.append((category, package, resistance_ohms))
+        return self._parametric
 
 
 @pytest.fixture
@@ -204,3 +210,13 @@ async def test_stale_cache_never_softens_upstream_failure(ds, inner, clock):
     inner.search = failing
     with pytest.raises(UpstreamError):
         await ds.search("STM32", 1)
+
+
+async def test_list_parametric_passthrough_not_cached(ds, inner):
+    inner._parametric = ["sentinel"]
+    out1 = await ds.list_parametric("resistors", "0603", resistance_ohms=10000)
+    out2 = await ds.list_parametric("resistors", "0603", resistance_ohms=10000)
+    assert out1 == ["sentinel"] and out2 == ["sentinel"]
+    # Uncached in v1: inner is hit every time.
+    assert inner.parametric_calls == [
+        ("resistors", "0603", 10000), ("resistors", "0603", 10000)]

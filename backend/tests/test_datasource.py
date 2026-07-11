@@ -1,6 +1,7 @@
 import httpx
 import pytest
 
+from models.parametric import ParametricPart  # noqa: E402
 from services.datasource import JlcSearchDataSource, UpstreamError, PAGE_SIZE
 
 RAW = {"lcsc": 8734, "mfr": "STM32F103C8T6", "package": "LQFP-48(7x7)",
@@ -115,3 +116,82 @@ async def test_get_part_returns_detail_with_flags():
     assert part.price_breaks is None and part.stock_breakdown is None
     assert part.price_usd == 1.0371
     assert part.brand is None and part.datasheet_url is None
+
+
+RES_ROW = {"lcsc": 25804, "mfr": "0603WAF1002T5E", "description": "", "stock": 37165617,
+           "price1": 0.000842857, "in_stock": True, "resistance": 10000,
+           "tolerance_fraction": 0.01, "power_watts": 100, "package": "0603",
+           "is_basic": True, "is_preferred": False}
+CAP_ROW = {"lcsc": 1525, "mfr": "CL05B104KO5NNNC", "description": "", "stock": 54323629,
+           "price1": 0.001085714, "in_stock": True, "capacitance_farads": 1e-07,
+           "tolerance_fraction": 0.1, "voltage_rating": 16, "package": "0402",
+           "temperature_coefficient": "X7R", "is_basic": True, "is_preferred": False}
+
+
+def parametric_handler(key, rows, captured=None):
+    def handler(request):
+        if captured is not None:
+            captured["url"] = str(request.url)
+        return httpx.Response(200, json={key: rows})
+    return handler
+
+
+@pytest.mark.anyio
+async def test_list_parametric_maps_resistor():
+    ds = make_ds(parametric_handler("resistors", [RES_ROW]))
+    parts = await ds.list_parametric("resistors", "0603")
+    assert len(parts) == 1
+    p = parts[0]
+    assert isinstance(p, ParametricPart)
+    assert p.lcsc == "C25804"
+    assert p.mpn == "0603WAF1002T5E"
+    assert p.price_usd == 0.0008           # price1 rounded 4dp
+    assert p.in_stock is True
+    assert p.specs["resistance"] == 10000
+    assert p.specs["power_watts"] == 100
+    assert p.specs["tolerance_fraction"] == 0.01
+
+
+@pytest.mark.anyio
+async def test_list_parametric_maps_capacitor():
+    ds = make_ds(parametric_handler("capacitors", [CAP_ROW]))
+    parts = await ds.list_parametric("capacitors", "0402")
+    p = parts[0]
+    assert p.lcsc == "C1525"
+    assert p.specs["capacitance_farads"] == 1e-07
+    assert p.specs["voltage_rating"] == 16
+    assert p.specs["temperature_coefficient"] == "X7R"
+
+
+@pytest.mark.anyio
+async def test_list_parametric_passes_resistance_in_raw_ohms():
+    captured = {}
+    ds = make_ds(parametric_handler("resistors", [RES_ROW], captured))
+    await ds.list_parametric("resistors", "0603", resistance_ohms=10000)
+    assert "resistance=10000" in captured["url"]
+    assert "package=0603" in captured["url"]
+
+
+@pytest.mark.anyio
+async def test_list_parametric_timeout_raises_upstream():
+    def handler(request):
+        raise httpx.ConnectTimeout("boom")
+    ds = make_ds(handler)
+    with pytest.raises(UpstreamError) as ei:
+        await ds.list_parametric("resistors", "0603")
+    assert ei.value.kind == "timeout"
+
+
+@pytest.mark.anyio
+async def test_list_parametric_http_error_raises_unavailable():
+    ds = make_ds(lambda req: httpx.Response(500, text="oops"))
+    with pytest.raises(UpstreamError) as ei:
+        await ds.list_parametric("resistors", "0603")
+    assert ei.value.kind == "unavailable"
+
+
+@pytest.mark.anyio
+async def test_list_parametric_missing_envelope_raises():
+    ds = make_ds(lambda req: httpx.Response(200, json={"wrong": []}))
+    with pytest.raises(UpstreamError):
+        await ds.list_parametric("resistors", "0603")

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import httpx
 
 from models.part import PartDetail
+from models.parametric import ParametricPart
 from models.search import SearchResult
 
 PAGE_SIZE = 20
@@ -33,6 +34,11 @@ class PartDataSource(ABC):
     @abstractmethod
     async def get_part(self, lcsc_code: str,
                        refresh: bool = False) -> PartDetail | None: ...
+
+    @abstractmethod
+    async def list_parametric(self, category: str, package: str,
+                              resistance_ohms: float | None = None
+                              ) -> list[ParametricPart]: ...
 
 
 def _to_result(raw: dict, as_of: datetime) -> SearchResult:
@@ -66,6 +72,29 @@ def _to_detail(raw: dict, as_of: datetime) -> PartDetail:
         is_preferred=raw.get("is_preferred"),
         datasheet_url=None,  # not in upstream data (documented gap)
         as_of=as_of,
+    )
+
+
+_PARAMETRIC_SPEC_FIELDS = {
+    "resistors": ("resistance", "tolerance_fraction", "power_watts"),
+    "capacitors": ("capacitance_farads", "voltage_rating", "tolerance_fraction",
+                   "temperature_coefficient"),
+}
+
+
+def _to_parametric(raw: dict, category: str) -> ParametricPart:
+    """Map one parametric row to ParametricPart (see docs/jlcsearch-notes.md)."""
+    fields = _PARAMETRIC_SPEC_FIELDS.get(category, ())
+    return ParametricPart(
+        lcsc=f"C{raw['lcsc']}",
+        mpn=raw.get("mfr") or "",
+        package=raw.get("package") or "",
+        stock=raw.get("stock") or 0,
+        price_usd=round(raw.get("price1") or 0.0, 4),
+        in_stock=bool(raw.get("in_stock")),
+        is_basic=raw.get("is_basic"),
+        is_preferred=raw.get("is_preferred"),
+        specs={f: raw.get(f) for f in fields},
     )
 
 
@@ -115,3 +144,35 @@ class JlcSearchDataSource(PartDataSource):
             if str(raw.get("lcsc")) == code:
                 return _to_detail(raw, as_of)
         return None
+
+    async def _fetch_parametric(self, category: str, params: dict) -> list[dict]:
+        try:
+            resp = await self._client.get(f"/{category}/list.json", params=params)
+        except httpx.TimeoutException as exc:
+            raise UpstreamError("timeout", f"jlcsearch timed out: {exc}") from exc
+        except httpx.HTTPError as exc:
+            raise UpstreamError("unavailable", f"jlcsearch unreachable: {exc}") from exc
+        if resp.status_code != 200:
+            raise UpstreamError(
+                "unavailable", f"jlcsearch returned HTTP {resp.status_code}")
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise UpstreamError("unavailable", "jlcsearch returned non-JSON") from exc
+        items = data.get(category)
+        if not isinstance(items, list):
+            raise UpstreamError(
+                "unavailable", f"jlcsearch response missing '{category}'")
+        return items
+
+    async def list_parametric(self, category: str, package: str,
+                              resistance_ohms: float | None = None
+                              ) -> list[ParametricPart]:
+        params: dict = {"package": package}
+        if resistance_ohms is not None:
+            # Upstream needs raw ohms; the '10k' suffix form is buggy (notes).
+            n = int(resistance_ohms) if float(resistance_ohms).is_integer() \
+                else resistance_ohms
+            params["resistance"] = n
+        items = await self._fetch_parametric(category, params)
+        return [_to_parametric(raw, category) for raw in items]
