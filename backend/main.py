@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from api.equivalent import router as equivalent_router
 from api.part import router as part_router
 from api.search import router as search_router
 from services import deps
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="PartSourcer API", lifespan=lifespan)
 app.include_router(search_router)
 app.include_router(part_router)
+app.include_router(equivalent_router)
 
 
 @app.get("/health")
