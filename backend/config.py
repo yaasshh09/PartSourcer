@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     sqlite_path: str = "./partsourcer.db"
 
     # Hardening phase
-    cors_origins: list[str] = ["*"]
+    # Dev default; production Vercel origin(s) supplied via CORS_ORIGINS env.
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
 settings = Settings()

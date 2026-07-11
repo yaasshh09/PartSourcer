@@ -1,5 +1,4 @@
 import httpx
-import pytest
 from fastapi.testclient import TestClient
 
 import services.deps as deps
@@ -57,3 +56,20 @@ def test_unexpected_exception_is_500_detail():
     resp = c.get("/api/search", params={"q": "x"})
     assert resp.status_code == 500
     assert resp.json() == {"detail": "internal server error"}
+
+
+def test_cors_allows_dev_origin_on_get():
+    c = _client(lambda req: httpx.Response(200, json={"components": []}))
+    resp = c.get("/api/search", params={"q": "x"},
+                 headers={"Origin": "http://localhost:5173"})
+    assert resp.status_code == 200
+    assert resp.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_cors_preflight_ok():
+    c = _client(lambda req: httpx.Response(200, json={"components": []}))
+    resp = c.options("/api/search",
+                     headers={"Origin": "http://localhost:5173",
+                              "Access-Control-Request-Method": "GET"})
+    assert resp.status_code == 200
+    assert resp.headers["access-control-allow-origin"] == "http://localhost:5173"
