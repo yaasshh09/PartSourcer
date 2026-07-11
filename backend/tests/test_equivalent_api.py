@@ -1,5 +1,4 @@
 import httpx
-import pytest
 from fastapi.testclient import TestClient
 
 import services.deps as deps
@@ -20,6 +19,19 @@ IC_ROW = {"lcsc": 8734, "mfr": "STM32F103C8T6", "package": "LQFP-48(7x7)",
           "is_basic": False, "is_preferred": True, "description": "",
           "stock": 214596, "price": 1.0371}
 
+# A capacitor lookup drives: search-by-code (get_part) via /api/search, then
+# /capacitors/list.json (classify original + pool, no lcsc filter upstream).
+CAP_ROW = {"lcsc": 200, "mfr": "C-orig", "package": "0402", "is_basic": True,
+           "is_preferred": False, "description": "", "stock": 1000,
+           "price": 0.0030, "price1": 0.0030, "in_stock": True,
+           "capacitance_farads": 1e-07, "voltage_rating": 16,
+           "tolerance_fraction": 0.1, "temperature_coefficient": "X7R"}
+CAP_CHEAP = {"lcsc": 2, "mfr": "C-cheap", "package": "0402", "is_basic": False,
+             "is_preferred": False, "description": "", "stock": 500000,
+             "price": 0.0012, "price1": 0.0012, "in_stock": True,
+             "capacitance_farads": 1e-07, "voltage_rating": 25,
+             "tolerance_fraction": 0.1, "temperature_coefficient": "C0G"}
+
 
 def route(request):
     p = request.url.path
@@ -32,6 +44,17 @@ def route(request):
         return httpx.Response(200, json={"resistors": [RES_ROW, RES_CHEAP]})
     if p == "/capacitors/list.json":
         return httpx.Response(200, json={"capacitors": []})
+    return httpx.Response(404, json={})
+
+
+def cap_route(request):
+    p = request.url.path
+    if p == "/api/search":
+        return httpx.Response(200, json={"components": [CAP_ROW]})
+    if p == "/capacitors/list.json":
+        return httpx.Response(200, json={"capacitors": [CAP_ROW, CAP_CHEAP]})
+    if p == "/resistors/list.json":
+        return httpx.Response(200, json={"resistors": []})
     return httpx.Response(404, json={})
 
 
@@ -55,6 +78,17 @@ def test_equivalent_found_for_resistor():
     b = resp.json()
     assert b["original"]["lcsc"] == "C100"
     assert b["equivalent"]["lcsc"] == "C1"
+    assert b["equivalent"]["percent_cheaper"] == 60
+    assert b["reason"] is None
+
+
+def test_equivalent_found_for_capacitor():
+    c = client_with(cap_route)
+    resp = c.get("/api/part/C200/equivalent")
+    assert resp.status_code == 200
+    b = resp.json()
+    assert b["original"]["lcsc"] == "C200"
+    assert b["equivalent"]["lcsc"] == "C2"
     assert b["equivalent"]["percent_cheaper"] == 60
     assert b["reason"] is None
 
