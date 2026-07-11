@@ -68,6 +68,11 @@ def test_resistor_accepts_tighter_tolerance_and_higher_power():
     assert [c.lcsc for c in resistor_candidates(ORIG_R, pool, ORIG_R.price_usd)] == ["C8"]
 
 
+def test_resistor_rejects_candidate_with_different_package():
+    pool = [rp("C1", price=0.0005, stock=5000).model_copy(update={"package": "0402"})]
+    assert resistor_candidates(ORIG_R, pool, ORIG_R.price_usd) == []
+
+
 def test_stock_buffer_boundary():
     below = [rp("C9", price=0.0005, stock=MATCH_MIN_STOCK - 1)]
     at = [rp("C10", price=0.0005, stock=MATCH_MIN_STOCK)]
@@ -84,6 +89,11 @@ def test_capacitor_rejects_lower_voltage_worse_dielectric_wrong_cap():
     pool = [cp("C2", price=0.0010, stock=5000, volt=10),          # lower voltage
             cp("C3", price=0.0010, stock=5000, tc="Y5V"),          # worse dielectric
             cp("C4", price=0.0010, stock=5000, cap=2.2e-07)]       # wrong capacitance
+    assert capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd) == []
+
+
+def test_capacitor_rejects_candidate_with_different_package():
+    pool = [cp("C1", price=0.0010, stock=5000).model_copy(update={"package": "0603"})]
     assert capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd) == []
 
 
