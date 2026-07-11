@@ -47,6 +47,8 @@ def resistor_candidates(orig, pool, orig_price: float) -> list:
     for c in pool:
         if c.lcsc == orig.lcsc or c.price_usd >= orig_price:
             continue
+        if c.package != orig.package:   # same package is a HARD requirement
+            continue
         if not _in_stock_ok(c):
             continue
         cr = c.specs.get("resistance")
@@ -71,6 +73,8 @@ def capacitor_candidates(orig, pool, orig_price: float) -> list:
     out = []
     for c in pool:
         if c.lcsc == orig.lcsc or c.price_usd >= orig_price:
+            continue
+        if c.package != orig.package:   # same package is a HARD requirement
             continue
         if not _in_stock_ok(c):
             continue
@@ -176,6 +180,11 @@ async def find_equivalent(ds: PartDataSource,
                 percent_cheaper=_percent_cheaper(original.price_usd,
                                                  best.price_usd)),
             reason=None, as_of=now)
+
+    if not original.package:
+        # Empty package = specs could not be reliably identified; an unfiltered
+        # upstream query could otherwise match a different-package candidate.
+        return _null(_NO_TYPE_REASON)
 
     # Classify as resistor?
     resistors = await ds.list_parametric("resistors", original.package)
