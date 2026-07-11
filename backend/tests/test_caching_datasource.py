@@ -257,3 +257,33 @@ async def test_ttl_exact_boundary_is_not_fresh(clock, tmp_path):
     await ds.search("stm32", 1)            # strict < ttl -> not fresh -> refetch
     assert inner.search_calls == 2
     store.close()
+
+
+async def test_refresh_throttled_degrades_to_cache(clock, tmp_path):
+    from cache.store import SqliteCacheStore
+    from services.throttle import RefreshThrottle
+
+    class FakeMono:
+        def __init__(self):
+            self.t = 0.0
+
+        def __call__(self):
+            return self.t
+
+        def advance(self, secs):
+            self.t += secs
+
+    mono = FakeMono()
+    store = SqliteCacheStore(str(tmp_path / "c.db"))
+    store.open()
+    inner = FakeDataSource(clock)
+    ds = CachingPartDataSource(inner, store, SPECS_TTL, STOCK_TTL,
+                               now=clock, throttle=RefreshThrottle(10, now=mono))
+    await ds.search("stm32", 1)                       # miss -> fetch (calls==1)
+    await ds.search("stm32", 1, refresh=True)         # 1st refresh allowed (==2)
+    await ds.search("stm32", 1, refresh=True)         # throttled -> cache (==2)
+    assert inner.search_calls == 2
+    mono.advance(11)
+    await ds.search("stm32", 1, refresh=True)         # cooldown elapsed (==3)
+    assert inner.search_calls == 3
+    store.close()

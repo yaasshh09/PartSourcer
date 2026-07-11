@@ -25,5 +25,8 @@ class Settings(BaseSettings):
     # Dev default; production Vercel origin(s) supplied via CORS_ORIGINS env.
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # Max one forced ?refresh=true upstream hit per key per this window.
+    refresh_cooldown_secs: float = 10.0
+
 
 settings = Settings()
