@@ -4,7 +4,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from config import settings
 
 from api.equivalent import router as equivalent_router
 from api.part import router as part_router
@@ -22,6 +25,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="PartSourcer API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+    allow_credentials=False,
+)
 
 
 @app.exception_handler(RequestValidationError)
