@@ -106,10 +106,10 @@ class JlcSearchDataSource(PartDataSource):
     def __init__(self, client: httpx.AsyncClient):
         self._client = client
 
-    async def _fetch(self, query: str, limit: int) -> list[dict]:
+    async def _fetch_json(self, path: str, params: dict,
+                          list_key: str) -> list[dict]:
         try:
-            resp = await self._client.get(
-                "/api/search", params={"q": query, "limit": limit})
+            resp = await self._client.get(path, params=params)
         except httpx.TimeoutException as exc:
             raise UpstreamError("timeout", f"jlcsearch timed out: {exc}") from exc
         except httpx.HTTPError as exc:
@@ -121,9 +121,13 @@ class JlcSearchDataSource(PartDataSource):
             data = resp.json()
         except ValueError as exc:
             raise UpstreamError("unavailable", "jlcsearch returned non-JSON") from exc
-        items = data.get("components")
+        if not isinstance(data, dict):
+            raise UpstreamError(
+                "unavailable", "jlcsearch returned a non-object JSON body")
+        items = data.get(list_key)
         if not isinstance(items, list):
-            raise UpstreamError("unavailable", "jlcsearch response missing 'components'")
+            raise UpstreamError(
+                "unavailable", f"jlcsearch response missing '{list_key}'")
         return items
 
     async def search(self, query: str, page: int,
@@ -132,7 +136,8 @@ class JlcSearchDataSource(PartDataSource):
         if not query:
             return []
         # Upstream ignores `page`; fetch enough rows and window locally.
-        items = await self._fetch(query, limit=page * PAGE_SIZE)
+        items = await self._fetch_json(
+            "/api/search", {"q": query, "limit": page * PAGE_SIZE}, "components")
         as_of = datetime.now(timezone.utc)
         start = (page - 1) * PAGE_SIZE
         return [_to_result(raw, as_of) for raw in items[start:start + PAGE_SIZE]]
@@ -142,32 +147,13 @@ class JlcSearchDataSource(PartDataSource):
         code = lcsc_code.strip().upper().lstrip("C")
         if not code.isdigit():
             return None
-        items = await self._fetch(code, limit=PAGE_SIZE)
+        items = await self._fetch_json(
+            "/api/search", {"q": code, "limit": PAGE_SIZE}, "components")
         as_of = datetime.now(timezone.utc)
         for raw in items:
             if str(raw.get("lcsc")) == code:
                 return _to_detail(raw, as_of)
         return None
-
-    async def _fetch_parametric(self, category: str, params: dict) -> list[dict]:
-        try:
-            resp = await self._client.get(f"/{category}/list.json", params=params)
-        except httpx.TimeoutException as exc:
-            raise UpstreamError("timeout", f"jlcsearch timed out: {exc}") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamError("unavailable", f"jlcsearch unreachable: {exc}") from exc
-        if resp.status_code != 200:
-            raise UpstreamError(
-                "unavailable", f"jlcsearch returned HTTP {resp.status_code}")
-        try:
-            data = resp.json()
-        except ValueError as exc:
-            raise UpstreamError("unavailable", "jlcsearch returned non-JSON") from exc
-        items = data.get(category)
-        if not isinstance(items, list):
-            raise UpstreamError(
-                "unavailable", f"jlcsearch response missing '{category}'")
-        return items
 
     async def list_parametric(self, category: str, package: str,
                               resistance_ohms: float | None = None
@@ -178,5 +164,5 @@ class JlcSearchDataSource(PartDataSource):
             n = int(resistance_ohms) if float(resistance_ohms).is_integer() \
                 else resistance_ohms
             params["resistance"] = n
-        items = await self._fetch_parametric(category, params)
+        items = await self._fetch_json(f"/{category}/list.json", params, category)
         return [_to_parametric(raw, category) for raw in items]
