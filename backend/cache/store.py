@@ -56,9 +56,10 @@ class SqliteCacheStore:
         self._conn.commit()
 
     def close(self) -> None:
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
+        with self._lock:
+            if self._conn is not None:
+                self._conn.close()
+                self._conn = None
 
     async def get_search(self, query: str, page: int) -> tuple[list[dict], datetime] | None:
         return await asyncio.to_thread(self._get_search, query, page)
