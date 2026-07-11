@@ -33,11 +33,12 @@ def dielectric_rank(tc: str | None) -> int | None:
     return _DIELECTRIC_RANK.get(tc.upper().strip())
 
 
-def _in_stock_ok(c) -> bool:
+def _in_stock_ok(c: ParametricPart) -> bool:
     return bool(c.in_stock) and c.stock >= MATCH_MIN_STOCK
 
 
-def resistor_candidates(orig, pool, orig_price: float) -> list:
+def resistor_candidates(orig: ParametricPart, pool: list[ParametricPart],
+                        orig_price: float) -> list[ParametricPart]:
     r = orig.specs.get("resistance")
     tol = orig.specs.get("tolerance_fraction")
     power = orig.specs.get("power_watts")
@@ -64,7 +65,8 @@ def resistor_candidates(orig, pool, orig_price: float) -> list:
     return out
 
 
-def capacitor_candidates(orig, pool, orig_price: float) -> list:
+def capacitor_candidates(orig: ParametricPart, pool: list[ParametricPart],
+                         orig_price: float) -> list[ParametricPart]:
     cap = orig.specs.get("capacitance_farads")
     volt = orig.specs.get("voltage_rating")
     orig_tc = orig.specs.get("temperature_coefficient")
@@ -97,7 +99,7 @@ def capacitor_candidates(orig, pool, orig_price: float) -> list:
     return out
 
 
-def rank_best(cands: list):
+def rank_best(cands: list[ParametricPart]) -> ParametricPart | None:
     if not cands:
         return None
     return sorted(cands, key=lambda c: (c.price_usd, -c.stock))[0]

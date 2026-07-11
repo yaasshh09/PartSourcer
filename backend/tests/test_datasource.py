@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from models.parametric import ParametricPart  # noqa: E402
+from models.parametric import ParametricPart
 from services.datasource import JlcSearchDataSource, UpstreamError, PAGE_SIZE
 
 RAW = {"lcsc": 8734, "mfr": "STM32F103C8T6", "package": "LQFP-48(7x7)",
