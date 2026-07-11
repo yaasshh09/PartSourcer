@@ -89,6 +89,15 @@ async def test_malformed_body_raises_unavailable():
 
 
 @pytest.mark.anyio
+async def test_non_dict_json_body_raises_unavailable():
+    # A bare-list upstream body must be an honest 502-class failure, not a 500.
+    ds = make_ds(lambda req: httpx.Response(200, json=[1, 2, 3]))
+    with pytest.raises(UpstreamError) as ei:
+        await ds.search("x", page=1)
+    assert ei.value.kind == "unavailable"
+
+
+@pytest.mark.anyio
 async def test_get_part_exact_match():
     def handler(request):
         assert request.url.params["q"] == "8734"
