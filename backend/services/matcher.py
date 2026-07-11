@@ -10,6 +10,11 @@ original constrains that spec).
 """
 
 import math
+from datetime import datetime, timezone
+
+from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef
+from models.parametric import ParametricPart
+from services.datasource import PartDataSource
 
 MATCH_MIN_STOCK = 100          # "healthy buffer", not just > 0 (design D5)
 _REL_TOL = 1e-6                # float compare for resistance / capacitance
@@ -87,3 +92,112 @@ def rank_best(cands: list):
     if not cands:
         return None
     return sorted(cands, key=lambda c: (c.price_usd, -c.stock))[0]
+
+
+_NO_TYPE_REASON = ("Equivalent matching in v1 covers resistors and capacitors; "
+                   "this part is a different component type (or its specs could "
+                   "not be identified), so no verified drop-in equivalent can be "
+                   "offered.")
+_NO_MATCH_REASON = ("No cheaper in-stock drop-in was found for this part in v1 "
+                    "(same package and specs, healthy stock, lower price).")
+
+
+def _find(parts: list[ParametricPart], lcsc: str) -> ParametricPart | None:
+    for p in parts:
+        if p.lcsc == lcsc:
+            return p
+    return None
+
+
+def _fmt_ohms(r: float) -> str:
+    if r >= 1e6:
+        return f"{r / 1e6:g} MOhm"
+    if r >= 1e3:
+        return f"{r / 1e3:g} kOhm"
+    return f"{r:g} Ohm"
+
+
+def _fmt_farads(f: float) -> str:
+    if f >= 1e-6:
+        return f"{f * 1e6:g} uF"
+    if f >= 1e-9:
+        return f"{f * 1e9:g} nF"
+    return f"{f * 1e12:g} pF"
+
+
+def _percent_cheaper(orig_price: float, new_price: float) -> int:
+    if orig_price <= 0:
+        return 0
+    return int(round((1 - new_price / orig_price) * 100))
+
+
+def _resistor_reason(orig, best, pkg, orig_price) -> str:
+    r = _fmt_ohms(orig.specs.get("resistance"))
+    tol = best.specs.get("tolerance_fraction")
+    tol_s = f", ±{tol * 100:g}%" if tol is not None else ""
+    pw = best.specs.get("power_watts")
+    pw_s = f", {pw:g} mW" if pw is not None else ""   # field is milliwatts (notes)
+    pct = _percent_cheaper(orig_price, best.price_usd)
+    return (f"Same {pkg} package, {r}{tol_s}{pw_s}, "
+            f"{best.stock:,} in stock — {pct}% cheaper")
+
+
+def _capacitor_reason(orig, best, pkg, orig_price) -> str:
+    cap = _fmt_farads(orig.specs.get("capacitance_farads"))
+    v = best.specs.get("voltage_rating")
+    v_s = f", {v:g} V" if v is not None else ""
+    tc = best.specs.get("temperature_coefficient")
+    tc_s = f", {tc}" if tc else ""
+    pct = _percent_cheaper(orig_price, best.price_usd)
+    return (f"Same {pkg} package, {cap}{v_s}{tc_s}, "
+            f"{best.stock:,} in stock — {pct}% cheaper")
+
+
+async def find_equivalent(ds: PartDataSource,
+                          lcsc_code: str) -> EquivalentResponse | None:
+    original = await ds.get_part(lcsc_code)
+    if original is None:
+        return None
+    now = datetime.now(timezone.utc)
+    orig_ref = OriginalRef(lcsc=original.lcsc, mpn=original.mpn,
+                           package=original.package,
+                           price_usd=original.price_usd, stock=original.stock)
+
+    def _null(reason: str) -> EquivalentResponse:
+        return EquivalentResponse(original=orig_ref, equivalent=None,
+                                  reason=reason, as_of=now)
+
+    def _match(best: ParametricPart, reason: str) -> EquivalentResponse:
+        return EquivalentResponse(
+            original=orig_ref,
+            equivalent=EquivalentMatch(
+                lcsc=best.lcsc, mpn=best.mpn, price_usd=best.price_usd,
+                stock=best.stock, package=best.package, match_reason=reason,
+                percent_cheaper=_percent_cheaper(original.price_usd,
+                                                 best.price_usd)),
+            reason=None, as_of=now)
+
+    # Classify as resistor?
+    resistors = await ds.list_parametric("resistors", original.package)
+    orig_r = _find(resistors, original.lcsc)
+    if orig_r is not None:
+        pool = await ds.list_parametric(
+            "resistors", original.package,
+            resistance_ohms=orig_r.specs.get("resistance"))
+        best = rank_best(resistor_candidates(orig_r, pool, original.price_usd))
+        if best is None:
+            return _null(_NO_MATCH_REASON)
+        return _match(best, _resistor_reason(orig_r, best, original.package,
+                                             original.price_usd))
+
+    # Classify as capacitor?
+    caps = await ds.list_parametric("capacitors", original.package)
+    orig_c = _find(caps, original.lcsc)
+    if orig_c is not None:
+        best = rank_best(capacitor_candidates(orig_c, caps, original.price_usd))
+        if best is None:
+            return _null(_NO_MATCH_REASON)
+        return _match(best, _capacitor_reason(orig_c, best, original.package,
+                                              original.price_usd))
+
+    return _null(_NO_TYPE_REASON)
