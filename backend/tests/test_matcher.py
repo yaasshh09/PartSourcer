@@ -93,3 +93,45 @@ def test_rank_best_price_then_stock():
     c = rp("C", price=0.0004, stock=9000)
     assert rank_best([a, b, c]).lcsc == "C"   # cheapest, then highest stock
     assert rank_best([]) is None
+
+
+def test_resistor_rejects_candidate_missing_tolerance():
+    pool = [rp("C1", price=0.0005, stock=5000, tol=None)]
+    assert resistor_candidates(ORIG_R, pool, ORIG_R.price_usd) == []
+
+
+def test_resistor_rejects_candidate_missing_power():
+    pool = [rp("C1", price=0.0005, stock=5000, power=None)]
+    assert resistor_candidates(ORIG_R, pool, ORIG_R.price_usd) == []
+
+
+def test_resistor_rejects_candidate_missing_resistance():
+    pool = [rp("C1", price=0.0005, stock=5000, resistance=None)]
+    assert resistor_candidates(ORIG_R, pool, ORIG_R.price_usd) == []
+
+
+def test_resistor_original_missing_resistance_yields_nothing():
+    orig = rp("C100", price=0.0010, stock=1000, resistance=None)
+    pool = [rp("C1", price=0.0005, stock=5000)]
+    assert resistor_candidates(orig, pool, orig.price_usd) == []
+
+
+def test_capacitor_rejects_candidate_missing_voltage():
+    pool = [cp("C1", price=0.0010, stock=5000, volt=None)]
+    assert capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd) == []
+
+
+def test_capacitor_rejects_candidate_missing_dielectric():
+    pool = [cp("C1", price=0.0010, stock=5000, tc=None)]
+    assert capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd) == []
+
+
+def test_capacitor_rejects_candidate_missing_capacitance():
+    pool = [cp("C1", price=0.0010, stock=5000, cap=None)]
+    assert capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd) == []
+
+
+def test_capacitor_original_missing_capacitance_yields_nothing():
+    orig = cp("C200", price=0.0030, stock=1000, cap=None)
+    pool = [cp("C1", price=0.0010, stock=5000)]
+    assert capacitor_candidates(orig, pool, orig.price_usd) == []
