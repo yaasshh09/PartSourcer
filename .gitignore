@@ -1,0 +1,41 @@
+# ---- Python / FastAPI backend ----
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# SQLite cache DB (regenerated at runtime)
+*.db
+*.db-shm
+*.db-wal
+
+# ---- Node / React + Vite frontend ----
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Agent / tooling scratch (not part of the project) ----
+.claude/
+.superpowers/
