@@ -1,0 +1,8 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #fffdf5; font-family: 'Space Grotesk', system-ui, sans-serif; color: #111; -webkit-font-smoothing: antialiased; }
+a { color: #111; text-decoration: none; }
+input { font-family: inherit; }
+input:focus { outline: none; }
+button { cursor: pointer; }
+::selection { background: #ffe14d; }
+@keyframes ps-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
