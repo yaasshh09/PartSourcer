@@ -1,5 +1,15 @@
 * { box-sizing: border-box; }
-body { margin: 0; background: #fffdf5; font-family: 'Space Grotesk', system-ui, sans-serif; color: #111; -webkit-font-smoothing: antialiased; }
+body {
+  margin: 0;
+  background-color: #fffdf5;
+  background-image:
+    linear-gradient(to right, rgba(17, 17, 17, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(17, 17, 17, 0.045) 1px, transparent 1px);
+  background-size: 30px 30px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #111;
+  -webkit-font-smoothing: antialiased;
+}
 a { color: #111; text-decoration: none; }
 input { font-family: inherit; }
 input:focus { outline: none; }
