@@ -23,7 +23,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (!q) {
-      setResults([]); setError(null); setSubmitted(''); setAsOf(null); setLoading(false)
+      setResults([]); setError(null); setSubmitted(''); setAsOf(null); setLoading(false); setQuery('')
       return
     }
     setQuery(q)

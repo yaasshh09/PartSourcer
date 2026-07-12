@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import SearchPage from './SearchPage.jsx'
 import * as api from '../api.js'
@@ -39,4 +39,18 @@ test('shows an honest error when the API throws', async () => {
   vi.spyOn(api, 'search').mockRejectedValue(new api.ApiError(502, 'jlcsearch unreachable'))
   renderAt('/?q=x')
   await waitFor(() => expect(screen.getByText(/unavailable|unreachable/i)).toBeInTheDocument())
+})
+
+test('clears the input text when q is removed from the URL', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue({ page: 1, results: [] })
+  render(
+    <MemoryRouter initialEntries={['/?q=STM32']}>
+      <Routes><Route path="/" element={<SearchPage />} /></Routes>
+      <Link to="/">go-home</Link>
+    </MemoryRouter>,
+  )
+  const input = await screen.findByPlaceholderText(/Search by MPN/)
+  expect(input.value).toBe('STM32')
+  fireEvent.click(screen.getByText('go-home'))
+  await waitFor(() => expect(input.value).toBe(''))
 })

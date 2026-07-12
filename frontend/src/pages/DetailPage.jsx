@@ -12,6 +12,7 @@ export default function DetailPage() {
 
   const [part, setPart] = useState(null)
   const [equiv, setEquiv] = useState(null)
+  const [equivError, setEquivError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState(null)
@@ -19,12 +20,13 @@ export default function DetailPage() {
 
   useEffect(() => {
     let cancelled = false
-    setPart(null); setEquiv(null); setLoading(true); setNotFound(false); setError(null); setCopied(false)
+    setPart(null); setEquiv(null); setEquivError(null); setLoading(true); setNotFound(false); setError(null); setCopied(false)
     Promise.allSettled([getPart(lcsc), getEquivalent(lcsc)]).then(([p, e]) => {
       if (cancelled) return
       if (p.status === 'fulfilled') {
         setPart(p.value)
         if (e.status === 'fulfilled') setEquiv(e.value)
+        else setEquivError(e.reason)
       } else if (p.reason && p.reason.status === 404) {
         setNotFound(true)
       } else {
@@ -36,9 +38,11 @@ export default function DetailPage() {
   }, [lcsc])
 
   function copyCode() {
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(part.lcsc)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1400)
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return
+    navigator.clipboard.writeText(part.lcsc).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1400)
+    }).catch(() => {})
   }
 
   if (notFound) {
@@ -180,6 +184,15 @@ export default function DetailPage() {
           </div>
           <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
             {equiv.reason}
+          </p>
+        </div>
+      ) : equivError ? (
+        <div style={{ marginTop: 24, border: `3px dashed ${C.ink}`, background: C.paper, padding: 28 }}>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
+            EQUIVALENT CHECK UNAVAILABLE
+          </div>
+          <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
+            {`We couldn't check for a cheaper equivalent right now — ${equivError.detail}. Try refreshing in a moment.`}
           </p>
         </div>
       ) : null}

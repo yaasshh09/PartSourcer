@@ -22,6 +22,7 @@ async function getJson(path) {
     const detail = body && typeof body.detail === 'string' ? body.detail : `Request failed (HTTP ${resp.status})`
     throw new ApiError(resp.status, detail)
   }
+  if (body === null) throw new ApiError(resp.status, 'Malformed response from backend')
   return body
 }
 

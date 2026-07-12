@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import DetailPage from './DetailPage.jsx'
@@ -53,6 +53,30 @@ test('honest null-equivalent shows the backend reason', async () => {
   renderPart('C25531')
   await waitFor(() => expect(screen.getByText(/WON'T FAKE ONE/)).toBeInTheDocument())
   expect(screen.getByText(/No cheaper in-stock drop-in/)).toBeInTheDocument()
+})
+
+test('equivalent lookup failure shows an honest "check unavailable" note, not silence', async () => {
+  vi.spyOn(api, 'getPart').mockResolvedValue(detail)
+  vi.spyOn(api, 'getEquivalent').mockRejectedValue(new api.ApiError(502, 'jlcsearch unreachable'))
+  renderPart('C25531')
+  await waitFor(() => expect(screen.getByText('0402WGJ0103TCE')).toBeInTheDocument())
+  expect(screen.getByText(/EQUIVALENT CHECK UNAVAILABLE/i)).toBeInTheDocument()
+  expect(screen.getByText(/jlcsearch unreachable/)).toBeInTheDocument()
+  // must NOT claim we checked and found none
+  expect(screen.queryByText(/WON'T FAKE ONE/)).not.toBeInTheDocument()
+})
+
+test('COPY does not claim success when the clipboard is unavailable', async () => {
+  vi.spyOn(api, 'getPart').mockResolvedValue(detail)
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue({ original: {}, equivalent: null, reason: 'none' })
+  renderPart('C25531')
+  await waitFor(() => expect(screen.getByText('0402WGJ0103TCE')).toBeInTheDocument())
+  const orig = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
+  fireEvent.click(screen.getByText('COPY'))
+  expect(screen.queryByText('COPIED ✓')).not.toBeInTheDocument()
+  if (orig) Object.defineProperty(navigator, 'clipboard', orig)
+  else delete navigator.clipboard
 })
 
 test('unknown part shows a 404 state', async () => {
