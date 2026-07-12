@@ -1,3 +1,188 @@
+import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { getPart, getEquivalent } from '../api.js'
+import { C, fmtPrice, fmtAsOf } from '../theme.js'
+import StockBadge from '../components/StockBadge.jsx'
+
+const MONO = "'IBM Plex Mono',monospace"
+const ARCHIVO = "'Archivo',sans-serif"
+
 export default function DetailPage() {
-  return <div>DETAIL</div>
+  const { lcsc } = useParams()
+
+  const [part, setPart] = useState(null)
+  const [equiv, setEquiv] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [error, setError] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setPart(null); setEquiv(null); setLoading(true); setNotFound(false); setError(null); setCopied(false)
+    Promise.allSettled([getPart(lcsc), getEquivalent(lcsc)]).then(([p, e]) => {
+      if (cancelled) return
+      if (p.status === 'fulfilled') {
+        setPart(p.value)
+        if (e.status === 'fulfilled') setEquiv(e.value)
+      } else if (p.reason && p.reason.status === 404) {
+        setNotFound(true)
+      } else {
+        setError(p.reason)
+      }
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [lcsc])
+
+  function copyCode() {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(part.lcsc)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1400)
+  }
+
+  if (notFound) {
+    return (
+      <section style={{ maxWidth: 820, margin: '0 auto', padding: '90px 28px', textAlign: 'center' }}>
+        <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 140, lineHeight: 1, color: C.orange }}>404</div>
+        <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30, marginTop: 8 }}>
+          {"THIS PART ISN'T ON THE BOARD."}
+        </div>
+        <p style={{ fontSize: 16, color: C.sub, fontWeight: 500, marginTop: 12 }}>
+          {"We couldn't find that part. Let's get you back to searching."}
+        </p>
+        <Link to="/" style={{ display: 'inline-block', marginTop: 22, background: C.ink, color: C.yellow,
+          fontFamily: ARCHIVO, fontWeight: 900, fontSize: 15, padding: '14px 26px',
+          border: `3px solid ${C.ink}`, boxShadow: `6px 6px 0 ${C.orange}`, textDecoration: 'none' }}>
+          ← BACK TO SEARCH
+        </Link>
+      </section>
+    )
+  }
+
+  if (loading) {
+    return (
+      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
+        <div style={{ height: 140, border: `3px solid ${C.ink}`, background: '#f0eee2',
+          animation: 'ps-pulse 1s ease-in-out infinite' }} />
+        <div style={{ marginTop: 14, fontSize: 14, color: C.muted, fontWeight: 600 }}>Loading…</div>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
+        <div style={{ border: `3px dashed ${C.ink}`, padding: '56px 28px', textAlign: 'center', background: C.paper }}>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30 }}>{"COULDN'T LOAD THIS PART"}</div>
+          <div style={{ fontSize: 15, color: C.sub, fontWeight: 500, marginTop: 10 }}>{error.detail}</div>
+        </div>
+      </section>
+    )
+  }
+
+  if (!part) return null
+
+  const specRows = [
+    ['LCSC', part.lcsc],
+    ['Package', part.package],
+    ['Stock', Number(part.stock || 0).toLocaleString()],
+    ['Unit price', fmtPrice(part.price_usd)],
+    ['Type', part.is_preferred ? 'Preferred' : part.is_basic ? 'Basic' : 'Standard'],
+  ]
+  if (part.description) specRows.push(['Description', part.description])
+
+  const eq = equiv && equiv.equivalent
+
+  return (
+    <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
+      <Link to="/" style={{ display: 'inline-block', fontWeight: 700, fontSize: 14, color: C.ink,
+        textDecoration: 'none', marginBottom: 22 }}>← Back to results</Link>
+
+      <div style={{ border: `3px solid ${C.ink}`, boxShadow: `7px 7px 0 ${C.ink}`, background: C.paper,
+        padding: 28, display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: MONO, fontSize: 12, color: C.muted }}>{part.lcsc}</span>
+            <button type="button" onClick={copyCode} style={{ cursor: 'pointer', fontFamily: MONO,
+              fontSize: 11, background: C.paper, border: '2px solid #d8d4c4', padding: '2px 9px', color: C.sub }}>
+              {copied ? 'COPIED ✓' : 'COPY'}
+            </button>
+          </div>
+          <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 38, lineHeight: 1.05, margin: '8px 0 0' }}>
+            {part.mpn}
+          </h1>
+          {part.description ? (
+            <p style={{ fontSize: 15, color: '#4a4838', fontWeight: 500, margin: '10px 0 0' }}>{part.description}</p>
+          ) : null}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+            <span style={{ background: C.ink, color: '#fff', fontSize: 12, fontWeight: 700,
+              padding: '4px 11px' }}>{part.package}</span>
+            <StockBadge stock={part.stock} />
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 44, lineHeight: 1 }}>
+            {fmtPrice(part.price_usd)}
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 6 }}>unit price</div>
+        </div>
+      </div>
+
+      <div style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 22, marginTop: 20 }}>
+        <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13, paddingBottom: 12,
+          borderBottom: `3px solid ${C.ink}` }}>SPECIFICATIONS</div>
+        {specRows.map(([key, value]) => (
+          <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 16,
+            padding: '11px 0', borderBottom: '1px solid #e8e4d4', fontSize: 14 }}>
+            <span style={{ color: C.sub, fontWeight: 500 }}>{key}</span>
+            <span style={{ fontWeight: 700, fontFamily: MONO, textAlign: 'right' }}>{value}</span>
+          </div>
+        ))}
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 12 }}>
+          {`stock & price as of ${fmtAsOf(part.as_of)}`}
+        </div>
+      </div>
+
+      {eq ? (
+        <div style={{ marginTop: 24, border: `3px solid ${C.ink}`, boxShadow: `10px 10px 0 ${C.orange}`,
+          background: C.yellow, padding: 30 }}>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
+            <span aria-hidden="true">💡 </span>CHEAPER EQUIVALENT FOUND
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 30, alignItems: 'center',
+            marginTop: 18 }}>
+            <div>
+              <div style={{ fontFamily: MONO, fontSize: 12, color: '#5a4d1a' }}>{eq.lcsc}</div>
+              <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 28, marginTop: 4 }}>{eq.mpn}</div>
+              <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 600, marginTop: 8 }}>
+                {`${eq.package} · ${Number(eq.stock || 0).toLocaleString()} in stock · ${fmtPrice(eq.price_usd)}`}
+              </div>
+              <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 500, marginTop: 8, maxWidth: 440 }}>
+                {eq.match_reason}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', background: C.ink, color: C.yellow, padding: '18px 24px' }}>
+              <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 60, lineHeight: 1 }}>
+                {`${eq.percent_cheaper}%`}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4 }}>CHEAPER</div>
+              <div style={{ fontFamily: MONO, fontSize: 13, color: C.bg, marginTop: 8 }}>
+                {`${fmtPrice(part.price_usd)} → ${fmtPrice(eq.price_usd)}`}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : equiv ? (
+        <div style={{ marginTop: 24, border: `3px dashed ${C.ink}`, background: C.paper, padding: 28 }}>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
+            {"NO CHEAPER EQUIVALENT — AND WE WON'T FAKE ONE"}
+          </div>
+          <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
+            {equiv.reason}
+          </p>
+        </div>
+      ) : null}
+    </section>
+  )
 }
