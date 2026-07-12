@@ -51,4 +51,12 @@ describe('error mapping', () => {
     await expect(search('x')).rejects.toBeInstanceOf(ApiError)
     await expect(search('x')).rejects.toMatchObject({ status: 502, detail: 'jlcsearch unreachable' })
   })
+
+  test('200 with an unparsable body throws ApiError instead of returning null', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => { throw new SyntaxError('Unexpected token <') },
+    })
+    await expect(search('x')).rejects.toBeInstanceOf(ApiError)
+  })
 })
