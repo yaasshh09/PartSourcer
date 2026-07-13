@@ -150,19 +150,29 @@ export default function DetailPage() {
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
             <span aria-hidden="true">💡 </span>CHEAPER EQUIVALENT FOUND
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 30, alignItems: 'center',
-            marginTop: 18 }}>
-            <div>
-              <div style={{ fontFamily: MONO, fontSize: 12, color: '#5a4d1a' }}>{eq.lcsc}</div>
-              <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 28, marginTop: 4 }}>{eq.mpn}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 30, alignItems: 'center',
+            justifyContent: 'space-between', marginTop: 18 }}>
+            <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: MONO, fontSize: 12, color: '#5a4d1a' }}>{eq.lcsc}</span>
+                <CopyButton value={eq.lcsc} label="Copy equivalent LCSC code" variant="onYellow" />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 28 }}>{eq.mpn}</div>
+                <CopyButton value={eq.mpn} label="Copy equivalent MPN" variant="onYellow" />
+              </div>
               <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 600, marginTop: 8 }}>
                 {`${eq.package} · ${Number(eq.stock || 0).toLocaleString()} in stock · ${fmtPrice(eq.price_usd)}`}
               </div>
               <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 500, marginTop: 8, maxWidth: 440 }}>
                 {eq.match_reason}
               </div>
+              <div style={{ marginTop: 14 }}>
+                <DistributorLinks code={eq.lcsc} variant="onYellow" />
+              </div>
             </div>
-            <div style={{ textAlign: 'center', background: C.ink, color: C.yellow, padding: '18px 24px' }}>
+            <div style={{ textAlign: 'center', background: C.ink, color: C.yellow, padding: '18px 24px',
+              flex: '0 0 auto' }}>
               <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 60, lineHeight: 1 }}>
                 {`${eq.percent_cheaper}%`}
               </div>
