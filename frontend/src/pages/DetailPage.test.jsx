@@ -44,7 +44,8 @@ test('renders real header + adapted specs, hides ladder & datasheet', async () =
   expect(screen.queryByText(/DATASHEET/)).not.toBeInTheDocument()
 })
 
-test('shows the cheaper-equivalent payoff', async () => {
+test('shows the cheaper-equivalent payoff with copy + distributor links', async () => {
+  setClipboard(vi.fn().mockResolvedValue())
   vi.spyOn(api, 'getPart').mockResolvedValue(detail)
   vi.spyOn(api, 'getEquivalent').mockResolvedValue({
     original: { price_usd: 0.0004 },
@@ -55,6 +56,13 @@ test('shows the cheaper-equivalent payoff', async () => {
   await waitFor(() => expect(screen.getByText('CHEAPER EQUIVALENT FOUND')).toBeInTheDocument())
   expect(screen.getByText('25%')).toBeInTheDocument()
   expect(screen.getByText(/Same 0402 package/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Copy equivalent LCSC code/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Copy equivalent MPN/i })).toBeInTheDocument()
+  // Both the header (C25531) and the equivalent card (C881063) render "View on LCSC"
+  // links, so disambiguate by href rather than using getByRole (which would throw on two).
+  const eqLcscLink = screen.getAllByRole('link', { name: /View on LCSC/i })
+    .find((l) => l.getAttribute('href') === 'https://www.lcsc.com/search?q=C881063')
+  expect(eqLcscLink).toBeTruthy()
 })
 
 test('honest null-equivalent shows the backend reason', async () => {
