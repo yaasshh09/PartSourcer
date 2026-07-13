@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { getPart, getEquivalent } from '../api.js'
 import { C, fmtPrice, fmtAsOf } from '../theme.js'
 import StockBadge from '../components/StockBadge.jsx'
+import CopyButton from '../components/CopyButton.jsx'
+import DistributorLinks from '../components/DistributorLinks.jsx'
 
 const MONO = "'IBM Plex Mono',monospace"
 const ARCHIVO = "'Archivo',sans-serif"
@@ -16,11 +18,10 @@ export default function DetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState(null)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    setPart(null); setEquiv(null); setEquivError(null); setLoading(true); setNotFound(false); setError(null); setCopied(false)
+    setPart(null); setEquiv(null); setEquivError(null); setLoading(true); setNotFound(false); setError(null)
     Promise.allSettled([getPart(lcsc), getEquivalent(lcsc)]).then(([p, e]) => {
       if (cancelled) return
       if (p.status === 'fulfilled') {
@@ -36,14 +37,6 @@ export default function DetailPage() {
     })
     return () => { cancelled = true }
   }, [lcsc])
-
-  function copyCode() {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) return
-    navigator.clipboard.writeText(part.lcsc).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1400)
-    }).catch(() => {})
-  }
 
   if (notFound) {
     return (
@@ -108,14 +101,14 @@ export default function DetailPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontFamily: MONO, fontSize: 12, color: C.muted }}>{part.lcsc}</span>
-            <button type="button" onClick={copyCode} style={{ cursor: 'pointer', fontFamily: MONO,
-              fontSize: 11, background: C.paper, border: '2px solid #d8d4c4', padding: '2px 9px', color: C.sub }}>
-              {copied ? 'COPIED ✓' : 'COPY'}
-            </button>
+            <CopyButton value={part.lcsc} label="Copy LCSC code" />
           </div>
-          <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 38, lineHeight: 1.05, margin: '8px 0 0' }}>
-            {part.mpn}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '8px 0 0' }}>
+            <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 38, lineHeight: 1.05, margin: 0 }}>
+              {part.mpn}
+            </h1>
+            <CopyButton value={part.mpn} label="Copy MPN" />
+          </div>
           {part.description ? (
             <p style={{ fontSize: 15, color: '#4a4838', fontWeight: 500, margin: '10px 0 0' }}>{part.description}</p>
           ) : null}
@@ -123,6 +116,9 @@ export default function DetailPage() {
             <span style={{ background: C.ink, color: '#fff', fontSize: 12, fontWeight: 700,
               padding: '4px 11px' }}>{part.package}</span>
             <StockBadge stock={part.stock} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <DistributorLinks code={part.lcsc} />
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import DetailPage from './DetailPage.jsx'
@@ -18,6 +18,17 @@ const detail = {
   stock_breakdown: null, is_basic: true, is_preferred: false, datasheet_url: null,
   as_of: '2026-07-12T07:52:24Z',
 }
+
+const origClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+function setClipboard(writeText) {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: writeText ? { writeText } : undefined, configurable: true,
+  })
+}
+afterEach(() => {
+  if (origClipboard) Object.defineProperty(navigator, 'clipboard', origClipboard)
+  else delete navigator.clipboard
+})
 
 beforeEach(() => { vi.restoreAllMocks() })
 afterEach(() => { vi.restoreAllMocks() })
@@ -66,17 +77,25 @@ test('equivalent lookup failure shows an honest "check unavailable" note, not si
   expect(screen.queryByText(/WON'T FAKE ONE/)).not.toBeInTheDocument()
 })
 
-test('COPY does not claim success when the clipboard is unavailable', async () => {
+test('header exposes copy for LCSC and MPN, plus distributor links', async () => {
+  setClipboard(vi.fn().mockResolvedValue())
   vi.spyOn(api, 'getPart').mockResolvedValue(detail)
   vi.spyOn(api, 'getEquivalent').mockResolvedValue({ original: {}, equivalent: null, reason: 'none' })
   renderPart('C25531')
   await waitFor(() => expect(screen.getByText('0402WGJ0103TCE')).toBeInTheDocument())
-  const orig = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
-  Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
-  fireEvent.click(screen.getByText('COPY'))
-  expect(screen.queryByText('COPIED ✓')).not.toBeInTheDocument()
-  if (orig) Object.defineProperty(navigator, 'clipboard', orig)
-  else delete navigator.clipboard
+  expect(screen.getByRole('button', { name: /Copy LCSC code/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Copy MPN/i })).toBeInTheDocument()
+  const lcsc = screen.getByRole('link', { name: /View on LCSC/i })
+  expect(lcsc).toHaveAttribute('href', 'https://www.lcsc.com/search?q=C25531')
+})
+
+test('copy affordance is absent when the clipboard API is unavailable', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(detail)
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue({ original: {}, equivalent: null, reason: 'none' })
+  renderPart('C25531')
+  await waitFor(() => expect(screen.getByText('0402WGJ0103TCE')).toBeInTheDocument())
+  expect(screen.queryByRole('button', { name: /Copy/i })).not.toBeInTheDocument()
 })
 
 test('unknown part shows a 404 state', async () => {
