@@ -1,0 +1,5 @@
+{"ts":"2026-07-12T19:17:55.326Z","cmd":"viewport","args":"1280x900","origin":"about:blank","durationMs":6,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-12T19:17:58.581Z","cmd":"goto","args":"http://localhost:5173","origin":"http://localhost:5173/","durationMs":3121,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-12T19:17:59.427Z","cmd":"wait","args":"--networkidle","origin":"http://localhost:5173/","durationMs":713,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-12T19:17:59.733Z","cmd":"screenshot","args":"C:/Users/yashg/AppData/Local/Temp/claude/C--Users-yashg-Desktop-partsourcer/8c008a6f-0b7c-48b2-b2ae-231a7eac6130/scratchpad/home-grid.png","origin":"http://localhost:5173/","durationMs":184,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-12T19:17:59.855Z","cmd":"console","args":"--errors","origin":"http://localhost:5173/","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
