@@ -7,19 +7,8 @@ electronic component and get live stock, price, footprint, and datasheet, plus
 the standout feature: **one cheaper in-stock equivalent** suggestion, so you can
 swap a part for a drop-in that costs less and is actually available.
 
-- 🆓 **Free forever.** No paywall, no signup to search.
-- ⚡ **Fast.** Aggressive caching, feels instant.
-- 🔍 **Honest.** Every result shows its data-freshness timestamp, and two parts
-  are never labelled a drop-in "equivalent" unless the package and key specs
-  match.
-- 🔓 **Open-source.** MIT licensed, clean and forkable.
-
 > **Status:** v1 feature-complete (backend plus frontend). Deploy configuration
 > is in progress. Not yet hosted live.
-
-<!-- Demo GIF goes here at launch: ![PartSourcer demo](docs/demo.gif) -->
-
----
 
 ## The cheaper-equivalent moat
 
@@ -33,12 +22,10 @@ reason) rather than guessing. In v1 the matcher covers **resistors and
 capacitors** (the component types with queryable parametric specs upstream).
 Everything else returns an honest null.
 
----
-
 ## Architecture
 
 ```
-Browser  ->  Vercel (React + Vite static site)
+Browser  -->  Vercel (React + Vite static site)
    |
    +------>  Render / Fly.io (FastAPI)  ->  jlcsearch API (jlcparts snapshot)
                      |
@@ -53,29 +40,17 @@ Browser  ->  Vercel (React + Vite static site)
   short (hours) and refresh on demand. Every cached record keeps an `as_of`
   timestamp, reported honestly to the UI.
 - **Data source.** The free, open **jlcsearch** API (tscircuit / jlcparts
-  ecosystem). No account or key required. Note: it is a **~daily jlcparts
-  snapshot**, not live LCSC stock and price.
-
-## Tech stack
-
-| Layer | Choice |
-|---|---|
-| Frontend | React + Vite |
-| Backend | FastAPI (Python 3.11+, async) |
-| Cache DB | SQLite (Postgres later) |
-| Data source | jlcsearch API |
-| Frontend host | Vercel (free) |
-| Backend host | Render (free) or Fly.io (always-on) |
-| License | MIT |
+  ecosystem). No account or key required. 
+  
+  >*Note: it is a ~daily jlcparts snapshot, not live LCSC stock and price.*
 
 ## Repo layout
-
 ```
 /
 ├── backend/     # FastAPI app (see backend/README.md for full detail)
 ├── frontend/    # React + Vite app
 ├── docs/        # spec, jlcsearch notes, design docs
-└── README.md    # this file
+└── README.md 
 ```
 
 ---
@@ -116,7 +91,7 @@ Run the backend tests with `.venv/Scripts/python.exe -m pytest -q`.
 ```bash
 cd frontend
 npm install
-npm run dev          # http://localhost:5173
+npm run dev      
 ```
 
 Other frontend scripts: `npm run build` (production build), `npm test` (Vitest),
@@ -193,8 +168,6 @@ These are load-bearing, not marketing:
 - **Show what is missing.** `brand` and `datasheet_url` are `null` in v1 (absent
   in the jlcsearch data); the UI shows nothing rather than inventing a value.
   They light up when the official LCSC API is dropped in behind `PartDataSource`.
-
----
 
 ## Contributing
 
