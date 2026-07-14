@@ -1,0 +1,42 @@
+# Fly.io config for the PartSourcer backend (always-on, no cold starts).
+# `fly launch` in this directory picks this up. Adjust `app` and
+# `primary_region` to your account/region as needed.
+app = "partsourcer"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  # Persistent cache path on the mounted volume so it survives restarts.
+  SQLITE_PATH = "/data/partsourcer.db"
+
+# Persistent volume for the SQLite cache. Create once with:
+#   fly volumes create partsourcer_data --size 1
+[mounts]
+  source = "partsourcer_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # Always-on: one machine stays running, so there are no cold starts.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+# CORS_ORIGINS is a per-deploy value (your Vercel origin, JSON array). Set it as
+# a secret, e.g.:
+#   fly secrets set CORS_ORIGINS='["https://partsourcer.vercel.app"]'
