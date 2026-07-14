@@ -1,0 +1,21 @@
+# Render Blueprint for the PartSourcer backend (free plan).
+# Set the service Root Directory to `backend` when importing the repo so this
+# file and the Dockerfile resolve correctly.
+#
+# The free plan spins down after ~15 min idle (first request then takes ~30-60s
+# to wake). The SQLite cache is ephemeral here and simply re-warms from upstream
+# after each restart, so correctness is unaffected (stale data is never served).
+services:
+  - type: web
+    name: partsourcer-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # JSON array of allowed Vercel origin(s), e.g.
+      # ["https://partsourcer.vercel.app"]. Set in the Render dashboard; not
+      # committed. sync:false keeps it out of the blueprint.
+      - key: CORS_ORIGINS
+        sync: false

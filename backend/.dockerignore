@@ -1,0 +1,26 @@
+# Keep the build context small and free of local-only artifacts.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local SQLite cache DB (regenerated at runtime; never ship a stale copy).
+*.db
+*.db-shm
+*.db-wal
+
+# Local env / secrets (config comes from the host's environment).
+.env
+.env.*
+!.env.example
+
+# Docs, tests, and scratch not needed in the runtime image.
+tests/
+explore_jlcsearch.py
+README.md
+.dockerignore
+Dockerfile
