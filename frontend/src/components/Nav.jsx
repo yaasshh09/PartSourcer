@@ -21,7 +21,7 @@ export default function Nav() {
           <NavLink to="/about" style={link}>About</NavLink>
           <NavLink to="/how" style={link}>How it works</NavLink>
           <NavLink to="/faq" style={link}>FAQ</NavLink>
-          <a href="https://github.com/" target="_blank" rel="noreferrer"
+          <a href="https://github.com/yaasshh09/PartSourcer" target="_blank" rel="noreferrer"
              style={{ marginLeft: 8, background: C.ink, color: C.yellow, fontWeight: 700, padding: '9px 14px' }}>GitHub</a>
         </nav>
       </div>
