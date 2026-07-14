@@ -58,11 +58,13 @@ test('shows the cheaper-equivalent payoff with copy + distributor links', async 
   expect(screen.getByText(/Same 0402 package/)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /Copy equivalent LCSC code/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /Copy equivalent MPN/i })).toBeInTheDocument()
-  // Both the header (C25531) and the equivalent card (C881063) render "View on LCSC"
-  // links, so disambiguate by href rather than using getByRole (which would throw on two).
-  const eqLcscLink = screen.getAllByRole('link', { name: /View on LCSC/i })
-    .find((l) => l.getAttribute('href') === 'https://www.lcsc.com/search?q=C881063')
-  expect(eqLcscLink).toBeTruthy()
+  // Header (C25531) and equivalent card (C881063) both render distributor links; the
+  // equivalent's carry a distinct accessible name ("View equivalent on LCSC") so a
+  // screen-reader link list can tell them apart. The main link keeps "View on LCSC".
+  const eqLcscLink = screen.getByRole('link', { name: /View equivalent on LCSC/i })
+  expect(eqLcscLink).toHaveAttribute('href', 'https://www.lcsc.com/search?q=C881063')
+  const mainLcscLink = screen.getByRole('link', { name: /^View on LCSC/i })
+  expect(mainLcscLink).toHaveAttribute('href', 'https://www.lcsc.com/search?q=C25531')
 })
 
 test('honest null-equivalent shows the backend reason', async () => {
