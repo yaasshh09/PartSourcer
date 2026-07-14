@@ -168,7 +168,7 @@ export default function DetailPage() {
                 {eq.match_reason}
               </div>
               <div style={{ marginTop: 14 }}>
-                <DistributorLinks code={eq.lcsc} variant="onYellow" />
+                <DistributorLinks code={eq.lcsc} variant="onYellow" context="equivalent" />
               </div>
             </div>
             <div style={{ textAlign: 'center', background: C.ink, color: C.yellow, padding: '18px 24px',
