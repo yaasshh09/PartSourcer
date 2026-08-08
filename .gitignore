@@ -40,9 +40,11 @@ Thumbs.db
 .claude/
 .superpowers/
 .gstack/
+.playwright-mcp/
 
 # ---- Internal docs kept out of the public repo ----
 /CLAUDE.md
+/fable-brain.md
 /partsourcer-spec.md
 /partsourcer-backend-prompts.md
 /docs/superpowers/
