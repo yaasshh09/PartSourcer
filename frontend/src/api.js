@@ -14,7 +14,7 @@ async function getJson(path) {
   try {
     resp = await fetch(`${API_BASE}${path}`, { headers: { Accept: 'application/json' } })
   } catch (e) {
-    throw new ApiError(0, 'Network error — is the backend running?')
+    throw new ApiError(0, 'Network error. Is the backend running?')
   }
   let body = null
   try { body = await resp.json() } catch { body = null }

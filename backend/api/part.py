@@ -1,4 +1,4 @@
-"""GET /api/part/<lcsc_code> — spec §9 detail."""
+"""GET /api/part/<lcsc_code>: spec §9 detail."""
 
 from fastapi import APIRouter, Depends, HTTPException
 

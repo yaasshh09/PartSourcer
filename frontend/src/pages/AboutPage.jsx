@@ -3,7 +3,7 @@ import { C } from '../theme.js'
 const ARCHIVO = "'Archivo',sans-serif"
 
 const CARDS = [
-  { title: 'FREE FOREVER', body: 'No paywall on core features. Any future revenue is optional affiliate links — never gating.' },
+  { title: 'FREE FOREVER', body: 'No paywall on core features. Any future revenue is optional affiliate links, never gating.' },
   { title: 'HONEST', body: "We show data freshness and never fake stock or price. If there's no valid equivalent, we say so." },
   { title: 'FAST', body: 'Aggressive caching means search feels instant. Specs cache long; stock & price refresh often.' },
   { title: 'OPEN-SOURCE', body: 'MIT licensed. Fork it, self-host it, send a PR. Built for students, by a student.', accent: true },

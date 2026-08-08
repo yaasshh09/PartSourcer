@@ -2,14 +2,14 @@
 
 Owns all freshness decisions: search entries and part stock/price are
 fresh for stock_ttl_secs; part specs for specs_ttl_secs (one upstream
-fetch renews both — upstream has no stock-only call). Served as_of is
+fetch renews both, since upstream has no stock-only call). Served as_of is
 always the stored fetch time. Never stale-serves: a stale entry plus an
 upstream failure propagates the UpstreamError.
 
 get_part additionally applies a completeness check: a row warmed only by
 the search write-through lacks the is_basic/is_preferred flags, so it is
 served for detail only when fresh AND both flags are present (not None).
-An incomplete row is a detail miss and triggers one upstream fetch — the
+An incomplete row is a detail miss and triggers one upstream fetch; the
 flags are never a stale guess.
 """
 
@@ -94,7 +94,7 @@ class CachingPartDataSource(PartDataSource):
         if not refresh:
             p = await self._store.get_part(key)
             # Completeness: a search-warmed row lacks the flags. Only serve a
-            # row that is fresh AND carries real flags — never a stale guess.
+            # row that is fresh AND carries real flags, never a stale guess.
             if (p is not None
                     and self._fresh(p.stock_as_of, self._stock_ttl)
                     and self._fresh(p.specs_as_of, self._specs_ttl)

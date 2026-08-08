@@ -1,4 +1,4 @@
-"""PartSourcer API — application entry point."""
+"""PartSourcer API: application entry point."""
 
 from contextlib import asynccontextmanager
 

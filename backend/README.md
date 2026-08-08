@@ -12,7 +12,7 @@ py -3 -m venv .venv                        # first time only (Python 3.11+)
 .venv/Scripts/python.exe -m uvicorn main:app --reload
 ```
 
-API at http://127.0.0.1:8000 — interactive docs at http://127.0.0.1:8000/docs.
+API at http://127.0.0.1:8000, interactive docs at http://127.0.0.1:8000/docs.
 
 Run the tests:
 
@@ -68,7 +68,7 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
 
 ## Data & honesty notes
 
-- Data source is the free, open **jlcsearch** API — a **~daily jlcparts
+- Data source is the free, open **jlcsearch** API, a **~daily jlcparts
   snapshot**, not live LCSC stock/price. `as_of` is our fetch time; the UI shows
   it so freshness is always honest.
 - `brand` and `datasheet_url` are `null` in v1 (absent upstream); they light up
@@ -77,11 +77,11 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
 
 ## What's fragile / worth watching
 
-- Single free community upstream — no SLA; the only data source in v1.
+- Single free community upstream, no SLA; the only data source in v1.
 - Data is a ~daily snapshot, not live LCSC.
-- Refresh throttle is in-process — it does not coordinate across multiple
+- Refresh throttle is in-process, so it does not coordinate across multiple
   workers/instances.
 - SQLite cache is single-node; fine for v1, revisit for horizontal scale.
-- Parametric (equivalent-matcher) results are not cached — every equivalent
+- Parametric (equivalent-matcher) results are not cached; every equivalent
   lookup hits upstream.
 - `brand` / `datasheet_url` remain null until the official LCSC API lands.

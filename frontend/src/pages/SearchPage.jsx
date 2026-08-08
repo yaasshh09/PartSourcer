@@ -78,7 +78,7 @@ export default function SearchPage() {
       <div style={{ border: `3px dashed ${C.ink}`, padding: '56px 28px', textAlign: 'center', background: C.paper }}>
         <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30 }}>SEARCH HIT A SNAG</div>
         <div style={{ fontSize: 15, color: C.sub, fontWeight: 500, marginTop: 10 }}>
-          {`Search is unavailable right now — ${error.detail}`}
+          {`Search is unavailable right now: ${error.detail}`}
         </div>
       </div>
     )
@@ -88,7 +88,7 @@ export default function SearchPage() {
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
           paddingBottom: 12, borderBottom: `3px solid ${C.ink}`, marginBottom: 18 }}>
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14 }}>
-            {`RESULTS — ${results.length} MATCHES`}
+            {`RESULTS: ${results.length} MATCHES`}
           </div>
           <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
             {`stock & price as of ${fmtAsOf(asOf)}`}
@@ -116,13 +116,13 @@ export default function SearchPage() {
           <p style={{ fontSize: 18, color: '#2a2822', fontWeight: 500, lineHeight: 1.5, maxWidth: 700, margin: '14px 0 0' }}>
             Finding a part that&apos;s <b>actually in stock</b>, at a fair price, with a footprint you can drop onto
             your board means tab-hopping across distributor sites for every line of your BOM. PartSourcer collapses
-            that into one search — and points you to a cheaper equivalent when one genuinely exists.
+            that into one search, and points you to a cheaper equivalent when one genuinely exists.
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
           {[
             { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
-            { n: '2', title: 'See live stock & price', body: 'Package, stock, unit price and datasheet — all scannable.' },
+            { n: '2', title: 'See live stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
             { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
           ].map((s) => (
             <div key={s.n} style={{ border: `3px solid ${C.ink}`, padding: 20,
@@ -135,7 +135,7 @@ export default function SearchPage() {
         </div>
         <div style={{ border: `3px solid ${C.ink}`, background: C.ink, color: C.bg, padding: 26 }}>
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
-            EQUIVALENT vs. SIMILAR — WE DON&apos;T BLUR THE LINE
+            EQUIVALENT vs. SIMILAR: WE DON&apos;T BLUR THE LINE
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, marginTop: 16 }}>
             <div>
@@ -147,7 +147,7 @@ export default function SearchPage() {
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: '#ffb02e' }}>≈ Similar part</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-                Close on specs, but pin-compatibility isn&apos;t confirmed. We show it clearly labelled — never as a drop-in.
+                Close on specs, but pin-compatibility isn&apos;t confirmed. We show it clearly labelled, never as a drop-in.
               </div>
             </div>
           </div>
@@ -175,7 +175,7 @@ export default function SearchPage() {
           FIND THE CHEAPEST IN-STOCK PART FOR YOUR PCB IN ONE SEARCH.
         </h1>
         <p style={{ fontSize: 18, color: '#4a4838', maxWidth: 560, margin: '20px 0 0', fontWeight: 500 }}>
-          Live stock, price, footprint &amp; datasheet — plus one cheaper in-stock equivalent. No login. No paywall.
+          Live stock, price, footprint &amp; datasheet, plus one cheaper in-stock equivalent. No login. No paywall.
         </p>
         <form onSubmit={(e) => { e.preventDefault(); runSearch(query) }}
           style={{ display: 'flex', alignItems: 'center', maxWidth: 720, marginTop: 34,

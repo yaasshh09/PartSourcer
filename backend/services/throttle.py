@@ -3,7 +3,7 @@
 ?refresh=true is a deliberate bypass that hits the free community jlcsearch
 upstream directly. This bounds how often any one key may force that bypass, so
 a hammering client cannot flood upstream. State is per-process (a dict keyed by
-a monotonic clock) — it deliberately does not coordinate across workers; see the
+a monotonic clock). It deliberately does not coordinate across workers; see the
 README fragility note.
 """
 

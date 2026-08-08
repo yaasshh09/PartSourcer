@@ -1,4 +1,4 @@
-"""GET /api/search — spec §9."""
+"""GET /api/search: spec §9."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 

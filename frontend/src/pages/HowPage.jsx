@@ -39,7 +39,7 @@ export default function HowPage() {
         </div>
         <p style={{ fontSize: 14, color: '#e6e2d4', fontWeight: 500, lineHeight: 1.6, margin: '10px 0 0' }}>
           Built on the open <span style={{ fontFamily: MONO, color: C.yellow }}>jlcparts</span> / <span
-            style={{ fontFamily: MONO, color: C.yellow }}>jlcsearch</span> ecosystem — a free, parametric API over
+            style={{ fontFamily: MONO, color: C.yellow }}>jlcsearch</span> ecosystem, a free, parametric API over
           the LCSC/JLCPCB catalog. Specs &amp; footprints cache long; stock &amp; price refresh in hours. Every
           result shows a &quot;data as of&quot; timestamp so you always know how fresh it is.
         </p>

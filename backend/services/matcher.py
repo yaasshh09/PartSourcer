@@ -1,4 +1,4 @@
-"""Equivalent-matcher logic (spec §10, v1 — no ML).
+"""Equivalent-matcher logic (spec §10, v1, no ML).
 
 Pure filter/rank helpers here reason over ParametricPart lists with no I/O,
 so they are unit-testable without a network. Orchestration (find_equivalent)
@@ -150,7 +150,7 @@ def _resistor_reason(orig, best, pkg, orig_price) -> str:
     pw_s = f", {pw:g} mW" if pw is not None else ""   # field is milliwatts (notes)
     pct = _percent_cheaper(orig_price, best.price_usd)
     return (f"Same {pkg} package, {r}{tol_s}{pw_s}, "
-            f"{best.stock:,} in stock — {pct}% cheaper")
+            f"{best.stock:,} in stock, {pct}% cheaper")
 
 
 def _capacitor_reason(orig, best, pkg, orig_price) -> str:
@@ -161,7 +161,7 @@ def _capacitor_reason(orig, best, pkg, orig_price) -> str:
     tc_s = f", {tc}" if tc else ""
     pct = _percent_cheaper(orig_price, best.price_usd)
     return (f"Same {pkg} package, {cap}{v_s}{tc_s}, "
-            f"{best.stock:,} in stock — {pct}% cheaper")
+            f"{best.stock:,} in stock, {pct}% cheaper")
 
 
 async def find_equivalent(ds: PartDataSource,
@@ -201,7 +201,7 @@ async def find_equivalent(ds: PartDataSource,
                 or orig_r.specs.get("tolerance_fraction") is None
                 or orig_r.specs.get("power_watts") is None):
             # Any unreadable key spec on the ORIGINAL means a drop-in can't
-            # be verified — honest null, never a guess (strict, confirmed).
+            # be verified: honest null, never a guess (strict, confirmed).
             return _null(_NO_TYPE_REASON)
         pool = await ds.list_parametric(
             "resistors", original.package,

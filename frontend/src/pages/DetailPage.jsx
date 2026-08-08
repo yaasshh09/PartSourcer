@@ -186,7 +186,7 @@ export default function DetailPage() {
       ) : equiv ? (
         <div style={{ marginTop: 24, border: `3px dashed ${C.ink}`, background: C.paper, padding: 28 }}>
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
-            {"NO CHEAPER EQUIVALENT — AND WE WON'T FAKE ONE"}
+            {"NO CHEAPER EQUIVALENT, AND WE WON'T FAKE ONE"}
           </div>
           <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
             {equiv.reason}
@@ -198,7 +198,7 @@ export default function DetailPage() {
             EQUIVALENT CHECK UNAVAILABLE
           </div>
           <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
-            {`We couldn't check for a cheaper equivalent right now — ${equivError.detail}. Try refreshing in a moment.`}
+            {`We couldn't check for a cheaper equivalent right now: ${equivError.detail}. Try refreshing in a moment.`}
           </p>
         </div>
       ) : null}

@@ -49,7 +49,7 @@ def test_not_found_returns_404():
 
 def test_malformed_code_returns_404():
     # A non-numeric code is rejected in the datasource before any upstream
-    # call — this handler must never run, so it fails loudly if it does.
+    # call: this handler must never run, so it fails loudly if it does.
     def handler(request):
         raise AssertionError("upstream must not be called for a malformed code")
 

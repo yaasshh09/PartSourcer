@@ -1,4 +1,4 @@
-# PartSourcer backend — shared image for Render and Fly.io.
+# PartSourcer backend: shared image for Render and Fly.io.
 # Both hosts build this same Dockerfile; host-specific config lives in
 # render.yaml / fly.toml. Python 3.11+ per project requirement.
 FROM python:3.12-slim

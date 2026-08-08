@@ -3,10 +3,10 @@ import { C } from '../theme.js'
 const ARCHIVO = "'Archivo',sans-serif"
 
 const QA = [
-  { q: 'Is it really free?', a: "Yes. Free forever on core features, no signup to search. It's MIT open-source — fork it if you like." },
+  { q: 'Is it really free?', a: "Yes. Free forever on core features, no signup to search. It's MIT open-source, fork it if you like." },
   { q: 'How fresh is the stock data?', a: 'Specs and footprints are cached long (they don\'t change). Stock and price refresh every few hours, and every result shows a "data as of" timestamp.' },
   { q: 'Are you affiliated with LCSC or JLCPCB?', a: 'No. PartSourcer is an independent, community tool built on open data. Not affiliated with or endorsed by LCSC / JLCPCB.' },
-  { q: 'How do I trust the "equivalent"?', a: 'We only call something an equivalent when package and core specs match. When we can\'t verify pin compatibility, we label it "similar part" instead — and if there\'s no valid match, we say none was found.' },
+  { q: 'How do I trust the "equivalent"?', a: 'We only call something an equivalent when package and core specs match. When we can\'t verify pin compatibility, we label it "similar part" instead, and if there\'s no valid match, we say none was found.' },
 ]
 
 export default function FaqPage() {

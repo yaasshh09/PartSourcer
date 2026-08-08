@@ -25,7 +25,7 @@ test('bootstraps a search from ?q= and shows results + real as_of', async () => 
   })
   renderAt('/?q=STM32')
   await waitFor(() => expect(screen.getByText('STM32F103C8T6')).toBeInTheDocument())
-  expect(screen.getByText(/RESULTS — 1 MATCHES/)).toBeInTheDocument()
+  expect(screen.getByText(/RESULTS: 1 MATCHES/)).toBeInTheDocument()
   expect(screen.getByText(/as of Jul 12, 2026/)).toBeInTheDocument()
 })
 
