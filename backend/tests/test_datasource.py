@@ -99,13 +99,17 @@ async def test_non_dict_json_body_raises_unavailable():
 
 @pytest.mark.anyio
 async def test_get_part_exact_match():
+    seen = []
+
     def handler(request):
-        assert request.url.params["q"] == "8734"
+        seen.append(request.url.params["q"])
         return httpx.Response(200, json={"components": [RAW]})
 
     ds = make_ds(handler)
     part = await ds.get_part("C8734")
     assert part is not None and part.lcsc == "C8734"
+    # The code is asked for by its canonical C-prefixed form.
+    assert seen[0] == "C8734"
 
 
 @pytest.mark.anyio
@@ -125,6 +129,51 @@ async def test_get_part_returns_detail_with_flags():
     assert part.price_breaks is None and part.stock_breakdown is None
     assert part.price_usd == 1.0371
     assert part.brand is None and part.datasheet_url is None
+
+
+# Upstream returns a different result set for the same part depending on the
+# `limit` value. Verified live against LCSC 25531: q=C25531&limit=1 returns the
+# row, q=C25531&limit=20 returns {"components": []}, both HTTP 200 and stable
+# across repeats and cache-busting. These tests pin the behaviour that a part
+# visible at either width still resolves.
+
+RAW_25531 = {"lcsc": 25531, "mfr": "0402WGJ0103TCE", "package": "0402",
+             "is_basic": False, "is_preferred": False, "description": "",
+             "stock": 4360131, "price": 0.000442857}
+
+
+@pytest.mark.anyio
+async def test_get_part_found_when_only_the_narrow_query_returns_it():
+    """The C25531 case: wide query says empty, narrow query has the row."""
+    def handler(request):
+        if request.url.params["limit"] == "1":
+            return httpx.Response(200, json={"components": [RAW_25531]})
+        return httpx.Response(200, json={"components": []})
+
+    ds = make_ds(handler)
+    part = await ds.get_part("C25531")
+    assert part is not None
+    assert part.lcsc == "C25531" and part.mpn == "0402WGJ0103TCE"
+
+
+@pytest.mark.anyio
+async def test_get_part_found_when_only_the_wide_query_returns_it():
+    """The reverse case must keep working, so the narrow probe never regresses."""
+    def handler(request):
+        if request.url.params["limit"] == "1":
+            return httpx.Response(200, json={"components": []})
+        return httpx.Response(200, json={"components": [RAW]})
+
+    ds = make_ds(handler)
+    part = await ds.get_part("C8734")
+    assert part is not None and part.lcsc == "C8734"
+
+
+@pytest.mark.anyio
+async def test_get_part_never_returns_a_different_part():
+    """A near miss is still a miss. Never pass off another code as the one asked for."""
+    ds = make_ds(items_handler([RAW]))
+    assert await ds.get_part("C9999") is None
 
 
 RES_ROW = {"lcsc": 25804, "mfr": "0603WAF1002T5E", "description": "", "stock": 37165617,

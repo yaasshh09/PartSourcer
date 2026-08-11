@@ -147,12 +147,20 @@ class JlcSearchDataSource(PartDataSource):
         code = lcsc_code.strip().upper().lstrip("C")
         if not code.isdigit():
             return None
-        items = await self._fetch_json(
-            "/api/search", {"q": code, "limit": PAGE_SIZE}, "components")
-        as_of = datetime.now(timezone.utc)
-        for raw in items:
-            if str(raw.get("lcsc")) == code:
-                return _to_detail(raw, as_of)
+        # Upstream returns a different result set for the same part depending
+        # on `limit`: C25531 comes back for limit=1 but yields
+        # {"components": []} for limit=20, both HTTP 200, stable across
+        # repeats and unaffected by cache busting. So ask the narrowest
+        # question first, using the canonical C-prefixed code, and only then
+        # fall back to the wider query. The fallback means no part that
+        # resolved before can stop resolving.
+        for query, limit in ((f"C{code}", 1), (code, PAGE_SIZE)):
+            items = await self._fetch_json(
+                "/api/search", {"q": query, "limit": limit}, "components")
+            as_of = datetime.now(timezone.utc)
+            for raw in items:
+                if str(raw.get("lcsc")) == code:
+                    return _to_detail(raw, as_of)
         return None
 
     async def list_parametric(self, category: str, package: str,
