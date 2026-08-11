@@ -35,5 +35,14 @@ class Settings(BaseSettings):
     recorder_batch_size: int = 500
     recorder_concurrency: int = 4
 
+    # Distributors (SP1). Unset credentials mean the distributor reports
+    # state="disabled" and is never called. No new vars = today's behaviour.
+    mouser_api_key: str | None = None
+    digikey_client_id: str | None = None
+    digikey_client_secret: str | None = None
+    digikey_base_url: str = "https://api.digikey.com"
+    mouser_base_url: str = "https://api.mouser.com"
+    distributor_timeout_secs: float = 8.0
+
 
 settings = Settings()

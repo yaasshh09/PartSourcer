@@ -41,6 +41,7 @@ Thumbs.db
 .superpowers/
 .gstack/
 .playwright-mcp/
+backend/scripts/__pycache__/
 
 # ---- Internal docs kept out of the public repo ----
 /CLAUDE.md
