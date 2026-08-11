@@ -10,16 +10,18 @@ import httpx
 from cache.caching_datasource import CachingPartDataSource
 from cache.store import SqliteCacheStore
 from config import settings
+from history.store import HistoryStore, PostgresHistoryStore
 from services.datasource import JlcSearchDataSource, PartDataSource
 from services.throttle import RefreshThrottle
 
 _client: httpx.AsyncClient | None = None
 _store: SqliteCacheStore | None = None
 _datasource: PartDataSource | None = None
+_history_store: HistoryStore | None = None
 
 
 async def startup() -> None:
-    global _client, _store, _datasource
+    global _client, _store, _datasource, _history_store
     _client = httpx.AsyncClient(
         base_url=settings.jlcsearch_base_url,
         timeout=settings.request_timeout_secs,
@@ -34,10 +36,16 @@ async def startup() -> None:
         stock_ttl_secs=settings.stock_cache_ttl_secs,
         throttle=RefreshThrottle(settings.refresh_cooldown_secs),
     )
+    if settings.database_url:
+        pg = PostgresHistoryStore(settings.database_url)
+        await pg.open()
+        _history_store = pg
 
 
 async def shutdown() -> None:
-    global _client, _store, _datasource
+    global _client, _store, _datasource, _history_store
+    if _history_store is not None and hasattr(_history_store, "close"):
+        await _history_store.close()
     if _store is not None:
         _store.close()
     if _client is not None:
@@ -45,8 +53,14 @@ async def shutdown() -> None:
     _client = None
     _store = None
     _datasource = None
+    _history_store = None
 
 
 def get_datasource() -> PartDataSource:
     assert _datasource is not None, "datasource not initialized (lifespan not run)"
     return _datasource
+
+
+def get_history_store() -> HistoryStore | None:
+    """None when DATABASE_URL is unset. The recorder endpoint 503s in that case."""
+    return _history_store

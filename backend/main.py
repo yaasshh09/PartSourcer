@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from config import settings
 
 from api.equivalent import router as equivalent_router
+from api.internal import router as internal_router
 from api.part import router as part_router
 from api.search import router as search_router
 from services import deps
@@ -60,6 +61,7 @@ async def _unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
 app.include_router(search_router)
 app.include_router(part_router)
 app.include_router(equivalent_router)
+app.include_router(internal_router)
 
 
 @app.get("/health")
