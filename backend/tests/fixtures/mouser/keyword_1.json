@@ -1,0 +1,1368 @@
+{
+  "Errors": [],
+  "SearchResults": {
+    "NumberOfResult": 1715,
+    "Parts": [
+      {
+        "AlternatePackagings": null,
+        "Availability": "340 In Stock",
+        "AvailabilityInStock": "340",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/3/80/37/ENG_DS_1773270_P2.pdf",
+        "Description": "Thin Film Resistors - SMD RN 0603 21%0K 0.1% 10PPM",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RN73_series_DSL.JPG",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RN73C1J210KBTDF",
+        "Min": "1",
+        "MouserPartNumber": "279-RN73C1J210KBTDF",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$1.21",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.857",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.579",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.562",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.547",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.526",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.478",
+            "Quantity": 5000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.461",
+            "Quantity": 10000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.454",
+            "Quantity": 25000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeCost": "$7.00 MouseReel\u2122 fee will be added and calculated in your shopping cart. All MouseReel\u2122 orders are non-cancellable and non-returnable.",
+            "AttributeName": "Packaging",
+            "AttributeValue": "MouseReel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "1000"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RN73C1J210KBTDF?qs=s1WWODT2SXVVUdBDDCcGSw%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 2e-06
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "Availability": "480 In Stock",
+        "AvailabilityInStock": "480",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/3/80/37/ENG_DS_1773270_P2.pdf",
+        "Description": "Thin Film Resistors - SMD RN 0603 110K 0.1% 10PPM",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RN73_series_DSL.JPG",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RN73C1J110KBTDF",
+        "Min": "1",
+        "MouserPartNumber": "279-RN73C1J110KBTDF",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$1.21",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.857",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.579",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.562",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.547",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.526",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.478",
+            "Quantity": 5000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.461",
+            "Quantity": 10000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.454",
+            "Quantity": 25000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeCost": "$7.00 MouseReel\u2122 fee will be added and calculated in your shopping cart. All MouseReel\u2122 orders are non-cancellable and non-returnable.",
+            "AttributeName": "Packaging",
+            "AttributeValue": "MouseReel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "1000"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RN73C1J110KBTDF?qs=iJVBkmKXgrnLWesXVxXvRw%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 2e-06
+        }
+      },
+      {
+        "AlternatePackagings": [
+          {
+            "APMfrPN": "RN73C1J10K7BTDF"
+          }
+        ],
+        "Availability": "175 In Stock",
+        "AvailabilityInStock": "175",
+        "AvailabilityOnOrder": [
+          {
+            "Date": "2026-11-23T00:00:00",
+            "Quantity": 250
+          }
+        ],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/3/80/37/ENG_DS_1773270_P2.pdf",
+        "Description": "Thin Film Resistors - SMD RN 0603 10K7 0.1% 10PPM CUT LENGTH",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RN73_series_DSL.JPG",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RN73C1J10K7BTG",
+        "Min": "1",
+        "MouserPartNumber": "279-RN73C1J10K7BTG",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$2.13",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.49",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.35",
+            "Quantity": 25
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.12",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.01",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.00",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.973",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.951",
+            "Quantity": 2500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.926",
+            "Quantity": 5000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "250"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RN73C1J10K7BTG?qs=ip69W3eHERVnmBosWVKZew%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": false,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 2e-06
+        }
+      },
+      {
+        "AlternatePackagings": [
+          {
+            "APMfrPN": "RN73C1J10KBTDF"
+          },
+          {
+            "APMfrPN": " RN73C1J10KBTG"
+          }
+        ],
+        "Availability": "15276 In Stock",
+        "AvailabilityInStock": "15276",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/3/80/37/ENG_DS_1773270_P2.pdf",
+        "Description": "Thin Film Resistors - SMD RN 0603 10K 0.1% 10PPM 5K RL",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RN73_series_DSL.JPG",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RN73C1J10KBTD",
+        "Min": "1",
+        "MouserPartNumber": "279-RN73C1J10KBTD",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$0.85",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.607",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.412",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.388",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.329",
+            "Quantity": 5000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.304",
+            "Quantity": 25000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeCost": "$7.00 MouseReel\u2122 fee will be added and calculated in your shopping cart. All MouseReel\u2122 orders are non-cancellable and non-returnable.",
+            "AttributeName": "Packaging",
+            "AttributeValue": "MouseReel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "5000"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RN73C1J10KBTD?qs=ip69W3eHERVfHR04FEIfYw%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 2e-06
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "AvailabilityInStock": "0",
+        "AvailabilityOnOrder": [
+          {
+            "Date": "2026-11-20T00:00:00",
+            "Quantity": 80000
+          }
+        ],
+        "Category": "Thick Film Resistors - SMD",
+        "DataSheetUrl": "",
+        "Description": "Thick Film Resistors - SMD RMC 0603 1/10W 1% T/R-5000",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/royalohm/images/Gen_Purpose_Thick_film_DSL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "84 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "Royalohm",
+        "ManufacturerPartNumber": "0603WAF510KT5E",
+        "Min": "5000",
+        "MouserPartNumber": "303-0603WAF510KT5E",
+        "Mult": "5000",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$0.001",
+            "Quantity": 5000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "5000"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/Royalohm/0603WAF510KT5E?qs=e8oIoAS2J1RosCaZ3ohPpg%3D%3D",
+        "ROHSStatus": "RoHS Compliant By Exemption",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Thailand"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 2e-06
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "Availability": "17869 In Stock",
+        "AvailabilityInStock": "17869",
+        "AvailabilityOnOrder": [],
+        "Category": "Thick Film Resistors - SMD",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/3/508/1/PYu-AR_51_RoHS_L_7.pdf",
+        "Description": "Thick Film Resistors - SMD 10kOhms 100mW 0603 1% AEC-Q200",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/yageo/images/AR_series_SPL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "56 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "YAGEO",
+        "ManufacturerPartNumber": "AR0402FR-0710KL",
+        "Min": "1",
+        "MouserPartNumber": "603-AR0402FR-0710KL",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$0.22",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.135",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.113",
+            "Quantity": 50
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.088",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.076",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.066",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.055",
+            "Quantity": 5000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.051",
+            "Quantity": 10000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeCost": "$7.00 MouseReel\u2122 fee will be added and calculated in your shopping cart. All MouseReel\u2122 orders are non-cancellable and non-returnable.",
+            "AttributeName": "Packaging",
+            "AttributeValue": "MouseReel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "10000"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/YAGEO/AR0402FR-0710KL?qs=bj0ANSkawG%252B%252B5c2eib7Icg%3D%3D",
+        "ROHSStatus": "RoHS Compliant By Exemption",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 6.5e-07
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "Availability": "21333 In Stock",
+        "AvailabilityInStock": "21333",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "",
+        "Description": "Thin Film Resistors - SMD RQ 0603 10K 0.1% 10PPM 5K RL",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/1-2176371-0_SPL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "129 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RQ73C1J10KBTD",
+        "Min": "1",
+        "MouserPartNumber": "279-RQ73C1J10KBTD",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$0.59",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.431",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.393",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.383",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.352",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.345",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.311",
+            "Quantity": 5000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.294",
+            "Quantity": 10000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeCost": "$7.00 MouseReel\u2122 fee will be added and calculated in your shopping cart. All MouseReel\u2122 orders are non-cancellable and non-returnable.",
+            "AttributeName": "Packaging",
+            "AttributeValue": "MouseReel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "5000"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RQ73C1J10KBTD?qs=gZXFycFWdANfo0u7NQfRgw%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 1.968e-06
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "Availability": "7 In Stock",
+        "AvailabilityInStock": "7",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "",
+        "Description": "Thin Film Resistors - SMD 10.2 Ohms .1% 15ppm .10 Watt 0603",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RP73_SPL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RP73D1J10K2BTDG",
+        "Min": "1",
+        "MouserPartNumber": "279-RP73D1J10K2BTDG",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$1.59",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.12",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.994",
+            "Quantity": 25
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.804",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.79",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.763",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.73",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.70",
+            "Quantity": 2500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.665",
+            "Quantity": 5000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Bulk"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "250"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RP73D1J10K2BTDG?qs=Ez2dlPhxtNGbsmR2Tma%252BCw%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": false,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 1.83e-06
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "Availability": "179 In Stock",
+        "AvailabilityInStock": "179",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "",
+        "Description": "Thin Film Resistors - SMD 10.7 KOhms .1% 15ppm .10 Watt 0603",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RP73_SPL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RP73D1J10K7BTDG",
+        "Min": "1",
+        "MouserPartNumber": "279-RP73D1J10K7BTDG",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$1.59",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.12",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.994",
+            "Quantity": 25
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.804",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.79",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.763",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.73",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.70",
+            "Quantity": 2500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.665",
+            "Quantity": 5000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Bulk"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "250"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RP73D1J10K7BTDG?qs=Ez2dlPhxtNF8%2FmqbsA2qlQ%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": false,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 1.83e-06
+        }
+      },
+      {
+        "AlternatePackagings": [
+          {
+            "APMfrPN": "RN73C1J10K5BTDF"
+          }
+        ],
+        "Availability": "10 In Stock",
+        "AvailabilityInStock": "10",
+        "AvailabilityOnOrder": [],
+        "Category": "Thin Film Resistors - SMD",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/3/80/37/ENG_DS_1773270_P2.pdf",
+        "Description": "Thin Film Resistors - SMD RN 0603 10K5 0.1% 10PPM CUT LENGTH",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/tycoelectronics/images/RN73_series_DSL.JPG",
+        "InfoMessages": [],
+        "LeadTime": "122 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "TE Connectivity / Holsworthy",
+        "ManufacturerPartNumber": "RN73C1J10K5BTG",
+        "Min": "1",
+        "MouserPartNumber": "279-RN73C1J10K5BTG",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$2.14",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.50",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.36",
+            "Quantity": 25
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.13",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.05",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$1.01",
+            "Quantity": 2500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$0.955",
+            "Quantity": 5000
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "250"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8533211000"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8533210030"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "853321000"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8533219000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8533210000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8533210100"
+          },
+          {
+            "ComplianceName": "BRHTS",
+            "ComplianceValue": "85332120"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/TE-Connectivity-Holsworthy/RN73C1J10K5BTG?qs=ip69W3eHERWfvFFLyieptA%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": false,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Taiwan"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 2e-06
+        }
+      }
+    ]
+  }
+}

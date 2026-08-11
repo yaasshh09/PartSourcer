@@ -1,0 +1,358 @@
+{
+  "Errors": [],
+  "SearchResults": {
+    "NumberOfResult": 3,
+    "Parts": [
+      {
+        "AlternatePackagings": [
+          {
+            "APMfrPN": "STM32F103C8T6TR"
+          }
+        ],
+        "AvailabilityInStock": "0",
+        "AvailabilityOnOrder": [
+          {
+            "Date": "2026-09-19T00:00:00",
+            "Quantity": 8933
+          },
+          {
+            "Date": "2026-10-12T00:00:00",
+            "Quantity": 7500
+          }
+        ],
+        "Category": "ARM Microcontrollers - MCU",
+        "DataSheetUrl": "",
+        "Description": "ARM Microcontrollers - MCU 32BIT Cortex M3 64KB 20KB RAM 2X12 ADC",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/stmicroelectronics/images/STM32F103C8T6_DSL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "280 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "STMicroelectronics",
+        "ManufacturerPartNumber": "STM32F103C8T6",
+        "Min": "1",
+        "MouserPartNumber": "511-STM32F103C8T6",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$7.45",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$5.75",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$5.05",
+            "Quantity": 25
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.83",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.61",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.48",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.47",
+            "Quantity": 1500
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Tray"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "1500"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8542319092"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8542310000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8542310025"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "8542310394"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8542311000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8542319000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8542310399"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "3A991.a.2"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/STMicroelectronics/STM32F103C8T6?qs=bhCVus9SdFtq6kqxsU5%2FDA%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": false,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "Malaysia"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 0.00018
+        }
+      },
+      {
+        "AlternatePackagings": [
+          {
+            "APMfrPN": "STM32F103C8T6"
+          }
+        ],
+        "Availability": "2 In Stock",
+        "AvailabilityInStock": "2",
+        "AvailabilityOnOrder": [
+          {
+            "Date": "2026-09-14T00:00:00",
+            "Quantity": 6451
+          }
+        ],
+        "Category": "ARM Microcontrollers - MCU",
+        "DataSheetUrl": "",
+        "Description": "ARM Microcontrollers - MCU 32BIT Cortex M3 USB 7 TIMERS 2 ADCS CAN",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/stmicroelectronics/images/STM32F103C8T6_DSL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "280 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "STMicroelectronics",
+        "ManufacturerPartNumber": "STM32F103C8T6TR",
+        "Min": "1",
+        "MouserPartNumber": "511-STM32F103C8T6TR",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$8.30",
+            "Quantity": 1
+          },
+          {
+            "Currency": "USD",
+            "Price": "$5.80",
+            "Quantity": 10
+          },
+          {
+            "Currency": "USD",
+            "Price": "$5.54",
+            "Quantity": 25
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.80",
+            "Quantity": 100
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.59",
+            "Quantity": 250
+          },
+          {
+            "Currency": "USD",
+            "Price": "$4.18",
+            "Quantity": 500
+          },
+          {
+            "Currency": "USD",
+            "Price": "$3.68",
+            "Quantity": 1000
+          },
+          {
+            "Currency": "USD",
+            "Price": "$3.68",
+            "Quantity": 2400
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Reel"
+          },
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Cut Tape"
+          },
+          {
+            "AttributeCost": "$7.00 MouseReel\u2122 fee will be added and calculated in your shopping cart. All MouseReel\u2122 orders are non-cancellable and non-returnable.",
+            "AttributeName": "Packaging",
+            "AttributeValue": "MouseReel"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "2400"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "CNHTS",
+            "ComplianceValue": "8542319092"
+          },
+          {
+            "ComplianceName": "CAHTS",
+            "ComplianceValue": "8542310000"
+          },
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8542310025"
+          },
+          {
+            "ComplianceName": "JPHTS",
+            "ComplianceValue": "8542310394"
+          },
+          {
+            "ComplianceName": "KRHTS",
+            "ComplianceValue": "8542311000"
+          },
+          {
+            "ComplianceName": "TARIC",
+            "ComplianceValue": "8542319000"
+          },
+          {
+            "ComplianceName": "MXHTS",
+            "ComplianceValue": "8542310399"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "3A991.a.2"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/STMicroelectronics/STM32F103C8T6TR?qs=5HwTSiuA5HDxFj62n06yag%3D%3D",
+        "ROHSStatus": "RoHS Compliant",
+        "Reeling": true,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "United States"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 0.0001817
+        }
+      },
+      {
+        "AlternatePackagings": null,
+        "Availability": "10 In Stock",
+        "AvailabilityInStock": "10",
+        "AvailabilityOnOrder": [],
+        "Category": "Development Boards & Kits - ARM",
+        "DataSheetUrl": "",
+        "Description": "Development Boards & Kits - ARM mini drone PCB",
+        "FactoryStock": "0",
+        "ImagePath": "https://www.mouser.com/images/crowdsupply/images/cs-ymfc-01_SPL.jpg",
+        "InfoMessages": [],
+        "LeadTime": "0 Days",
+        "LifecycleStatus": null,
+        "Manufacturer": "Crowd Supply",
+        "ManufacturerPartNumber": "CS-YMFC-01",
+        "Min": "1",
+        "MouserPartNumber": "392-CS-YMFC-01",
+        "Mult": "1",
+        "MultiSimBlue": 0,
+        "PriceBreaks": [
+          {
+            "Currency": "USD",
+            "Price": "$55.01",
+            "Quantity": 1
+          }
+        ],
+        "ProductAttributes": [
+          {
+            "AttributeName": "Packaging",
+            "AttributeValue": "Bulk"
+          },
+          {
+            "AttributeName": "Standard Pack Qty",
+            "AttributeValue": "30"
+          }
+        ],
+        "ProductCompliance": [
+          {
+            "ComplianceName": "USHTS",
+            "ComplianceValue": "8537109160"
+          },
+          {
+            "ComplianceName": "ECCN",
+            "ComplianceValue": "EAR99"
+          }
+        ],
+        "ProductDetailUrl": "https://eu.mouser.com/en/ProductDetail/Crowd-Supply/CS-YMFC-01?qs=HBWAp0VN4RjyS6ljAMR8FQ%3D%3D",
+        "ROHSStatus": "",
+        "Reeling": false,
+        "SuggestedReplacement": "",
+        "SurchargeMessages": null,
+        "TradeCompliance": [
+          {
+            "ComplianceName": "Country of Origin",
+            "ComplianceValue": "China"
+          },
+          {
+            "ComplianceName": "Assembly Country of Origin",
+            "ComplianceValue": "Not available"
+          },
+          {
+            "ComplianceName": "Country of Diffusion",
+            "ComplianceValue": "Not available"
+          }
+        ],
+        "UnitWeightKg": {
+          "UnitWeight": 0.1
+        }
+      }
+    ]
+  }
+}
