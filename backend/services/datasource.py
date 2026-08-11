@@ -27,7 +27,10 @@ class UpstreamError(Exception):
 
 
 # Shared by all route handlers: maps UpstreamError.kind -> HTTP status.
-UPSTREAM_STATUS: dict[str, int] = {"timeout": 504, "unavailable": 502}
+# "quota" is a distributor rate limit; PartService turns it into a
+# quota_exhausted status rather than an HTTP error.
+UPSTREAM_STATUS: dict[str, int] = {
+    "timeout": 504, "unavailable": 502, "quota": 502}
 
 
 class PartDataSource(ABC):
