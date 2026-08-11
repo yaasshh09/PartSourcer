@@ -28,5 +28,12 @@ class Settings(BaseSettings):
     # Max one forced ?refresh=true upstream hit per key per this window.
     refresh_cooldown_secs: float = 10.0
 
+    # History recorder (SP2a). All optional: unset means the recorder is off
+    # and POST /api/internal/record returns 503.
+    database_url: str | None = None
+    recorder_token: str | None = None
+    recorder_batch_size: int = 500
+    recorder_concurrency: int = 4
+
 
 settings = Settings()
