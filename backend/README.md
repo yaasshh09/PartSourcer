@@ -60,6 +60,55 @@ Loaded via pydantic-settings from the environment or a local `.env`
 | `SQLITE_PATH` | `./partsourcer.db` | cache DB path |
 | `CORS_ORIGINS` | `["http://localhost:5173", "http://127.0.0.1:5173"]` | allowed browser origins (set Vercel origin in prod) |
 | `REFRESH_COOLDOWN_SECS` | `10.0` | min gap between forced `?refresh=true` upstream hits per key |
+| `DATABASE_URL` | unset | Neon Postgres DSN for the history recorder (see below) |
+| `RECORDER_TOKEN` | unset | shared secret for `POST /api/internal/record` (see below) |
+| `RECORDER_BATCH_SIZE` | `500` | max watchlist entries walked per recorder run |
+| `RECORDER_CONCURRENCY` | `4` | max simultaneous upstream fetches during a run |
+
+## History recorder (SP2a)
+
+Price and stock history cannot be backfilled, so the recorder starts the clock
+now and the SP5b price chart reads it later.
+
+**How it works.** The `watchlist` table self-populates: every successful
+`GET /api/part/<lcsc_code>` adds that part, keyed by its normalized MPN. A
+nightly GitHub Actions cron (`.github/workflows/record-history.yml`, 03:00 UTC)
+POSTs to `/api/internal/record`, which walks the watchlist with bounded
+concurrency and appends one row per part to `offer_history`. History is
+append-only: a recorded price is a fact about a moment and is never rewritten.
+
+**Both env vars are optional, and the feature is off until both are set.**
+
+| State | Behaviour |
+|---|---|
+| `DATABASE_URL` unset | No history store is built. The app behaves exactly as it did before SP2a, detail views skip the watchlist write, and `POST /api/internal/record` returns `503 {"detail": "recorder is not configured"}`. |
+| `RECORDER_TOKEN` unset | Same `503`. A misconfigured deploy fails loudly rather than silently accepting anonymous writes. |
+| Both set | The endpoint requires a matching `X-Recorder-Token` header (constant-time compared) and returns `{"recorded": N, "skipped": N, "errors": N}`. A wrong or missing token is `401`. |
+
+`POST /api/internal/record` is not part of the public API. It is not reachable
+from a browser: CORS allows `GET` only.
+
+The watchlist write on a detail view is deliberately non-fatal. If Postgres is
+unreachable the part detail still returns `200`, because a search tool that
+breaks when its analytics database is down is worse than one that quietly
+misses a data point.
+
+Generate a token with:
+
+```bash
+.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Set the same value as `RECORDER_TOKEN` on the backend host and as the
+`RECORDER_TOKEN` GitHub Actions secret. `BACKEND_URL` is the other required
+Actions secret.
+
+Live Postgres tests are marked `live` and deselected by default. Run them
+against a real database with `DATABASE_URL` set:
+
+```bash
+.venv/Scripts/python.exe -m pytest -m live tests/test_history_store_pg.py -v
+```
 
 ## Errors
 

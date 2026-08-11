@@ -1,0 +1,33 @@
+name: Record price history
+
+# Render free spins the backend down after ~15 min idle, so the first
+# request wakes it and can take 30 to 60 seconds. The generous timeout and
+# single retry below absorb that cold start.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the backend
+        continue-on-error: true
+        run: curl -sS --max-time 90 "${{ secrets.BACKEND_URL }}/health" || true
+
+      - name: Trigger the recorder
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            code=$(curl -sS -o /tmp/out.json -w "%{http_code}" \
+              --max-time 300 \
+              -X POST "${{ secrets.BACKEND_URL }}/api/internal/record" \
+              -H "X-Recorder-Token: ${{ secrets.RECORDER_TOKEN }}")
+            if [ "$code" = "200" ]; then
+              echo "recorder ok:"; cat /tmp/out.json; exit 0
+            fi
+            echo "attempt $attempt failed with HTTP $code"; cat /tmp/out.json || true
+            sleep 30
+          done
+          exit 1
