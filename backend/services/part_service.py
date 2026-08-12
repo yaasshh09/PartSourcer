@@ -6,6 +6,7 @@ better than a 502 when two of them answered.
 """
 
 import asyncio
+from datetime import datetime
 from typing import Awaitable, Callable
 
 from models.offer import DistributorStatus
@@ -53,11 +54,12 @@ class PartService:
         self._timeout = timeout_secs
 
     def _status(self, distributor: str, state: str, detail: str | None = None,
-                as_of=None) -> DistributorStatus:
+                as_of: datetime | None = None) -> DistributorStatus:
         return DistributorStatus(distributor=distributor, state=state,
                                  detail=detail, as_of=as_of)
 
-    async def _call_one(self, name: str, make: Call):
+    async def _call_one(self, name: str, make: Call
+                        ) -> tuple[list[RawListing], DistributorStatus]:
         """Never raises. Every failure becomes a status."""
         adapter = self._adapters[name]
         try:
@@ -104,6 +106,10 @@ class PartService:
                                         return_exceptions=True)
         for (name, _), outcome in zip(pending, outcomes):
             if isinstance(outcome, BaseException):
+                if not isinstance(outcome, Exception):
+                    # CancelledError and friends are not this distributor's
+                    # failure to report, they are the caller's to see.
+                    raise outcome
                 statuses.append(self._status(name, "unavailable",
                                              f"{name} failed: {outcome}"))
                 continue
@@ -111,5 +117,9 @@ class PartService:
             listings.extend(got)
             statuses.append(status)
 
+        # gather() preserves input order, but disabled and quota_exhausted
+        # statuses are appended during the loop above while the pending
+        # ones are appended after gather, so insertion order interleaves
+        # wrong. Sort back into canonical order to fix that.
         statuses.sort(key=lambda s: ALL_DISTRIBUTORS.index(s.distributor))
         return listings, statuses

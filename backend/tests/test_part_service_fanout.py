@@ -107,12 +107,14 @@ async def test_an_already_exhausted_distributor_is_never_called():
 
 
 async def test_a_disabled_distributor_is_reported_and_never_called():
-    svc = service([FakeAdapter("lcsc")],
+    digikey = FakeAdapter("digikey")
+    svc = service([FakeAdapter("lcsc"), digikey],
                   disabled={"digikey": "no credentials configured"})
     _, sources = await svc.fan_out(call)
     by = {s.distributor: s for s in sources}
     assert by["digikey"].state == "disabled"
     assert by["digikey"].detail == "no credentials configured"
+    assert digikey.calls == 0
 
 
 async def test_an_ok_status_carries_the_oldest_listing_timestamp():
@@ -139,3 +141,23 @@ async def test_a_successful_call_is_counted_against_the_daily_quota():
     q = QuotaTracker()
     await service([FakeAdapter("lcsc")], quota=q).fan_out(call)
     assert q.calls_today("lcsc") == 1
+
+
+async def test_sources_are_called_concurrently_not_one_after_another():
+    started = asyncio.Event()
+
+    class Waiter(FakeAdapter):
+        async def search(self, query, limit):
+            started.set()
+            return await super().search(query, limit)
+
+    class Blocker(FakeAdapter):
+        async def search(self, query, limit):
+            await asyncio.wait_for(started.wait(), 1.0)
+            return await super().search(query, limit)
+
+    # lcsc runs first in ALL_DISTRIBUTORS order, so it must not finish
+    # before mouser has started.
+    svc = service([Blocker("lcsc"), Waiter("mouser")])
+    listings, sources = await svc.fan_out(call)
+    assert [s.state for s in sources] == ["ok", "ok"]
