@@ -9,8 +9,11 @@ import asyncio
 from datetime import datetime
 from typing import Awaitable, Callable
 
-from models.offer import DistributorStatus
+from models.offer import DistributorStatus, Offer, Part, SearchResponseV2
 from services.adapters.base import DistributorAdapter, RawListing, UpstreamError
+from services.cheapest import compute_cheapest
+from services.matching import (normalize_exact, packaging_note,
+                               strip_packaging_suffix)
 from services.quota import QuotaTracker
 
 ALL_DISTRIBUTORS: tuple[str, ...] = ("lcsc", "mouser", "digikey")
@@ -35,6 +38,20 @@ def disabled_reasons(settings) -> dict[str, str]:
 
 
 Call = Callable[[DistributorAdapter], Awaitable[list[RawListing]]]
+
+
+def _first_populated(rows: list[RawListing], attr: str) -> str | None:
+    """First non-empty value across a part's listings.
+
+    Listings arrive in distributor precedence order, so this closes v1's
+    honest gaps: LCSC carries package but no brand or datasheet, and
+    Mouser and DigiKey carry brand and datasheet but no package.
+    """
+    for row in rows:
+        value = getattr(row, attr)
+        if value:
+            return value
+    return None
 
 
 class PartService:
@@ -123,3 +140,71 @@ class PartService:
         # wrong. Sort back into canonical order to fix that.
         statuses.sort(key=lambda s: ALL_DISTRIBUTORS.index(s.distributor))
         return listings, statuses
+
+    def merge(self, listings: list[RawListing],
+              sources: list[DistributorStatus]) -> list[Part]:
+        """Group listings into parts by canonical MPN, two tiers deep."""
+        exact: dict[str, list[RawListing]] = {}
+        seen: list[str] = []
+        for row in listings:
+            key = normalize_exact(row.mpn)
+            if not key:
+                continue                      # not a part, drop it
+            if key not in exact:
+                exact[key] = []
+                seen.append(key)
+            exact[key].append(row)
+
+        # Fold a packaging variant into its base only when that base is
+        # itself a real result. A variant standing alone is its own part,
+        # because inventing a base we never saw would be a claim we cannot
+        # support.
+        grouped: dict[str, list[tuple[RawListing, str, str | None]]] = {}
+        order: list[str] = []
+        for key in seen:
+            base, suffix = strip_packaging_suffix(key)
+            if suffix and base in exact:
+                target, tier, note = base, "packaging", packaging_note(suffix)
+            else:
+                target, tier, note = key, "exact", None
+            if target not in grouped:
+                grouped[target] = []
+                order.append(target)
+            grouped[target].extend((row, tier, note) for row in exact[key])
+
+        parts: list[Part] = []
+        for key in order:
+            rows = grouped[key]
+            offers = [
+                Offer(distributor=row.distributor, sku=row.sku,
+                      mpn_as_listed=row.mpn, match_tier=tier, match_note=note,
+                      stock=row.stock, in_stock=row.in_stock,
+                      price_usd=row.price, price_breaks=row.price_breaks,
+                      currency=row.currency, product_url=row.product_url,
+                      as_of=row.as_of)
+                for row, tier, note in rows
+            ]
+            claim, reason = compute_cheapest(offers, sources)
+            plain = [row for row, tier, _ in rows if tier == "exact"] or \
+                [row for row, _, _ in rows]
+            specs = [row for row, _, _ in rows]
+            parts.append(Part(
+                mpn_key=key,
+                mpn=plain[0].mpn,
+                brand=_first_populated(specs, "brand"),
+                package=_first_populated(specs, "package") or "",
+                description=_first_populated(specs, "description") or "",
+                datasheet_url=_first_populated(specs, "datasheet_url"),
+                offers=offers,
+                cheapest=claim,
+                cheapest_unavailable_reason=reason,
+            ))
+        return parts
+
+    async def search(self, query: str, limit: int,
+                     page: int = 1) -> SearchResponseV2:
+        listings, sources = await self.fan_out(
+            lambda adapter: adapter.search(query, limit))
+        return SearchResponseV2(page=page, query=query,
+                                results=self.merge(listings, sources),
+                                sources=sources)
