@@ -18,8 +18,9 @@ def disabled_reasons(settings) -> dict[str, str]:
     and DigiKey stays dark with no code branch.
     """
     off: dict[str, str] = {}
-    if not settings.mouser_api_key:
+    if not (settings.mouser_api_key or "").strip():
         off["mouser"] = NO_CREDENTIALS
-    if not (settings.digikey_client_id and settings.digikey_client_secret):
+    if not ((settings.digikey_client_id or "").strip()
+            and (settings.digikey_client_secret or "").strip()):
         off["digikey"] = NO_CREDENTIALS
     return off

@@ -35,5 +35,10 @@ def test_an_empty_string_key_counts_as_absent():
     assert set(off) == {"mouser", "digikey"}
 
 
+def test_a_whitespace_only_key_counts_as_absent():
+    off = disabled_reasons(cfg(mouser="   ", dk_id=" ", dk_secret="\t"))
+    assert set(off) == {"mouser", "digikey"}
+
+
 def test_the_distributor_order_is_fixed():
     assert ALL_DISTRIBUTORS == ("lcsc", "mouser", "digikey")
