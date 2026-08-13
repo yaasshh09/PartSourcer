@@ -137,6 +137,24 @@ async def test_an_unexpected_exception_degrades_instead_of_propagating():
     assert len(listings) == 1
 
 
+async def test_an_unmapped_exception_never_leaks_its_message_into_the_status():
+    # httpx puts the request URL in the message, and the Mouser API key
+    # travels in the query string, so the message of an exception we did
+    # not compose is never safe to publish. Only the type is.
+    leaky = RuntimeError(
+        "Server error '500 Internal Server Error' for url "
+        "'https://api.example.invalid/api/v1/search/keyword?apiKey=SECRET123'")
+    bad = FakeAdapter("mouser", raises=leaky)
+    _, sources = await service([bad]).fan_out(call)
+
+    status = sources[0]
+    assert status.state == "unavailable"
+    assert "SECRET123" not in (status.detail or "")
+    assert "apiKey" not in (status.detail or "")
+    assert "SECRET123" not in str(status.model_dump())
+    assert "RuntimeError" in status.detail
+
+
 async def test_a_successful_call_is_counted_against_the_daily_quota():
     q = QuotaTracker()
     await service([FakeAdapter("lcsc")], quota=q).fan_out(call)

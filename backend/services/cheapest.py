@@ -18,8 +18,13 @@ def compute_cheapest(
     sources: list[DistributorStatus],
 ) -> tuple[Cheapest | None, str | None]:
     """Return (claim, None) or (None, human-readable reason)."""
-    answered = sum(1 for s in sources if s.state == "ok")
-    asked = len(sources)
+    # A disabled distributor has no credentials, so it was never contacted.
+    # Counting it would describe a source that was asked and failed, and in
+    # the deploy where only LCSC is configured that reads as two dead
+    # distributors rather than two we never set up.
+    contacted = [s for s in sources if s.state != "disabled"]
+    answered = sum(1 for s in contacted if s.state == "ok")
+    asked = len(contacted)
 
     if answered < MIN_SOURCES_FOR_CLAIM:
         return None, (f"compared {answered} of {asked} sources, "

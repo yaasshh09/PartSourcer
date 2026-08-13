@@ -19,6 +19,12 @@ def ok(*names):
             for n in names]
 
 
+def disabled(*names):
+    return [DistributorStatus(distributor=n, state="disabled",
+                              detail="no credentials configured", as_of=None)
+            for n in names]
+
+
 def all_three(ok_names):
     states = []
     for n in ("lcsc", "mouser", "digikey"):
@@ -84,3 +90,25 @@ def test_ties_prefer_earlier_distributor_precedence():
         [offer("mouser", 1.00), offer("lcsc", 1.00)],
         all_three(["lcsc", "mouser"]))
     assert c.distributor == "lcsc"
+
+
+def test_a_disabled_source_is_not_counted_as_asked():
+    # DigiKey has no credentials, so it was never contacted. Counting it
+    # would describe a source we asked and that failed, which is not what
+    # happened.
+    c, reason = compute_cheapest(
+        [offer("lcsc", 1.82), offer("mouser", 2.94)],
+        ok("lcsc", "mouser") + disabled("digikey"))
+    assert reason is None
+    assert (c.compared_sources, c.of_sources) == (2, 2)
+
+
+def test_the_credentialed_lcsc_only_deploy_reads_one_of_one_and_claims_nothing():
+    # The live default: only LCSC is configured. One answering source is
+    # still short of quorum, so there is no cheapest, but the count must
+    # not pretend two other distributors were asked.
+    c, reason = compute_cheapest(
+        [offer("lcsc", 1.82)],
+        ok("lcsc") + disabled("mouser", "digikey"))
+    assert c is None
+    assert reason == "compared 1 of 1 sources, need at least 2 to name a cheapest"

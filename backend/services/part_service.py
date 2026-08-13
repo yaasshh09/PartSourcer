@@ -129,7 +129,13 @@ class PartService:
             state = "timeout" if exc.kind == "timeout" else "unavailable"
             return [], self._status(name, state, str(exc))
         except Exception as exc:                    # noqa: BLE001
-            return [], self._status(name, "unavailable", f"{name} failed: {exc}")
+            # Type only, never the message. A detail we did not compose can
+            # carry anything the exception saw, and httpx puts the request
+            # URL in its message while the Mouser key rides in the query
+            # string. An unmapped failure gives a caller nothing to act on
+            # anyway, so there is nothing to lose by dropping it.
+            return [], self._status(name, "unavailable",
+                                    f"{name} failed: {type(exc).__name__}")
 
         self._quota.record_call(name)
         as_of = min((r.as_of for r in listings), default=None)
@@ -295,6 +301,10 @@ def build_part_service(settings, lcsc_client: "httpx.AsyncClient"):
         adapters["digikey"] = DigiKeyAdapter(client, tokens,
                                              settings.digikey_client_id)
 
+    # No daily_limits on purpose, so the local counter is unlimited and
+    # record_call and calls_today only observe. Nothing here gates a call
+    # today except the exhaustion marker an upstream 429 sets. Part 3 wires
+    # the per-distributor limits and persists the marker across restarts.
     service = PartService(adapters=adapters, quota=QuotaTracker(), disabled=off,
                           timeout_secs=settings.distributor_timeout_secs)
     return service, created
