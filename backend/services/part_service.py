@@ -250,3 +250,51 @@ class PartService:
         return SearchResponseV2(page=page, query=query,
                                 results=parts[start:start + limit],
                                 sources=sources)
+
+    @property
+    def timeout_secs(self) -> float:
+        return self._timeout
+
+    def adapter_names(self) -> list[str]:
+        return [n for n in ALL_DISTRIBUTORS if n in self._adapters]
+
+    def disabled_names(self) -> list[str]:
+        return [n for n in ALL_DISTRIBUTORS if n in self._disabled]
+
+
+def build_part_service(settings, lcsc_client: "httpx.AsyncClient"):
+    """Build the registry from whichever credentials exist.
+
+    Returns (service, created_clients). The caller owns the returned
+    clients and must close them on shutdown. The LCSC client is passed in
+    because it already exists and is shared with the v1 datasource.
+    """
+    import httpx
+
+    from services.adapters.digikey import DigiKeyAdapter
+    from services.adapters.digikey_auth import DigiKeyTokenClient
+    from services.adapters.lcsc import LcscAdapter
+    from services.adapters.mouser import MouserAdapter
+
+    off = disabled_reasons(settings)
+    adapters: dict[str, DistributorAdapter] = {"lcsc": LcscAdapter(lcsc_client)}
+    created: list[httpx.AsyncClient] = []
+
+    if "mouser" not in off:
+        client = httpx.AsyncClient(base_url=settings.mouser_base_url,
+                                   timeout=settings.distributor_timeout_secs)
+        created.append(client)
+        adapters["mouser"] = MouserAdapter(client, settings.mouser_api_key)
+
+    if "digikey" not in off:
+        client = httpx.AsyncClient(base_url=settings.digikey_base_url,
+                                   timeout=settings.distributor_timeout_secs)
+        created.append(client)
+        tokens = DigiKeyTokenClient(client, settings.digikey_client_id,
+                                    settings.digikey_client_secret)
+        adapters["digikey"] = DigiKeyAdapter(client, tokens,
+                                             settings.digikey_client_id)
+
+    service = PartService(adapters=adapters, quota=QuotaTracker(), disabled=off,
+                          timeout_secs=settings.distributor_timeout_secs)
+    return service, created
