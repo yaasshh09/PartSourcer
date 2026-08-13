@@ -43,15 +43,51 @@ Call = Callable[[DistributorAdapter], Awaitable[list[RawListing]]]
 def _first_populated(rows: list[RawListing], attr: str) -> str | None:
     """First non-empty value across a part's listings.
 
-    Listings arrive in distributor precedence order, so this closes v1's
-    honest gaps: LCSC carries package but no brand or datasheet, and
-    Mouser and DigiKey carry brand and datasheet but no package.
+    Rows arrive in spec precedence order (see _ranked_listings), so this
+    closes v1's honest gaps: LCSC carries package but no brand or
+    datasheet, and Mouser and DigiKey carry brand and datasheet but no
+    package.
     """
     for row in rows:
         value = getattr(row, attr)
         if value:
             return value
     return None
+
+
+def _ranked_listings(rows: list[tuple[RawListing, str, str | None]]
+                     ) -> list[RawListing]:
+    """A part's listings in spec precedence order.
+
+    Exact-tier first, so a folded packaging variant never gets to name the
+    part or describe it, then canonical distributor order, so the answer
+    does not depend on which distributor happened to be seen first. The
+    grouping in merge orders rows by first-seen key, which is neither.
+    """
+    def rank(item: tuple[RawListing, str, str | None]) -> tuple[int, int]:
+        row, tier, _ = item
+        return (0 if tier == "exact" else 1,
+                ALL_DISTRIBUTORS.index(row.distributor))
+
+    return [row for row, _, _ in sorted(rows, key=rank)]
+
+
+def _fold_target(key: str, present: dict[str, list[RawListing]]) -> str:
+    """The part key a listing key folds into, followed to its end.
+
+    A variant folds only into a base that is itself a real result, because
+    inventing a base we never saw would be a claim we cannot support. The
+    walk repeats rather than stopping after one strip: with X, X-TR and
+    X-TR-REEL all in the results, X-TR-REEL belongs on X, not on an X-TR
+    that has itself been folded away and so claims no listing of its own.
+    Every step strictly shortens the key, so this terminates.
+    """
+    target = key
+    while True:
+        base, suffix = strip_packaging_suffix(target)
+        if not suffix or base not in present:
+            return target
+        target = base
 
 
 class PartService:
@@ -155,18 +191,19 @@ class PartService:
                 seen.append(key)
             exact[key].append(row)
 
-        # Fold a packaging variant into its base only when that base is
-        # itself a real result. A variant standing alone is its own part,
-        # because inventing a base we never saw would be a claim we cannot
-        # support.
+        # Fold each variant onto the base it really belongs to. A variant
+        # with no base among the results stands alone as its own part.
         grouped: dict[str, list[tuple[RawListing, str, str | None]]] = {}
         order: list[str] = []
         for key in seen:
-            base, suffix = strip_packaging_suffix(key)
-            if suffix and base in exact:
-                target, tier, note = base, "packaging", packaging_note(suffix)
+            target = _fold_target(key, exact)
+            if target == key:
+                tier, note = "exact", None
             else:
-                target, tier, note = key, "exact", None
+                # Name the whole difference between what was listed and
+                # what the part is called, not just the last suffix
+                # stripped, so a reader can check the claim by eye.
+                tier, note = "packaging", packaging_note(key[len(target):])
             if target not in grouped:
                 grouped[target] = []
                 order.append(target)
@@ -185,12 +222,10 @@ class PartService:
                 for row, tier, note in rows
             ]
             claim, reason = compute_cheapest(offers, sources)
-            plain = [row for row, tier, _ in rows if tier == "exact"] or \
-                [row for row, _, _ in rows]
-            specs = [row for row, _, _ in rows]
+            specs = _ranked_listings(rows)
             parts.append(Part(
                 mpn_key=key,
-                mpn=plain[0].mpn,
+                mpn=specs[0].mpn,
                 brand=_first_populated(specs, "brand"),
                 package=_first_populated(specs, "package") or "",
                 description=_first_populated(specs, "description") or "",
@@ -203,8 +238,15 @@ class PartService:
 
     async def search(self, query: str, limit: int,
                      page: int = 1) -> SearchResponseV2:
+        # An adapter takes a limit and no offset, so paging happens here:
+        # ask upstream for enough rows to reach the page, then window the
+        # merged parts locally. v1 pages the same way in datasource.search.
+        # Echoing a page number over page-1 results would be a lie.
+        want = page * limit
         listings, sources = await self.fan_out(
-            lambda adapter: adapter.search(query, limit))
+            lambda adapter: adapter.search(query, want))
+        parts = self.merge(listings, sources)
+        start = (page - 1) * limit
         return SearchResponseV2(page=page, query=query,
-                                results=self.merge(listings, sources),
+                                results=parts[start:start + limit],
                                 sources=sources)

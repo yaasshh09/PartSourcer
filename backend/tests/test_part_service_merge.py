@@ -99,6 +99,56 @@ def test_specs_come_from_whichever_distributor_actually_has_them():
     assert p.description == "ARM MCU"
 
 
+def test_specs_prefer_the_exact_listing_over_a_folded_variant():
+    parts = svc().merge(
+        [listing("mouser", "STM32F103C8T6-TR", brand="Mouser Listed Brand",
+                 package="LQFP-48 reel", description="MCU on tape and reel"),
+         listing("lcsc", "STM32F103C8T6", brand="STMicroelectronics",
+                 package="LQFP-48", description="ARM MCU")],
+        ok("lcsc", "mouser"))
+    p = parts[0]
+    assert p.brand == "STMicroelectronics"
+    assert p.package == "LQFP-48"
+    assert p.description == "ARM MCU"
+
+
+def test_specs_follow_distributor_precedence_not_input_order():
+    parts = svc().merge(
+        [listing("mouser", "STM32F103C8T6", brand="Mouser Listed Brand",
+                 package="LQFP48", description="MCU, 32-bit"),
+         listing("lcsc", "STM32F103C8T6", brand="STMicroelectronics",
+                 package="LQFP-48", description="ARM MCU")],
+        ok("lcsc", "mouser"))
+    p = parts[0]
+    assert p.brand == "STMicroelectronics"
+    assert p.package == "LQFP-48"
+    assert p.description == "ARM MCU"
+
+
+def test_a_two_step_variant_folds_down_to_the_base_that_really_exists():
+    parts = svc().merge([listing("lcsc", "STM32F103C8T6"),
+                         listing("mouser", "STM32F103C8T6-TR"),
+                         listing("digikey", "STM32F103C8T6-TR-REEL")],
+                        ok("lcsc", "mouser", "digikey"))
+    assert [p.mpn_key for p in parts] == ["STM32F103C8T6"]
+    tiers = {o.distributor: o.match_tier for o in parts[0].offers}
+    assert tiers == {"lcsc": "exact", "mouser": "packaging",
+                     "digikey": "packaging"}
+    note = [o.match_note for o in parts[0].offers
+            if o.distributor == "digikey"][0]
+    assert "-TR-REEL" in note
+    assert parts[0].cheapest.distributor == "lcsc"
+
+
+def test_a_two_step_variant_stops_at_the_deepest_base_present():
+    parts = svc().merge([listing("mouser", "STM32F103C8T6-TR"),
+                         listing("digikey", "STM32F103C8T6-TR-REEL")],
+                        ok("mouser", "digikey"))
+    assert [p.mpn_key for p in parts] == ["STM32F103C8T6-TR"]
+    tiers = {o.distributor: o.match_tier for o in parts[0].offers}
+    assert tiers == {"mouser": "exact", "digikey": "packaging"}
+
+
 def test_part_as_of_is_the_oldest_contributing_offer():
     parts = svc().merge([listing("lcsc", "STM32F103C8T6", as_of=T1),
                          listing("mouser", "STM32F103C8T6", as_of=T0)],
@@ -132,18 +182,50 @@ def test_a_listing_with_an_unusable_mpn_is_dropped():
     assert [p.mpn_key for p in parts] == ["AAA1"]
 
 
+class FakePages:
+    """Returns as many distinct listings as it was asked for, and remembers
+    every limit it was asked with."""
+
+    name = "lcsc"
+
+    def __init__(self):
+        self.limits = []
+
+    async def search(self, query, limit):
+        self.limits.append(limit)
+        return [listing("lcsc", f"MPN{i:02d}") for i in range(limit)]
+
+    async def lookup_mpn(self, mpn):
+        return await self.search(mpn, 10)
+
+
 async def test_search_wraps_the_fan_out_in_a_response_envelope():
-    class Fake:
-        name = "lcsc"
-
-        async def search(self, query, limit):
-            return [listing("lcsc", "STM32F103C8T6")]
-
-        async def lookup_mpn(self, mpn):
-            return await self.search(mpn, 10)
-
-    service = PartService(adapters={"lcsc": Fake()}, quota=QuotaTracker())
-    resp = await service.search("stm32", limit=10, page=2)
-    assert resp.page == 2 and resp.query == "stm32"
-    assert [p.mpn_key for p in resp.results] == ["STM32F103C8T6"]
+    fake = FakePages()
+    service = PartService(adapters={"lcsc": fake}, quota=QuotaTracker())
+    resp = await service.search("stm32", limit=3, page=1)
+    assert resp.page == 1 and resp.query == "stm32"
+    assert fake.limits == [3]
+    assert [p.mpn_key for p in resp.results] == ["MPN00", "MPN01", "MPN02"]
     assert [s.distributor for s in resp.sources] == ["lcsc"]
+
+
+async def test_a_later_page_returns_that_page_not_the_first_one():
+    fake = FakePages()
+    service = PartService(adapters={"lcsc": fake}, quota=QuotaTracker())
+    resp = await service.search("stm32", limit=3, page=2)
+    assert resp.page == 2 and resp.query == "stm32"
+    assert fake.limits == [6]        # asked upstream for page * limit rows
+    assert [p.mpn_key for p in resp.results] == ["MPN03", "MPN04", "MPN05"]
+    assert [s.distributor for s in resp.sources] == ["lcsc"]
+
+
+async def test_a_page_past_the_end_is_empty_rather_than_wrapping_around():
+    class Short(FakePages):
+        async def search(self, query, limit):
+            self.limits.append(limit)
+            return [listing("lcsc", "MPN00")]
+
+    service = PartService(adapters={"lcsc": Short()}, quota=QuotaTracker())
+    resp = await service.search("stm32", limit=3, page=2)
+    assert resp.page == 2
+    assert resp.results == []
