@@ -54,7 +54,8 @@ class DigiKeyAdapter(DistributorAdapter):
                                 "digikey returned a non-object JSON body")
         return data
 
-    def _to_listing(self, product: dict, as_of: datetime) -> RawListing:
+    def _to_listing(self, product: dict, as_of: datetime,
+                    rank: int = 0) -> RawListing:
         variations = product.get("ProductVariations") or []
         first = variations[0] if variations else {}
         breaks = [{"qty": int(b.get("BreakQuantity") or 0),
@@ -82,6 +83,7 @@ class DigiKeyAdapter(DistributorAdapter):
             datasheet_url=product.get("DatasheetUrl") or None,
             product_url=product.get("ProductUrl") or None,
             as_of=as_of,
+            rank=rank,
         )
 
     async def _keyword(self, keyword: str, limit: int) -> list[RawListing]:
@@ -91,7 +93,8 @@ class DigiKeyAdapter(DistributorAdapter):
         data = await self._post("/products/v4/search/keyword",
                                 {"Keywords": keyword, "Limit": limit, "Offset": 0})
         as_of = datetime.now(timezone.utc)
-        return [self._to_listing(p, as_of) for p in (data.get("Products") or [])]
+        return [self._to_listing(p, as_of, rank=i)
+                for i, p in enumerate(data.get("Products") or [])]
 
     async def search(self, query: str, limit: int) -> list[RawListing]:
         return await self._keyword(query, limit)

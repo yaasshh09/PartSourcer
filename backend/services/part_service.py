@@ -72,6 +72,14 @@ def _ranked_listings(rows: list[tuple[RawListing, str, str | None]]
     return [row for row, _, _ in sorted(rows, key=rank)]
 
 
+def _part_rank(rows: list[tuple[RawListing, str, str | None]]) -> tuple[int, int]:
+    """A part's position is its best listing's position, tie-broken by
+    canonical distributor order so the answer never depends on which
+    distributor happened to answer first."""
+    return min((row.rank, ALL_DISTRIBUTORS.index(row.distributor))
+               for row, _, _ in rows)
+
+
 def _fold_target(key: str, present: dict[str, list[RawListing]]) -> str:
     """The part key a listing key folds into, followed to its end.
 
@@ -219,7 +227,7 @@ class PartService:
             grouped[target].extend((row, tier, note) for row in exact[key])
 
         parts: list[Part] = []
-        for key in order:
+        for key in sorted(order, key=lambda k: _part_rank(grouped[k])):
             rows = grouped[key]
             offers = [
                 Offer(distributor=row.distributor, sku=row.sku,

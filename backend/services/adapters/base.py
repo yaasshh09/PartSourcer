@@ -43,6 +43,10 @@ class RawListing:
     # exactly as LCSC leaves price_breaks null.
     is_basic: bool | None = None
     is_preferred: bool | None = None
+    # Zero-based index within this distributor's own response. The merge uses
+    # the best rank across a part's listings so a part only one distributor
+    # carries is not buried under every hit from an earlier distributor.
+    rank: int = 0
 
 
 class DistributorAdapter(ABC):

@@ -43,7 +43,7 @@ class LcscAdapter(DistributorAdapter):
                                 f"jlcsearch response missing '{list_key}'")
         return items
 
-    def _to_listing(self, raw: dict, as_of: datetime) -> RawListing:
+    def _to_listing(self, raw: dict, as_of: datetime, rank: int = 0) -> RawListing:
         code = f"C{raw['lcsc']}"
         stock = raw.get("stock") or 0
         return RawListing(
@@ -63,6 +63,7 @@ class LcscAdapter(DistributorAdapter):
             as_of=as_of,
             is_basic=raw.get("is_basic"),
             is_preferred=raw.get("is_preferred"),
+            rank=rank,
         )
 
     async def search(self, query: str, limit: int) -> list[RawListing]:
@@ -72,7 +73,8 @@ class LcscAdapter(DistributorAdapter):
         items = await self._fetch_json("/api/search",
                                        {"q": query, "limit": limit}, "components")
         as_of = datetime.now(timezone.utc)
-        return [self._to_listing(raw, as_of) for raw in items]
+        return [self._to_listing(raw, as_of, rank=i)
+                for i, raw in enumerate(items)]
 
     async def lookup_mpn(self, mpn: str) -> list[RawListing]:
         listings = await self.search(mpn, limit=20)

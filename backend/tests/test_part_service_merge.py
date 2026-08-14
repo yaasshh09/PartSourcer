@@ -247,3 +247,27 @@ def test_merge_leaves_the_flags_null_for_other_distributors():
 
     assert parts[0].offers[0].is_basic is None
     assert parts[0].offers[0].is_preferred is None
+
+
+def test_merge_orders_parts_by_best_rank_not_by_distributor():
+    """A Mouser-only part that Mouser ranked first must beat an LCSC part
+    that LCSC ranked third. Source-blocked order buries the better match."""
+    lcsc_third = listing("lcsc", "LCSC-ONLY-PART")
+    lcsc_third.rank = 2
+    mouser_first = listing("mouser", "MOUSER-ONLY-PART")
+    mouser_first.rank = 0
+
+    parts = svc().merge([lcsc_third, mouser_first], ok("lcsc", "mouser"))
+
+    assert [p.mpn_key for p in parts] == ["MOUSER-ONLY-PART", "LCSC-ONLY-PART"]
+
+
+def test_merge_breaks_a_rank_tie_by_distributor_precedence():
+    lcsc = listing("lcsc", "PART-A")
+    lcsc.rank = 0
+    mouser = listing("mouser", "PART-B")
+    mouser.rank = 0
+
+    parts = svc().merge([mouser, lcsc], ok("lcsc", "mouser"))
+
+    assert [p.mpn_key for p in parts] == ["PART-A", "PART-B"]

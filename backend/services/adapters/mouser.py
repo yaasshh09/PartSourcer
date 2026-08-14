@@ -65,7 +65,7 @@ class MouserAdapter(DistributorAdapter):
             raise UpstreamError("unavailable", f"mouser error: {first}")
         return data
 
-    def _to_listing(self, part: dict, as_of: datetime) -> RawListing:
+    def _to_listing(self, part: dict, as_of: datetime, rank: int = 0) -> RawListing:
         breaks = []
         for b in part.get("PriceBreaks") or []:
             parsed = parse_money(b.get("Price"))
@@ -95,6 +95,7 @@ class MouserAdapter(DistributorAdapter):
             datasheet_url=part.get("DataSheetUrl") or None,
             product_url=part.get("ProductDetailUrl") or None,
             as_of=as_of,
+            rank=rank,
         )
 
     async def _keyword(self, keyword: str, limit: int) -> list[RawListing]:
@@ -106,7 +107,7 @@ class MouserAdapter(DistributorAdapter):
                                        "startingRecord": 0}})
         parts = (data.get("SearchResults") or {}).get("Parts") or []
         as_of = datetime.now(timezone.utc)
-        return [self._to_listing(p, as_of) for p in parts]
+        return [self._to_listing(p, as_of, rank=i) for i, p in enumerate(parts)]
 
     async def search(self, query: str, limit: int) -> list[RawListing]:
         return await self._keyword(query, limit)
