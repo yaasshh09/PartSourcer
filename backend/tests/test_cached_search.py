@@ -7,6 +7,7 @@ from cache.store import SqliteCacheStore
 from services.adapters.base import DistributorAdapter, RawListing, UpstreamError
 from services.part_service import PartService
 from services.quota import QuotaTracker
+from services.throttle import RefreshThrottle
 
 pytestmark = pytest.mark.anyio
 
@@ -141,6 +142,35 @@ async def test_a_repair_appends_new_keys_instead_of_reordering(store):
     result = await cached.search("stm32", 1)
 
     assert [p.mpn_key for p in result.results] == ["PART-A", "PART-B", "PART-NEW"]
+
+
+async def test_a_forced_refresh_re_asks_a_source_the_cache_could_have_served(store):
+    lcsc = CountingAdapter("lcsc", ["PART-A"])
+    cached = build(store, {"lcsc": lcsc})
+    await cached.search("stm32", 1)
+
+    await cached.search("stm32", 1, refresh=True)
+
+    assert lcsc.calls == 2
+
+
+async def test_a_throttled_refresh_serves_that_source_from_cache_instead_of_failing(store):
+    """The cooldown bounds how often a client can force an upstream hit. A
+    blocked refresh falls back to cached data rather than denying the request."""
+    lcsc = CountingAdapter("lcsc", ["PART-A"])
+    service = PartService(adapters={"lcsc": lcsc}, quota=QuotaTracker(),
+                          now=lambda: T0)
+    cached = CachedPartService(service=service, store=store, offer_ttl_secs=TTL,
+                               now=lambda: T0,
+                               throttle=RefreshThrottle(60.0, now=lambda: 0.0))
+    await cached.search("stm32", 1)
+
+    first = await cached.search("stm32", 1, refresh=True)
+    second = await cached.search("stm32", 1, refresh=True)
+
+    assert lcsc.calls == 2                      # the second refresh was blocked
+    assert [p.mpn_key for p in second.results] == [p.mpn_key for p in first.results]
+    assert [s.state for s in second.sources] == ["ok"]
 
 
 async def test_an_empty_query_asks_nothing(store):
