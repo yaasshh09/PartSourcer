@@ -116,6 +116,13 @@ class CachedPartService:
                 listing=listing_to_dict(listing), as_of=listing.as_of))
         await self._store.put_offers(rows)
 
+    def _log_sources(self, statuses: list[DistributorStatus]) -> None:
+        """One line per distributor outcome. Never the detail: an unmapped
+        failure's detail is a type name today, but keeping details out of logs
+        entirely means there is one rule to check rather than two."""
+        for status in statuses:
+            log.info("source=%s state=%s", status.distributor, status.state)
+
     def _merge_statuses(self, cached: list[dict],
                         fresh: list[DistributorStatus]) -> list[DistributorStatus]:
         by_name = {s["distributor"]: DistributorStatus.model_validate(s)
@@ -148,6 +155,7 @@ class CachedPartService:
                 [s.model_dump(mode="json") for s in result.statuses],
                 self._now())
             await self._write_offers(result.listings, result.parts)
+            self._log_sources(result.statuses)
             return self._window(query, page, result.parts, result.statuses)
 
         served, retry = self._retry_set(row.statuses, f"search:{key}", refresh)
@@ -157,6 +165,7 @@ class CachedPartService:
             log.info("search hit q=%r page=%d served=%s", key, page,
                      sorted(served))
             statuses = [DistributorStatus.model_validate(s) for s in row.statuses]
+            self._log_sources(statuses)
             parts = _spine_order(self._service.merge(cached_listings, statuses),
                                  row.part_keys)
             return self._window(query, page, parts, statuses)
@@ -166,6 +175,7 @@ class CachedPartService:
         result = await self._service.collect(
             lambda adapter: adapter.search(query, row.limit_used), only=retry)
         statuses = self._merge_statuses(row.statuses, result.statuses)
+        self._log_sources(statuses)
         parts = _spine_order(
             self._service.merge(cached_listings + result.listings, statuses),
             row.part_keys)
@@ -188,9 +198,11 @@ class CachedPartService:
         row = await self._store.get_part_status(mpn_key)
 
         if row is None or not self._fresh(row.as_of):
+            log.info("lookup miss key=%s", mpn_key)
             result = await self._service.lookup(mpn_key)
             await self._commit_lookup(mpn_key, result.listings, result.parts,
                                       result.statuses)
+            self._log_sources(result.statuses)
             part, canonical = select_part(result.parts, mpn_key)
             return part, result.statuses, canonical
 
@@ -198,14 +210,19 @@ class CachedPartService:
         cached_listings = await self._cached_listings([mpn_key], served)
 
         if not retry:
+            log.info("lookup hit key=%s served=%s", mpn_key, sorted(served))
             statuses = [DistributorStatus.model_validate(s) for s in row.statuses]
+            self._log_sources(statuses)
             parts = self._service.merge(cached_listings, statuses)
             part, canonical = select_part(parts, mpn_key)
             return part, statuses, canonical
 
+        log.info("lookup partial key=%s served=%s retry=%s", mpn_key,
+                 sorted(served), sorted(retry))
         result = await self._service.collect(
             lambda adapter: adapter.lookup_mpn(mpn_key), only=retry)
         statuses = self._merge_statuses(row.statuses, result.statuses)
+        self._log_sources(statuses)
         parts = self._service.merge(cached_listings + result.listings, statuses)
         await self._commit_lookup(mpn_key, result.listings, parts, statuses)
         part, canonical = select_part(parts, mpn_key)

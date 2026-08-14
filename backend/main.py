@@ -1,5 +1,6 @@
 """PartSourcer API: application entry point."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -24,6 +25,10 @@ async def lifespan(app: FastAPI):
     finally:
         await deps.shutdown()
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 app = FastAPI(title="PartSourcer API", lifespan=lifespan)
 
