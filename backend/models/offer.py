@@ -69,7 +69,7 @@ class Part(BaseModel):
         return min(o.as_of for o in self.offers)
 
 
-class SearchResponseV2(BaseModel):
+class SearchResponse(BaseModel):
     page: int
     query: str
     results: list[Part]

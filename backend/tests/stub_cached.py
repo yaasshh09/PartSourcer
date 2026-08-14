@@ -7,7 +7,7 @@ test_cached_search.py and test_cached_lookup.py.
 
 from datetime import datetime, timezone
 
-from models.offer import (DistributorStatus, Offer, Part, SearchResponseV2)
+from models.offer import DistributorStatus, Offer, Part, SearchResponse
 
 AS_OF = datetime(2026, 8, 14, 9, 0, tzinfo=timezone.utc)
 
@@ -46,12 +46,12 @@ class StubCached:
         self._skus = dict(skus or {})
         self._error = error
 
-    async def search(self, query, page=1, refresh=False) -> SearchResponseV2:
+    async def search(self, query, page=1, refresh=False) -> SearchResponse:
         if self._error is not None:
             raise self._error
         results = [self._part] if self._part is not None else []
-        return SearchResponseV2(page=page, query=query, results=results,
-                                sources=self._sources)
+        return SearchResponse(page=page, query=query, results=results,
+                              sources=self._sources)
 
     async def lookup(self, mpn_key, refresh=False):
         if self._error is not None:

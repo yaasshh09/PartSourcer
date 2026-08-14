@@ -30,21 +30,41 @@ Run the tests:
 curl "http://127.0.0.1:8000/api/search?q=STM32F103"
 ```
 ```json
-{"page": 1, "results": [
-  {"lcsc": "C8734", "mpn": "STM32F103C8T6", "brand": null,
-   "package": "LQFP-48(7x7)", "description": "...", "stock": 214596,
-   "price_usd": 1.0371, "datasheet_url": null, "as_of": "2026-07-12T..."}
+{"page": 1, "query": "STM32F103", "results": [
+  {"mpn_key": "STM32F103C8T6", "mpn": "STM32F103C8T6", "brand": null,
+   "package": "LQFP-48(7x7)", "description": "...", "datasheet_url": null,
+   "offers": [
+     {"distributor": "lcsc", "sku": "C8734", "mpn_as_listed": "STM32F103C8T6",
+      "match_tier": "exact", "match_note": null, "stock": 214596,
+      "in_stock": true, "price_usd": 1.0371, "price_breaks": null,
+      "currency": "USD", "product_url": "...", "is_basic": false,
+      "is_preferred": true, "as_of": "2026-08-14T..."}
+   ],
+   "cheapest": null, "cheapest_unavailable_reason": "only one source answered",
+   "as_of": "2026-08-14T..."}
+], "sources": [
+  {"distributor": "lcsc", "state": "ok", "detail": null, "as_of": "2026-08-14T..."},
+  {"distributor": "mouser", "state": "disabled", "detail": "no credentials configured",
+   "as_of": null},
+  {"distributor": "digikey", "state": "disabled", "detail": "no credentials configured",
+   "as_of": null}
 ]}
 ```
 
-### `GET /api/part/<lcsc_code>?refresh=false`
-Full detail (adds `price_breaks`, `stock_breakdown`, `is_basic`, `is_preferred`;
-`price_breaks`/`stock_breakdown` are `null` in v1). `404` if unknown.
+A distributor that fails is a `sources` entry, not an error: the response is
+still `200`. Only a total failure of every callable distributor is a `502`.
 
-### `GET /api/part/<lcsc_code>/equivalent`
+### `GET /api/part/<mpn_key>?refresh=false`
+`{"part": {...}, "sources": [...]}`, the same `Part` shape as a search result.
+`404` if unknown. A legacy `C<digits>` LCSC code redirects `302` to the
+canonical MPN, and so does a key that folds into another part (`X-TR` to `X`).
+
+### `GET /api/equivalent/<mpn_key>`
 Returns `original` + one cheaper in-stock drop-in `equivalent`, or
 `equivalent: null` with a human `reason`. v1 matches resistors and capacitors
 only; every other type returns an honest null (never a guessed "similar part").
+A part with no LCSC offer also returns an honest null, because v1 matching
+reads LCSC parametric data and cannot verify a drop-in without it.
 
 ## Configuration (env vars)
 
@@ -117,20 +137,30 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
 
 ## Data & honesty notes
 
-- Data source is the free, open **jlcsearch** API, a **~daily jlcparts
+- LCSC data comes from the free, open **jlcsearch** API, a **~daily jlcparts
   snapshot**, not live LCSC stock/price. `as_of` is our fetch time; the UI shows
-  it so freshness is always honest.
-- `brand` and `datasheet_url` are `null` in v1 (absent upstream); they light up
-  when the official LCSC API is dropped in behind `PartDataSource`.
-- `?refresh=true` forces a fresh upstream fetch, throttled per key.
+  it so freshness is always honest. `Part.as_of` is the **oldest** contributing
+  offer, so a fast distributor never makes a record look fresher than its
+  stalest component.
+- `brand`, `datasheet_url`, and `price_breaks` are no longer global gaps. They
+  are per offer: real for Mouser and DigiKey, `null` for LCSC. `is_basic` and
+  `is_preferred` are the mirror case, real for LCSC and `null` elsewhere. A
+  part shows the first populated value across its offers rather than inventing
+  one.
+- `?refresh=true` forces a fresh upstream fetch, throttled per
+  (distributor, key) so one distributor's cooldown cannot block another's.
 
 ## What's fragile / worth watching
 
-- Single free community upstream, no SLA; the only data source in v1.
-- Data is a ~daily snapshot, not live LCSC.
+- LCSC data is a ~daily snapshot from a single free community upstream with no
+  SLA. Mouser and DigiKey are live but only run when their credentials are set.
 - Refresh throttle is in-process, so it does not coordinate across multiple
   workers/instances.
-- SQLite cache is single-node; fine for v1, revisit for horizontal scale.
+- SQLite cache is single-node; fine for v1, revisit for horizontal scale. The
+  whole cache is dropped and rebuilt on a schema-version change, which is safe
+  because no source of truth lives there.
+- The quota exhaustion marker persists to SQLite, so it survives a restart only
+  where the volume does. On Render free the file is ephemeral and the first call
+  after a restart earns a fresh 429 that re-marks it.
 - Parametric (equivalent-matcher) results are not cached; every equivalent
   lookup hits upstream.
-- `brand` / `datasheet_url` remain null until the official LCSC API lands.

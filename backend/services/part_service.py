@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Awaitable, Callable
 
-from models.offer import DistributorStatus, Offer, Part, SearchResponseV2
+from models.offer import DistributorStatus, Offer, Part, SearchResponse
 from services.adapters.base import DistributorAdapter, RawListing, UpstreamError
 from services.cheapest import compute_cheapest
 from services.matching import (normalize_exact, packaging_note,
@@ -293,7 +293,7 @@ class PartService:
                 and not self._quota.is_exhausted(n)]
 
     async def search(self, query: str, limit: int,
-                     page: int = 1) -> SearchResponseV2:
+                     page: int = 1) -> SearchResponse:
         # An adapter takes a limit and no offset, so paging happens here:
         # ask upstream for enough rows to reach the page, then window the
         # merged parts locally. Echoing a page number over page-1 results
@@ -301,9 +301,9 @@ class PartService:
         want = page * limit
         result = await self.collect(lambda adapter: adapter.search(query, want))
         start = (page - 1) * limit
-        return SearchResponseV2(page=page, query=query,
-                                results=result.parts[start:start + limit],
-                                sources=result.statuses)
+        return SearchResponse(page=page, query=query,
+                              results=result.parts[start:start + limit],
+                              sources=result.statuses)
 
     @property
     def timeout_secs(self) -> float:

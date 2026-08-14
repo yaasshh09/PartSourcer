@@ -17,7 +17,7 @@ from typing import Callable, Iterable
 
 from cache.serde import listing_from_dict, listing_to_dict
 from cache.store import CachedOffer, SqliteCacheStore
-from models.offer import DistributorStatus, Part, SearchResponseV2
+from models.offer import DistributorStatus, Part, SearchResponse
 from services.adapters.base import RawListing
 from services.matching import normalize_exact
 from services.part_service import ALL_DISTRIBUTORS, PartService, select_part
@@ -134,11 +134,11 @@ class CachedPartService:
     # -- the search path --
 
     async def search(self, query: str, page: int = 1,
-                     refresh: bool = False) -> SearchResponseV2:
+                     refresh: bool = False) -> SearchResponse:
         key = query.strip().lower()
         if not key:
-            return SearchResponseV2(page=page, query=query, results=[],
-                                    sources=[])
+            return SearchResponse(page=page, query=query, results=[],
+                                  sources=[])
 
         want = page * PAGE_SIZE
         row = await self._store.get_search(key)
@@ -243,8 +243,8 @@ class CachedPartService:
         return await self._store.find_part_key_by_sku(distributor, sku)
 
     def _window(self, query: str, page: int, parts: list[Part],
-                statuses: list[DistributorStatus]) -> SearchResponseV2:
+                statuses: list[DistributorStatus]) -> SearchResponse:
         start = (page - 1) * PAGE_SIZE
-        return SearchResponseV2(page=page, query=query,
-                                results=parts[start:start + PAGE_SIZE],
-                                sources=statuses)
+        return SearchResponse(page=page, query=query,
+                              results=parts[start:start + PAGE_SIZE],
+                              sources=statuses)

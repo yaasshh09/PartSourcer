@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from models.offer import (Cheapest, DistributorStatus, Offer, Part,
-                          SearchResponseV2)
+                          SearchResponse)
 
 T1 = datetime(2026, 8, 8, 9, 14, tzinfo=timezone.utc)
 T2 = datetime(2026, 8, 8, 10, 30, tzinfo=timezone.utc)
@@ -63,6 +63,6 @@ def test_distributor_status_states_are_constrained():
 
 
 def test_search_response_carries_sources():
-    r = SearchResponseV2(page=1, query="stm32", results=[], sources=[
+    r = SearchResponse(page=1, query="stm32", results=[], sources=[
         DistributorStatus(distributor="lcsc", state="ok", detail=None, as_of=T1)])
     assert r.sources[0].state == "ok"
