@@ -16,9 +16,11 @@ def test_parametric_part_holds_specs_dict():
 
 def test_equivalent_response_found():
     resp = EquivalentResponse(
-        original=OriginalRef(lcsc="C25804", mpn="R1", package="0603",
+        original=OriginalRef(mpn_key="R1", lcsc="C25804", distributor="lcsc",
+                             mpn="R1", package="0603",
                              price_usd=0.0008, stock=100),
-        equivalent=EquivalentMatch(lcsc="C1", mpn="R2", price_usd=0.0004,
+        equivalent=EquivalentMatch(mpn_key="R2", lcsc="C1", mpn="R2",
+                                   price_usd=0.0004,
                                    stock=900000, package="0603",
                                    match_reason="Same 0603, 10 kOhm, 50% cheaper",
                                    percent_cheaper=50),
@@ -30,7 +32,8 @@ def test_equivalent_response_found():
 
 def test_equivalent_response_null():
     resp = EquivalentResponse(
-        original=OriginalRef(lcsc="C8734", mpn="STM32", package="LQFP-48(7x7)",
+        original=OriginalRef(mpn_key="STM32", lcsc="C8734", distributor="lcsc",
+                             mpn="STM32", package="LQFP-48(7x7)",
                              price_usd=1.0371, stock=214596),
         equivalent=None,
         reason="Only resistors and capacitors are matched in v1.",

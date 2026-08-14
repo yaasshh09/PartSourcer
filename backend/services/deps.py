@@ -12,6 +12,7 @@ from config import settings
 from history.store import HistoryStore, PostgresHistoryStore
 from services.adapters.lcsc import LcscAdapter
 from services.datasource import JlcSearchDataSource, PartDataSource
+from services.lcsc_matcher_source import LcscMatcherSource
 from services.part_service import PartService, build_part_service
 from services.throttle import RefreshThrottle
 
@@ -22,12 +23,13 @@ _history_store: HistoryStore | None = None
 _part_service: PartService | None = None
 _cached_service: CachedPartService | None = None
 _lcsc_adapter: LcscAdapter | None = None
+_matcher_source: LcscMatcherSource | None = None
 _distributor_clients: list[httpx.AsyncClient] = []
 
 
 async def startup() -> None:
     global _client, _store, _datasource, _history_store, _part_service
-    global _cached_service, _lcsc_adapter, _distributor_clients
+    global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
     _client = httpx.AsyncClient(
         base_url=settings.jlcsearch_base_url,
         timeout=settings.request_timeout_secs,
@@ -36,6 +38,7 @@ async def startup() -> None:
     _store = SqliteCacheStore(settings.sqlite_path)
     _store.open()
     _lcsc_adapter = LcscAdapter(_client)
+    _matcher_source = LcscMatcherSource(_lcsc_adapter)
     _part_service, _distributor_clients = build_part_service(settings, _client)
     # The exhaustion marker outlives the process only where the volume does.
     _part_service.attach_quota_markers(_store, await _store.get_quota_markers())
@@ -43,8 +46,8 @@ async def startup() -> None:
         service=_part_service, store=_store,
         offer_ttl_secs=settings.stock_cache_ttl_secs,
         throttle=RefreshThrottle(settings.refresh_cooldown_secs))
-    # The v1 datasource survives only for the routes Task 26 and Task 27 have
-    # not reached yet: the equivalent matcher and the history recorder.
+    # The v1 datasource survives only for the history recorder, which Task 27
+    # rehomes. Nothing else reads it.
     _datasource = JlcSearchDataSource(_client)
     if settings.database_url:
         pg = PostgresHistoryStore(settings.database_url)
@@ -54,7 +57,7 @@ async def startup() -> None:
 
 async def shutdown() -> None:
     global _client, _store, _datasource, _history_store, _part_service
-    global _cached_service, _lcsc_adapter, _distributor_clients
+    global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
     if _history_store is not None and hasattr(_history_store, "close"):
         await _history_store.close()
     if _store is not None:
@@ -65,6 +68,7 @@ async def shutdown() -> None:
     _part_service = None
     _cached_service = None
     _lcsc_adapter = None
+    _matcher_source = None
     if _client is not None:
         await _client.aclose()
     _client = None
@@ -96,3 +100,8 @@ def get_cached_service() -> CachedPartService:
 def get_lcsc_adapter() -> LcscAdapter:
     assert _lcsc_adapter is not None, "adapter not initialized (lifespan not run)"
     return _lcsc_adapter
+
+
+def get_matcher_source() -> LcscMatcherSource:
+    assert _matcher_source is not None, "matcher source not initialized"
+    return _matcher_source

@@ -1,4 +1,4 @@
-"""Response models for GET /api/part/<lcsc_code>/equivalent (spec §9)."""
+"""Response models for GET /api/equivalent/<mpn_key> (spec §9)."""
 
 from datetime import datetime
 
@@ -6,14 +6,19 @@ from pydantic import BaseModel
 
 
 class OriginalRef(BaseModel):
-    lcsc: str
+    mpn_key: str
     mpn: str
     package: str
     price_usd: float
     stock: int
+    # None when the part has no LCSC listing, which is also when the matcher
+    # cannot run. The distributor names whose price and stock these are.
+    lcsc: str | None = None
+    distributor: str | None = None
 
 
 class EquivalentMatch(BaseModel):
+    mpn_key: str
     lcsc: str
     mpn: str
     price_usd: float

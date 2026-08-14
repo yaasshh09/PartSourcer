@@ -66,6 +66,15 @@ def test_a_legacy_lcsc_code_redirects_to_the_canonical_mpn(client):
     assert resp.headers["location"] == "/api/part/STM32F103C8T6"
 
 
+def test_a_legacy_equivalent_url_redirects_out_from_under_part(client):
+    """/api/part/{code}/equivalent is no longer a route of its own: the greedy
+    path converter sees it, so this handler has to hand it onwards."""
+    resp = client.get("/api/part/C8734/equivalent", follow_redirects=False)
+
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "/api/equivalent/STM32F103C8T6"
+
+
 def test_a_code_shaped_string_that_is_not_a_sku_is_treated_as_an_mpn(client):
     """2SC1815 is catalogued as C1815, so ^C\\d+$ is not proof of a SKU. When
     the code does not resolve, fall through rather than 404."""

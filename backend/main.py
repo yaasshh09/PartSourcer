@@ -59,9 +59,6 @@ async def _unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 app.include_router(search_router)
-# Ahead of the part router on purpose: /api/part/{mpn_key:path} is greedy and
-# would otherwise swallow the v1 /api/part/{code}/equivalent route. Task 26
-# moves equivalent out to its own prefix and this ordering stops mattering.
 app.include_router(equivalent_router)
 app.include_router(part_router)
 app.include_router(internal_router)

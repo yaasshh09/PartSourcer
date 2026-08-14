@@ -10,4 +10,4 @@ def test_openapi_lists_every_public_route():
     assert "/health" in paths
     assert "/api/search" in paths
     assert "/api/part/{mpn_key}" in paths
-    assert "/api/part/{lcsc_code}/equivalent" in paths
+    assert "/api/equivalent/{mpn_key}" in paths

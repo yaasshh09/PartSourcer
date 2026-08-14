@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef
 from models.parametric import ParametricPart
 from services.datasource import PartDataSource
+from services.matching import normalize_exact
 
 MATCH_MIN_STOCK = 100          # "healthy buffer", not just > 0 (design D5)
 _REL_TOL = 1e-6                # float compare for resistance / capacitance
@@ -170,8 +171,9 @@ async def find_equivalent(ds: PartDataSource,
     if original is None:
         return None
     now = datetime.now(timezone.utc)
-    orig_ref = OriginalRef(lcsc=original.lcsc, mpn=original.mpn,
-                           package=original.package,
+    orig_ref = OriginalRef(mpn_key=normalize_exact(original.mpn),
+                           lcsc=original.lcsc, distributor="lcsc",
+                           mpn=original.mpn, package=original.package,
                            price_usd=original.price_usd, stock=original.stock)
 
     def _null(reason: str) -> EquivalentResponse:
@@ -182,6 +184,7 @@ async def find_equivalent(ds: PartDataSource,
         return EquivalentResponse(
             original=orig_ref,
             equivalent=EquivalentMatch(
+                mpn_key=normalize_exact(best.mpn),
                 lcsc=best.lcsc, mpn=best.mpn, price_usd=best.price_usd,
                 stock=best.stock, package=best.package, match_reason=reason,
                 percent_cheaper=_percent_cheaper(original.price_usd,
