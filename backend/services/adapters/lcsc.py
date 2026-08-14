@@ -76,10 +76,30 @@ class LcscAdapter(DistributorAdapter):
         return [self._to_listing(raw, as_of, rank=i)
                 for i, raw in enumerate(items)]
 
-    async def lookup_mpn(self, mpn: str) -> list[RawListing]:
-        listings = await self.search(mpn, limit=20)
-        wanted = mpn.strip().upper()
-        return [r for r in listings if r.mpn.upper() == wanted]
+    async def lookup_mpn(self, mpn: str, limit: int = 20) -> list[RawListing]:
+        return await self.search(mpn, limit)
+
+    async def lookup_sku(self, sku: str) -> RawListing | None:
+        """Resolve an LCSC code to its listing. LCSC-only, and deliberately
+        not on the ABC: nothing else needs SKU lookup yet.
+
+        The limit=1 attempt comes first and is load-bearing. Upstream returns
+        a different result set for the same part depending on `limit`: C25531
+        comes back at limit=1 and yields {"components": []} at limit=20, both
+        HTTP 200, stable across repeats. See docs/jlcsearch-notes.md.
+        """
+        code = sku.strip().upper().lstrip("C")
+        if not code.isdigit():
+            return None
+        for query, limit in ((f"C{code}", 1), (code, 20)):
+            items = await self._fetch_json("/api/search",
+                                           {"q": query, "limit": limit},
+                                           "components")
+            as_of = datetime.now(timezone.utc)
+            for i, raw in enumerate(items):
+                if str(raw.get("lcsc")) == code:
+                    return self._to_listing(raw, as_of, rank=i)
+        return None
 
     async def list_parametric(self, category: str, package: str,
                               resistance_ohms: float | None = None

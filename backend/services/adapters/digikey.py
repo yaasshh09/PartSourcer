@@ -99,5 +99,5 @@ class DigiKeyAdapter(DistributorAdapter):
     async def search(self, query: str, limit: int) -> list[RawListing]:
         return await self._keyword(query, limit)
 
-    async def lookup_mpn(self, mpn: str) -> list[RawListing]:
-        return await self._keyword(mpn, limit=10)
+    async def lookup_mpn(self, mpn: str, limit: int = 20) -> list[RawListing]:
+        return await self._keyword(mpn, limit)

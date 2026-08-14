@@ -56,7 +56,13 @@ class DistributorAdapter(ABC):
     async def search(self, query: str, limit: int) -> list[RawListing]: ...
 
     @abstractmethod
-    async def lookup_mpn(self, mpn: str) -> list[RawListing]: ...
+    async def lookup_mpn(self, mpn: str, limit: int = 20) -> list[RawListing]:
+        """What this distributor considers a match for that MPN.
+
+        No cross-listing judgement here. Whether a result is the same part,
+        a packaging variant, or unrelated is decided by PartService.merge,
+        which is the only place that can see all the distributors at once.
+        """
 
 
 @runtime_checkable

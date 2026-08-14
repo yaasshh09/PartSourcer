@@ -45,11 +45,24 @@ async def test_zero_stock_is_not_in_stock():
     assert r.stock == 0 and r.in_stock is False
 
 
-async def test_lookup_mpn_filters_to_the_matching_part():
-    rows = [ROW, dict(ROW, lcsc=9999, mfr="STM32F103CBT6")]
+async def test_lookup_mpn_keeps_packaging_variants():
+    """The adapter must not drop -TR: merge decides the tier, not the adapter.
+    Filtering here made the detail page's variant group unreachable."""
+    rows = [ROW, dict(ROW, lcsc=9999, mfr="STM32F103C8T6-TR")]
     async with client_returning({"components": rows}) as c:
-        out = await LcscAdapter(c).lookup_mpn("stm32f103c8t6")
-    assert [r.sku for r in out] == ["C8734"]
+        listings = await LcscAdapter(c).lookup_mpn("STM32F103C8T6")
+
+    assert {r.mpn for r in listings} == {"STM32F103C8T6", "STM32F103C8T6-TR"}
+
+
+async def test_lookup_sku_finds_the_part_and_returns_none_for_a_miss():
+    async with client_returning({"components": [ROW]}) as c:
+        adapter = LcscAdapter(c)
+        found = await adapter.lookup_sku("C8734")
+        assert found is not None and found.sku == "C8734"
+
+        assert await adapter.lookup_sku("C99999999") is None
+        assert await adapter.lookup_sku("not-a-code") is None
 
 
 async def test_empty_query_returns_empty_without_calling_upstream():
