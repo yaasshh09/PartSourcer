@@ -44,5 +44,12 @@ class Settings(BaseSettings):
     mouser_base_url: str = "https://api.mouser.com"
     distributor_timeout_secs: float = 8.0
 
+    # Per-distributor daily call ceilings. None means unlimited, which is what
+    # jlcsearch gets: it is a free community service with no published quota,
+    # and inventing a number would be a fake limit. These are config rather
+    # than code so a wrong value is a dashboard edit, not a deploy.
+    mouser_daily_limit: int | None = 1000
+    digikey_daily_limit: int | None = 1000
+
 
 settings = Settings()

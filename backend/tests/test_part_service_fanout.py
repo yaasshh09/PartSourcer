@@ -98,7 +98,7 @@ async def test_a_429_marks_the_tracker_and_reports_quota_exhausted():
 
 async def test_an_already_exhausted_distributor_is_never_called():
     q = QuotaTracker()
-    q.mark_exhausted("mouser")
+    await q.mark_exhausted("mouser")
     mouser = FakeAdapter("mouser")
     _, sources = await service([FakeAdapter("lcsc"), mouser], quota=q).fan_out(call)
     by = {s.distributor: s for s in sources}
@@ -219,7 +219,7 @@ async def test_an_empty_answer_still_carries_a_timestamp():
 
 async def test_callable_names_excludes_disabled_and_exhausted():
     quota = QuotaTracker()
-    quota.mark_exhausted("mouser")
+    await quota.mark_exhausted("mouser")
     svc = PartService(
         adapters={"lcsc": FakeAdapter("lcsc", []),
                   "mouser": FakeAdapter("mouser", [])},

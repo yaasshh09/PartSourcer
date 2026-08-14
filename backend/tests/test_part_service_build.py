@@ -11,7 +11,8 @@ def cfg(mouser=None, dk_id=None, dk_secret=None):
         digikey_client_secret=dk_secret,
         mouser_base_url="https://api.mouser.test",
         digikey_base_url="https://api.digikey.test",
-        distributor_timeout_secs=3.0)
+        distributor_timeout_secs=3.0,
+        mouser_daily_limit=1000, digikey_daily_limit=1000)
 
 
 def test_with_no_keys_only_lcsc_is_registered_and_no_client_is_created():

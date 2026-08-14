@@ -147,7 +147,7 @@ class PartService:
         except UpstreamError as exc:
             if exc.kind == "quota":
                 # Upstream is the authority on its own quota.
-                self._quota.mark_exhausted(name)
+                await self._quota.mark_exhausted(name)
                 return [], self._status(name, "quota_exhausted",
                                         self._quota.exhaustion_detail(name))
             state = "timeout" if exc.kind == "timeout" else "unavailable"
@@ -366,10 +366,14 @@ def build_part_service(settings, lcsc_client: "httpx.AsyncClient"):
         adapters["digikey"] = DigiKeyAdapter(client, tokens,
                                              settings.digikey_client_id)
 
-    # No daily_limits on purpose, so the local counter is unlimited and
-    # record_call and calls_today only observe. Nothing here gates a call
-    # today except the exhaustion marker an upstream 429 sets. Part 3 wires
-    # the per-distributor limits and persists the marker across restarts.
-    service = PartService(adapters=adapters, quota=QuotaTracker(), disabled=off,
+    # LCSC gets no limit on purpose: jlcsearch publishes no quota, so a number
+    # here would be invented. Marker loading and the store wiring happen in
+    # deps, which is where the cache store lives.
+    limits = {name: limit for name, limit in
+              (("mouser", settings.mouser_daily_limit),
+               ("digikey", settings.digikey_daily_limit)) if limit is not None}
+    service = PartService(adapters=adapters,
+                          quota=QuotaTracker(daily_limits=limits),
+                          disabled=off,
                           timeout_secs=settings.distributor_timeout_secs)
     return service, created
