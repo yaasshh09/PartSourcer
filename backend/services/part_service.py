@@ -169,8 +169,11 @@ class PartService:
                     # CancelledError and friends are not this distributor's
                     # failure to report, they are the caller's to see.
                     raise outcome
+                # Type only, never the message, for the same reason as the
+                # catch-all inside _call_one: a detail we did not compose can
+                # carry a connection string or a request URL with a key in it.
                 statuses.append(self._status(name, "unavailable",
-                                             f"{name} failed: {outcome}"))
+                                             f"{name} failed: {type(outcome).__name__}"))
                 continue
             got, status = outcome
             listings.extend(got)

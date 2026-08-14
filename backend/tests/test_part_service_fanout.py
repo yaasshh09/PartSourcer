@@ -179,3 +179,21 @@ async def test_sources_are_called_concurrently_not_one_after_another():
     svc = service([Blocker("lcsc"), Waiter("mouser")])
     listings, sources = await svc.fan_out(call)
     assert [s.state for s in sources] == ["ok", "ok"]
+
+
+class _RaisingQuota(QuotaTracker):
+    """record_call is reached from _call_one AFTER its try block, so an
+    error here escapes into gather. Stands in for Task 24's marker I/O."""
+
+    def record_call(self, distributor: str) -> None:
+        raise RuntimeError("could not write dsn=postgres://user:hunter2@db/x")
+
+
+async def test_gather_branch_detail_names_the_type_not_the_message():
+    svc = service([FakeAdapter("lcsc")], quota=_RaisingQuota())
+    _, statuses = await svc.fan_out(call)
+
+    lcsc = next(s for s in statuses if s.distributor == "lcsc")
+    assert lcsc.state == "unavailable"
+    assert lcsc.detail == "lcsc failed: RuntimeError"
+    assert "hunter2" not in (lcsc.detail or "")
