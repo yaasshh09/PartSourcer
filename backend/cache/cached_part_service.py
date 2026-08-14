@@ -20,7 +20,7 @@ from cache.store import CachedOffer, SqliteCacheStore
 from models.offer import DistributorStatus, Part, SearchResponseV2
 from services.adapters.base import RawListing
 from services.matching import normalize_exact
-from services.part_service import ALL_DISTRIBUTORS, PartService
+from services.part_service import ALL_DISTRIBUTORS, PartService, select_part
 from services.throttle import RefreshThrottle
 
 PAGE_SIZE = 20
@@ -174,6 +174,56 @@ class CachedPartService:
             [s.model_dump(mode="json") for s in statuses], self._now())
         await self._write_offers(result.listings, parts)
         return self._window(query, page, parts, statuses)
+
+    # -- the detail path --
+
+    async def lookup(self, mpn_key: str, refresh: bool = False
+                     ) -> tuple[Part | None, list[DistributorStatus], bool]:
+        """Resolve one part. Returns (part, sources, is_canonical).
+
+        is_canonical False means the request named a key that folds into
+        another part, so the caller should redirect rather than answer under
+        a name the merge does not use.
+        """
+        row = await self._store.get_part_status(mpn_key)
+
+        if row is None or not self._fresh(row.as_of):
+            result = await self._service.lookup(mpn_key)
+            await self._commit_lookup(mpn_key, result.listings, result.parts,
+                                      result.statuses)
+            part, canonical = select_part(result.parts, mpn_key)
+            return part, result.statuses, canonical
+
+        served, retry = self._retry_set(row.statuses, f"part:{mpn_key}", refresh)
+        cached_listings = await self._cached_listings([mpn_key], served)
+
+        if not retry:
+            statuses = [DistributorStatus.model_validate(s) for s in row.statuses]
+            parts = self._service.merge(cached_listings, statuses)
+            part, canonical = select_part(parts, mpn_key)
+            return part, statuses, canonical
+
+        result = await self._service.collect(
+            lambda adapter: adapter.lookup_mpn(mpn_key), only=retry)
+        statuses = self._merge_statuses(row.statuses, result.statuses)
+        parts = self._service.merge(cached_listings + result.listings, statuses)
+        await self._commit_lookup(mpn_key, result.listings, parts, statuses)
+        part, canonical = select_part(parts, mpn_key)
+        return part, statuses, canonical
+
+    async def _commit_lookup(self, mpn_key: str, listings: list[RawListing],
+                             parts: list[Part],
+                             statuses: list[DistributorStatus]) -> None:
+        # Offers for every listing, including parts the keyword lookup dragged
+        # in: that is free cache warming. A status row only for the key we
+        # actually asked about, because that is the only question we asked.
+        await self._write_offers(listings, parts)
+        await self._store.put_part_status(
+            mpn_key, [s.model_dump(mode="json") for s in statuses], self._now())
+
+    async def resolve_sku(self, distributor: str, sku: str) -> str | None:
+        """A distributor SKU to its part key, for the legacy redirect."""
+        return await self._store.find_part_key_by_sku(distributor, sku)
 
     def _window(self, query: str, page: int, parts: list[Part],
                 statuses: list[DistributorStatus]) -> SearchResponseV2:
