@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from models.parametric import ParametricPart
 from models.part import PartDetail
-from services.datasource import PartDataSource
 from services.matcher import (MATCH_MIN_STOCK, dielectric_rank,
                                resistor_candidates, capacitor_candidates,
                                rank_best, find_equivalent)
@@ -160,14 +159,13 @@ def test_capacitor_original_missing_capacitance_yields_nothing():
     assert capacitor_candidates(orig, pool, orig.price_usd) == []
 
 
-class FakeDS(PartDataSource):
+class FakeDS:
+    """Duck-typed MatcherSource: get_part plus list_parametric, nothing else."""
+
     def __init__(self, detail, parametric):
         self._detail = detail
         self._parametric = parametric   # dict: (category, package) -> list[ParametricPart]
         self.calls = []
-
-    async def search(self, query, page, refresh=False):
-        return []
 
     async def get_part(self, lcsc_code, refresh=False):
         return self._detail

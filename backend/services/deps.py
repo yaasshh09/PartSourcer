@@ -11,14 +11,12 @@ from cache.store import SqliteCacheStore
 from config import settings
 from history.store import HistoryStore, PostgresHistoryStore
 from services.adapters.lcsc import LcscAdapter
-from services.datasource import JlcSearchDataSource, PartDataSource
 from services.lcsc_matcher_source import LcscMatcherSource
 from services.part_service import PartService, build_part_service
 from services.throttle import RefreshThrottle
 
 _client: httpx.AsyncClient | None = None
 _store: SqliteCacheStore | None = None
-_datasource: PartDataSource | None = None
 _history_store: HistoryStore | None = None
 _part_service: PartService | None = None
 _cached_service: CachedPartService | None = None
@@ -28,7 +26,7 @@ _distributor_clients: list[httpx.AsyncClient] = []
 
 
 async def startup() -> None:
-    global _client, _store, _datasource, _history_store, _part_service
+    global _client, _store, _history_store, _part_service
     global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
     _client = httpx.AsyncClient(
         base_url=settings.jlcsearch_base_url,
@@ -46,9 +44,6 @@ async def startup() -> None:
         service=_part_service, store=_store,
         offer_ttl_secs=settings.stock_cache_ttl_secs,
         throttle=RefreshThrottle(settings.refresh_cooldown_secs))
-    # The v1 datasource survives only for the history recorder, which Task 27
-    # rehomes. Nothing else reads it.
-    _datasource = JlcSearchDataSource(_client)
     if settings.database_url:
         pg = PostgresHistoryStore(settings.database_url)
         await pg.open()
@@ -56,7 +51,7 @@ async def startup() -> None:
 
 
 async def shutdown() -> None:
-    global _client, _store, _datasource, _history_store, _part_service
+    global _client, _store, _history_store, _part_service
     global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
     if _history_store is not None and hasattr(_history_store, "close"):
         await _history_store.close()
@@ -73,13 +68,7 @@ async def shutdown() -> None:
         await _client.aclose()
     _client = None
     _store = None
-    _datasource = None
     _history_store = None
-
-
-def get_datasource() -> PartDataSource:
-    assert _datasource is not None, "datasource not initialized (lifespan not run)"
-    return _datasource
 
 
 def get_history_store() -> HistoryStore | None:

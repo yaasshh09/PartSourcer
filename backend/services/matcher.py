@@ -11,11 +11,27 @@ original constrains that spec).
 
 import math
 from datetime import datetime, timezone
+from typing import Protocol
 
 from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef
 from models.parametric import ParametricPart
-from services.datasource import PartDataSource
+from models.part import PartDetail
 from services.matching import normalize_exact
+
+
+class MatcherSource(Protocol):
+    """What the matcher needs from LCSC, named rather than imported.
+
+    LcscMatcherSource is the only implementation. Stating the contract here
+    keeps this module free of a dependency on the shim that satisfies it.
+    """
+
+    async def get_part(self, lcsc_code: str,
+                       refresh: bool = False) -> PartDetail | None: ...
+
+    async def list_parametric(self, category: str, package: str,
+                              resistance_ohms: float | None = None
+                              ) -> list[ParametricPart]: ...
 
 MATCH_MIN_STOCK = 100          # "healthy buffer", not just > 0 (design D5)
 _REL_TOL = 1e-6                # float compare for resistance / capacitance
@@ -165,7 +181,7 @@ def _capacitor_reason(orig, best, pkg, orig_price) -> str:
             f"{best.stock:,} in stock, {pct}% cheaper")
 
 
-async def find_equivalent(ds: PartDataSource,
+async def find_equivalent(ds: MatcherSource,
                           lcsc_code: str) -> EquivalentResponse | None:
     original = await ds.get_part(lcsc_code)
     if original is None:

@@ -1,21 +1,11 @@
-"""Swappable part-data source (spec §8).
+"""Shared upstream error vocabulary and parametric mapping.
 
-Routes depend on the PartDataSource ABC only. JlcSearchDataSource is the v1
-implementation over the jlcsearch API (see docs/jlcsearch-notes.md for the
-verified upstream reality this mapping encodes). A future official-LCSC
-datasource implements the same interface and swaps in via services/deps.py.
+The v1 PartDataSource stack lived here. It is gone: LcscAdapter speaks
+jlcsearch now, and PartService is what routes see. What remains is what other
+modules import from here, and nothing else.
 """
 
-from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-
-import httpx
-
-from models.part import PartDetail
 from models.parametric import ParametricPart
-from models.search import SearchResult
-
-PAGE_SIZE = 20
 
 
 class UpstreamError(Exception):
@@ -23,7 +13,7 @@ class UpstreamError(Exception):
 
     def __init__(self, kind: str, detail: str):
         super().__init__(detail)
-        self.kind = kind  # "timeout" | "unavailable"
+        self.kind = kind  # "timeout" | "unavailable" | "quota"
 
 
 # Shared by all route handlers: maps UpstreamError.kind -> HTTP status.
@@ -31,56 +21,6 @@ class UpstreamError(Exception):
 # quota_exhausted status rather than an HTTP error.
 UPSTREAM_STATUS: dict[str, int] = {
     "timeout": 504, "unavailable": 502, "quota": 502}
-
-
-class PartDataSource(ABC):
-    @abstractmethod
-    async def search(self, query: str, page: int,
-                     refresh: bool = False) -> list[SearchResult]: ...
-
-    @abstractmethod
-    async def get_part(self, lcsc_code: str,
-                       refresh: bool = False) -> PartDetail | None: ...
-
-    @abstractmethod
-    async def list_parametric(self, category: str, package: str,
-                              resistance_ohms: float | None = None
-                              ) -> list[ParametricPart]: ...
-
-
-def _to_result(raw: dict, as_of: datetime) -> SearchResult:
-    """Map one upstream item to the §9 shape (see docs/jlcsearch-notes.md)."""
-    return SearchResult(
-        lcsc=f"C{raw['lcsc']}",
-        mpn=raw.get("mfr") or "",
-        brand=None,  # not in upstream data (documented gap)
-        package=raw.get("package") or "",
-        description=raw.get("description") or "",
-        stock=raw.get("stock") or 0,
-        price_usd=round(raw.get("price") or raw.get("price1") or 0.0, 4),
-        datasheet_url=None,  # not in upstream data (documented gap)
-        as_of=as_of,
-    )
-
-
-def _to_detail(raw: dict, as_of: datetime) -> PartDetail:
-    """Map one upstream item to the §9 detail shape (see docs/jlcsearch-notes.md)."""
-    return PartDetail(
-        lcsc=f"C{raw['lcsc']}",
-        mpn=raw.get("mfr") or "",
-        brand=None,  # not in upstream data (documented gap)
-        package=raw.get("package") or "",
-        description=raw.get("description") or "",
-        stock=raw.get("stock") or 0,
-        price_usd=round(raw.get("price") or raw.get("price1") or 0.0, 4),
-        price_breaks=None,   # no upstream ladder (honest gap)
-        stock_breakdown=None,  # no upstream breakdown (honest gap)
-        is_basic=raw.get("is_basic"),
-        is_preferred=raw.get("is_preferred"),
-        datasheet_url=None,  # not in upstream data (documented gap)
-        as_of=as_of,
-    )
-
 
 _PARAMETRIC_SPEC_FIELDS = {
     "resistors": ("resistance", "tolerance_fraction", "power_watts"),
@@ -103,77 +43,3 @@ def _to_parametric(raw: dict, category: str) -> ParametricPart:
         is_preferred=raw.get("is_preferred"),
         specs={f: raw.get(f) for f in fields},
     )
-
-
-class JlcSearchDataSource(PartDataSource):
-    def __init__(self, client: httpx.AsyncClient):
-        self._client = client
-
-    async def _fetch_json(self, path: str, params: dict,
-                          list_key: str) -> list[dict]:
-        try:
-            resp = await self._client.get(path, params=params)
-        except httpx.TimeoutException as exc:
-            raise UpstreamError("timeout", f"jlcsearch timed out: {exc}") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamError("unavailable", f"jlcsearch unreachable: {exc}") from exc
-        if resp.status_code != 200:
-            raise UpstreamError(
-                "unavailable", f"jlcsearch returned HTTP {resp.status_code}")
-        try:
-            data = resp.json()
-        except ValueError as exc:
-            raise UpstreamError("unavailable", "jlcsearch returned non-JSON") from exc
-        if not isinstance(data, dict):
-            raise UpstreamError(
-                "unavailable", "jlcsearch returned a non-object JSON body")
-        items = data.get(list_key)
-        if not isinstance(items, list):
-            raise UpstreamError(
-                "unavailable", f"jlcsearch response missing '{list_key}'")
-        return items
-
-    async def search(self, query: str, page: int,
-                     refresh: bool = False) -> list[SearchResult]:
-        query = query.strip()
-        if not query:
-            return []
-        # Upstream ignores `page`; fetch enough rows and window locally.
-        items = await self._fetch_json(
-            "/api/search", {"q": query, "limit": page * PAGE_SIZE}, "components")
-        as_of = datetime.now(timezone.utc)
-        start = (page - 1) * PAGE_SIZE
-        return [_to_result(raw, as_of) for raw in items[start:start + PAGE_SIZE]]
-
-    async def get_part(self, lcsc_code: str,
-                       refresh: bool = False) -> PartDetail | None:
-        code = lcsc_code.strip().upper().lstrip("C")
-        if not code.isdigit():
-            return None
-        # Upstream returns a different result set for the same part depending
-        # on `limit`: C25531 comes back for limit=1 but yields
-        # {"components": []} for limit=20, both HTTP 200, stable across
-        # repeats and unaffected by cache busting. So ask the narrowest
-        # question first, using the canonical C-prefixed code, and only then
-        # fall back to the wider query. The fallback means no part that
-        # resolved before can stop resolving.
-        for query, limit in ((f"C{code}", 1), (code, PAGE_SIZE)):
-            items = await self._fetch_json(
-                "/api/search", {"q": query, "limit": limit}, "components")
-            as_of = datetime.now(timezone.utc)
-            for raw in items:
-                if str(raw.get("lcsc")) == code:
-                    return _to_detail(raw, as_of)
-        return None
-
-    async def list_parametric(self, category: str, package: str,
-                              resistance_ohms: float | None = None
-                              ) -> list[ParametricPart]:
-        params: dict = {"package": package}
-        if resistance_ohms is not None:
-            # Upstream needs raw ohms; the '10k' suffix form is buggy (notes).
-            n = int(resistance_ohms) if float(resistance_ohms).is_integer() \
-                else resistance_ohms
-            params["resistance"] = n
-        items = await self._fetch_json(f"/{category}/list.json", params, category)
-        return [_to_parametric(raw, category) for raw in items]

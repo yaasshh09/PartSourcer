@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 
 from config import settings
 from history.recorder import record_watchlist
-from services.datasource import PartDataSource
-from services.deps import get_datasource, get_history_store
+from services.deps import get_history_store, get_matcher_source
+from services.lcsc_matcher_source import LcscMatcherSource
 
 router = APIRouter(prefix="/api/internal")
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/internal")
 @router.post("/record")
 async def record(
     x_recorder_token: str | None = Header(default=None),
-    ds: PartDataSource = Depends(get_datasource),
+    ds: LcscMatcherSource = Depends(get_matcher_source),
 ) -> dict[str, int]:
     expected = settings.recorder_token
     store = get_history_store()

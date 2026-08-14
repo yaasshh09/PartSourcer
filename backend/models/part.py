@@ -1,8 +1,10 @@
-"""Pydantic response model for GET /api/part/<lcsc_code> (spec §9 detail).
+"""One LCSC listing in the shape the equivalent matcher reasons over.
 
-Distinct from models.search.SearchResult so the §9 /api/search shape never
-drifts. price_breaks/stock_breakdown are typed to hold real structures once
-the official LCSC API lands, but are always null in v1 (jlcsearch has no
+No longer a response model: the public detail surface is models.offer.Part.
+This is what LcscMatcherSource hands the matcher, kept because the matcher is
+v1 logic that reads LCSC parametric data and was deliberately not rewritten.
+price_breaks and stock_breakdown are typed to hold real structures once the
+official LCSC API lands, but are always null over jlcsearch (which has no
 price ladder or per-warehouse stock; honesty, §5).
 """
 

@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 from typing import Callable
 
 from history.store import HistoryStore, OfferRecord
-from services.datasource import PartDataSource, UpstreamError
+from services.datasource import UpstreamError
+from services.lcsc_matcher_source import LcscMatcherSource
 
 
 @dataclass
@@ -21,7 +22,7 @@ class RecordSummary:
 
 
 async def record_watchlist(
-    ds: PartDataSource,
+    ds: LcscMatcherSource,
     store: HistoryStore,
     *,
     batch_size: int,

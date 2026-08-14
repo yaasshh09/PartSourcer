@@ -5,7 +5,7 @@ import pytest
 from history.recorder import record_watchlist
 from history.store import InMemoryHistoryStore
 from models.part import PartDetail
-from services.datasource import PartDataSource, UpstreamError
+from services.datasource import UpstreamError
 
 pytestmark = pytest.mark.anyio
 
@@ -20,14 +20,13 @@ def detail(lcsc="C8734", mpn="STM32F103C8T6", price=1.82, stock=12400):
                       as_of=FIXED)
 
 
-class FakeDs(PartDataSource):
+class FakeDs:
+    """Duck-typed LcscMatcherSource: the recorder only ever calls get_part."""
+
     def __init__(self, parts=None, fail_on=()):
         self.parts = parts or {}
         self.fail_on = set(fail_on)
         self.calls = []
-
-    async def search(self, query, page, refresh=False):
-        return []
 
     async def get_part(self, lcsc_code, refresh=False):
         self.calls.append(lcsc_code)
