@@ -124,11 +124,6 @@ async def test_an_ok_status_carries_the_oldest_listing_timestamp():
     assert sources[0].as_of == T0
 
 
-async def test_an_ok_source_with_no_results_has_no_timestamp():
-    _, sources = await service([FakeAdapter("lcsc", listings=[])]).fan_out(call)
-    assert sources[0].state == "ok" and sources[0].as_of is None
-
-
 async def test_an_unexpected_exception_degrades_instead_of_propagating():
     bad = FakeAdapter("mouser", raises=ValueError("unmapped"))
     listings, sources = await service([FakeAdapter("lcsc"), bad]).fan_out(call)
@@ -197,3 +192,37 @@ async def test_gather_branch_detail_names_the_type_not_the_message():
     assert lcsc.state == "unavailable"
     assert lcsc.detail == "lcsc failed: RuntimeError"
     assert "hunter2" not in (lcsc.detail or "")
+
+
+async def test_fan_out_only_calls_the_named_subset():
+    lcsc, mouser = FakeAdapter("lcsc"), FakeAdapter("mouser")
+    svc = service([lcsc, mouser])
+
+    _, statuses = await svc.fan_out(call, only={"mouser"})
+
+    assert (lcsc.calls, mouser.calls) == (0, 1)
+    assert [s.distributor for s in statuses] == ["mouser"]
+
+
+async def test_an_empty_answer_still_carries_a_timestamp():
+    """as_of None on an ok status would make the cache re-ask forever for
+    a part a distributor genuinely does not carry."""
+    fixed = datetime(2026, 8, 14, 9, 0, tzinfo=timezone.utc)
+    svc = PartService(adapters={"lcsc": FakeAdapter("lcsc", [])},
+                      quota=QuotaTracker(), now=lambda: fixed)
+
+    _, statuses = await svc.fan_out(call)
+
+    assert statuses[0].state == "ok"
+    assert statuses[0].as_of == fixed
+
+
+async def test_callable_names_excludes_disabled_and_exhausted():
+    quota = QuotaTracker()
+    quota.mark_exhausted("mouser")
+    svc = PartService(
+        adapters={"lcsc": FakeAdapter("lcsc", []),
+                  "mouser": FakeAdapter("mouser", [])},
+        quota=quota, disabled={"digikey": "no credentials configured"})
+
+    assert svc.callable_names() == ["lcsc"]

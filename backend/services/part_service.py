@@ -6,7 +6,8 @@ better than a 502 when two of them answered.
 """
 
 import asyncio
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Awaitable, Callable
 
 from models.offer import DistributorStatus, Offer, Part, SearchResponseV2
@@ -38,6 +39,19 @@ def disabled_reasons(settings) -> dict[str, str]:
 
 
 Call = Callable[[DistributorAdapter], Awaitable[list[RawListing]]]
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+@dataclass
+class FanOutResult:
+    """Everything one fan-out produced. The cache layer needs all three:
+    listings to write through, statuses to record, parts to answer with."""
+    listings: list[RawListing]
+    statuses: list[DistributorStatus]
+    parts: list[Part]
 
 
 def _first_populated(rows: list[RawListing], attr: str) -> str | None:
@@ -108,11 +122,13 @@ class PartService:
     def __init__(self, adapters: dict[str, DistributorAdapter],
                  quota: QuotaTracker,
                  disabled: dict[str, str] | None = None,
-                 timeout_secs: float = 8.0):
+                 timeout_secs: float = 8.0,
+                 now: Callable[[], datetime] = _utc_now):
         self._adapters = adapters
         self._quota = quota
         self._disabled = dict(disabled or {})
         self._timeout = timeout_secs
+        self._now = now
 
     def _status(self, distributor: str, state: str, detail: str | None = None,
                 as_of: datetime | None = None) -> DistributorStatus:
@@ -146,15 +162,20 @@ class PartService:
                                     f"{name} failed: {type(exc).__name__}")
 
         self._quota.record_call(name)
-        as_of = min((r.as_of for r in listings), default=None)
+        # An ok status with no timestamp would make the cache unable to tell
+        # "asked, carries nothing" from "never asked", so it would re-ask on
+        # every request for a part this distributor genuinely does not stock.
+        as_of = min((r.as_of for r in listings), default=self._now())
         return listings, self._status(name, "ok", None, as_of)
 
-    async def fan_out(self, make: Call
+    async def fan_out(self, make: Call, only: set[str] | None = None
                       ) -> tuple[list[RawListing], list[DistributorStatus]]:
         statuses: list[DistributorStatus] = []
         pending: list[tuple[str, asyncio.Task]] = []
 
         for name in ALL_DISTRIBUTORS:
+            if only is not None and name not in only:
+                continue
             if name in self._disabled:
                 statuses.append(self._status(name, "disabled",
                                              self._disabled[name]))
@@ -254,20 +275,35 @@ class PartService:
             ))
         return parts
 
+    async def collect(self, make: Call, only: set[str] | None = None
+                      ) -> FanOutResult:
+        """One fan-out, merged. The single entry point the cache layer uses."""
+        listings, statuses = await self.fan_out(make, only=only)
+        return FanOutResult(listings=listings, statuses=statuses,
+                            parts=self.merge(listings, statuses))
+
+    async def lookup(self, mpn_key: str, limit: int = 20) -> FanOutResult:
+        return await self.collect(lambda a: a.lookup_mpn(mpn_key, limit))
+
+    def callable_names(self) -> list[str]:
+        """Distributors worth calling right now: present, credentialed, and
+        not sitting behind an exhaustion marker."""
+        return [n for n in ALL_DISTRIBUTORS
+                if n in self._adapters and n not in self._disabled
+                and not self._quota.is_exhausted(n)]
+
     async def search(self, query: str, limit: int,
                      page: int = 1) -> SearchResponseV2:
         # An adapter takes a limit and no offset, so paging happens here:
         # ask upstream for enough rows to reach the page, then window the
-        # merged parts locally. v1 pages the same way in datasource.search.
-        # Echoing a page number over page-1 results would be a lie.
+        # merged parts locally. Echoing a page number over page-1 results
+        # would be a lie.
         want = page * limit
-        listings, sources = await self.fan_out(
-            lambda adapter: adapter.search(query, want))
-        parts = self.merge(listings, sources)
+        result = await self.collect(lambda adapter: adapter.search(query, want))
         start = (page - 1) * limit
         return SearchResponseV2(page=page, query=query,
-                                results=parts[start:start + limit],
-                                sources=sources)
+                                results=result.parts[start:start + limit],
+                                sources=result.statuses)
 
     @property
     def timeout_secs(self) -> float:
@@ -278,6 +314,23 @@ class PartService:
 
     def disabled_names(self) -> list[str]:
         return [n for n in ALL_DISTRIBUTORS if n in self._disabled]
+
+
+def select_part(parts: list[Part], mpn_key: str) -> tuple[Part | None, bool]:
+    """Pick the part a detail request asked for.
+
+    Returns (part, is_canonical). is_canonical False means the request named a
+    key that folded into another part, so the caller should redirect to
+    part.mpn_key rather than answer under a name the merge does not use.
+    """
+    for part in parts:
+        if part.mpn_key == mpn_key:
+            return part, True
+    for part in parts:
+        for offer in part.offers:
+            if normalize_exact(offer.mpn_as_listed) == mpn_key:
+                return part, False
+    return None, True
 
 
 def build_part_service(settings, lcsc_client: "httpx.AsyncClient"):

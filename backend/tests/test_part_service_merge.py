@@ -5,7 +5,7 @@ import pytest
 
 from models.offer import DistributorStatus
 from services.adapters.base import RawListing
-from services.part_service import PartService
+from services.part_service import PartService, select_part
 from services.quota import QuotaTracker
 
 pytestmark = pytest.mark.anyio
@@ -271,3 +271,32 @@ def test_merge_breaks_a_rank_tie_by_distributor_precedence():
     parts = svc().merge([mouser, lcsc], ok("lcsc", "mouser"))
 
     assert [p.mpn_key for p in parts] == ["PART-A", "PART-B"]
+
+
+def test_select_part_prefers_the_exact_key():
+    parts = svc().merge([listing("lcsc", "PART-A")], ok("lcsc"))
+
+    part, canonical = select_part(parts, "PART-A")
+
+    assert canonical is True and part.mpn_key == "PART-A"
+
+
+def test_select_part_falls_back_to_an_offer_key_and_asks_for_a_redirect():
+    """Search may key a part as X-TR when X was not in that result set. The
+    detail lookup can pull X back, folding the variant onto it."""
+    parts = svc().merge([listing("lcsc", "PART-A"), listing("mouser", "PART-A-TR")],
+                        ok("lcsc", "mouser"))
+
+    part, canonical = select_part(parts, "PART-A-TR")
+
+    assert canonical is False and part.mpn_key == "PART-A"
+
+
+def test_select_part_returns_nothing_when_only_a_variant_exists():
+    """Promoting a variant to answer for a part we never saw listed is the
+    confidently wrong claim the two-tier design exists to prevent."""
+    parts = svc().merge([listing("mouser", "PART-A-TR")], ok("mouser"))
+
+    part, canonical = select_part(parts, "PART-A")
+
+    assert part is None and canonical is True
