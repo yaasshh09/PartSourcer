@@ -72,6 +72,17 @@ async def test_upstream_500_raises_unavailable():
     assert exc.value.kind == "unavailable"
 
 
+async def test_search_carries_the_lcsc_flags():
+    """Both flags are native jlcsearch fields, present in search payloads,
+    so they cost no extra call. Verified in docs/api-samples/search-stm32f103.json."""
+    row = dict(ROW, is_basic=False, is_preferred=True)
+    async with client_returning({"components": [row]}) as c:
+        r = (await LcscAdapter(c).search("stm32", limit=20))[0]
+
+    assert r.is_basic is False
+    assert r.is_preferred is True
+
+
 async def test_adapter_is_parametric_capable():
     async with client_returning({"components": []}) as c:
         assert isinstance(LcscAdapter(c), ParametricCapable)

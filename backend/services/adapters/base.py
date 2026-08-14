@@ -38,6 +38,11 @@ class RawListing:
     datasheet_url: str | None
     product_url: str | None
     as_of: datetime
+    # LCSC-only flags. jlcsearch carries them on every search row, so they
+    # cost nothing. Mouser and DigiKey have no equivalent and leave them null,
+    # exactly as LCSC leaves price_breaks null.
+    is_basic: bool | None = None
+    is_preferred: bool | None = None
 
 
 class DistributorAdapter(ABC):

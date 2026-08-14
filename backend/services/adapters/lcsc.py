@@ -61,6 +61,8 @@ class LcscAdapter(DistributorAdapter):
             datasheet_url=None,       # documented gap
             product_url=f"https://jlcpcb.com/partdetail/{code}",
             as_of=as_of,
+            is_basic=raw.get("is_basic"),
+            is_preferred=raw.get("is_preferred"),
         )
 
     async def search(self, query: str, limit: int) -> list[RawListing]:

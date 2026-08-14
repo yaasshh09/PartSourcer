@@ -229,3 +229,21 @@ async def test_a_page_past_the_end_is_empty_rather_than_wrapping_around():
     resp = await service.search("stm32", limit=3, page=2)
     assert resp.page == 2
     assert resp.results == []
+
+
+def test_merge_passes_the_lcsc_flags_through_to_the_offer():
+    row = listing("lcsc", "STM32F103C8T6")
+    row.is_basic = False
+    row.is_preferred = True
+
+    parts = svc().merge([row], ok("lcsc"))
+
+    assert parts[0].offers[0].is_basic is False
+    assert parts[0].offers[0].is_preferred is True
+
+
+def test_merge_leaves_the_flags_null_for_other_distributors():
+    parts = svc().merge([listing("mouser", "STM32F103C8T6")], ok("mouser"))
+
+    assert parts[0].offers[0].is_basic is None
+    assert parts[0].offers[0].is_preferred is None

@@ -29,6 +29,8 @@ class Offer(BaseModel):
     currency: str
     product_url: str | None
     as_of: datetime
+    is_basic: bool | None = None       # LCSC only, null elsewhere
+    is_preferred: bool | None = None   # LCSC only, null elsewhere
 
 
 class Cheapest(BaseModel):
