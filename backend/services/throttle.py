@@ -3,8 +3,8 @@
 ?refresh=true is a deliberate bypass that hits the free community jlcsearch
 upstream directly. This bounds how often any one key may force that bypass, so
 a hammering client cannot flood upstream. State is per-process (a dict keyed by
-a monotonic clock). It deliberately does not coordinate across workers; see the
-README fragility note.
+a monotonic clock, keyed per (distributor, key) pair). It deliberately does not
+coordinate across workers; see the README fragility note.
 """
 
 import time
@@ -16,12 +16,15 @@ class RefreshThrottle:
                  now: Callable[[], float] = time.monotonic):
         self._cooldown = cooldown_secs
         self._now = now
-        self._last: dict[str, float] = {}
+        self._last: dict[tuple[str, str], float] = {}
 
-    def allow(self, key: str) -> bool:
+    def allow(self, distributor: str, key: str) -> bool:
+        """Keyed per (distributor, key) so a forced refresh cannot burn one
+        distributor's cooldown through another's."""
         t = self._now()
-        last = self._last.get(key)
+        pair = (distributor, key)
+        last = self._last.get(pair)
         if last is not None and (t - last) < self._cooldown:
             return False
-        self._last[key] = t
+        self._last[pair] = t
         return True
