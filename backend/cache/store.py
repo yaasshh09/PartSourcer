@@ -1,10 +1,16 @@
-"""SQLite cache storage (spec §7).
+"""SQLite cache storage, v2 (MPN-keyed).
 
 Dumb storage: rows in, rows out, each with its as_of fetch timestamp.
-Freshness/TTL decisions live in CachingPartDataSource, not here. One
-connection (WAL, check_same_thread=False) guarded by a threading.Lock;
-every public method runs its sync body via asyncio.to_thread so the
-event loop never blocks.
+Freshness and TTL decisions live in CachedPartService, not here. One
+connection (WAL, check_same_thread=False) guarded by a threading.Lock; every
+public method runs its sync body via asyncio.to_thread so the event loop
+never blocks.
+
+There is deliberately no parts table. Every distributor call returns specs,
+stock, and price in the same response, so a spec never outlives the offer
+that carried it, and a separate long-TTL specs row could only ever be read
+after that offer expired. Serving a 30 day old brand next to a 40 minute old
+price is the mixed-freshness record Part.as_of exists to prevent.
 """
 
 import asyncio
@@ -14,33 +20,69 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime
 
+CACHE_SCHEMA_VERSION = 2
+
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS parts (
-    lcsc         TEXT PRIMARY KEY,
-    specs_json   TEXT NOT NULL,
-    specs_as_of  TEXT NOT NULL,
-    stock        INTEGER NOT NULL,
-    price_usd    REAL NOT NULL,
-    stock_as_of  TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS search_cache (
-    query        TEXT NOT NULL,
-    page         INTEGER NOT NULL,
-    results_json TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS offers (
+    listing_key  TEXT NOT NULL,
+    distributor  TEXT NOT NULL,
+    sku          TEXT NOT NULL,
+    part_key     TEXT NOT NULL,
+    listing_json TEXT NOT NULL,
     as_of        TEXT NOT NULL,
-    PRIMARY KEY (query, page)
+    PRIMARY KEY (listing_key, distributor, sku)
+);
+CREATE INDEX IF NOT EXISTS offers_part_key ON offers (part_key);
+CREATE INDEX IF NOT EXISTS offers_sku ON offers (distributor, sku);
+CREATE TABLE IF NOT EXISTS search_cache (
+    query          TEXT PRIMARY KEY,
+    limit_used     INTEGER NOT NULL,
+    part_keys_json TEXT NOT NULL,
+    status_json    TEXT NOT NULL,
+    as_of          TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS part_cache (
+    mpn_key     TEXT PRIMARY KEY,
+    status_json TEXT NOT NULL,
+    as_of       TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS quota_state (
+    distributor TEXT PRIMARY KEY,
+    resets_at   TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS schema_meta (
+    version INTEGER NOT NULL
 );
 """
 
+_CACHE_TABLES = ("offers", "search_cache", "part_cache", "quota_state",
+                 "schema_meta", "parts")
+
 
 @dataclass
-class CachedPart:
-    lcsc: str
-    specs: dict          # mpn, brand, package, description, datasheet_url
-    specs_as_of: datetime
-    stock: int
-    price_usd: float
-    stock_as_of: datetime
+class CachedOffer:
+    listing_key: str        # normalize_exact of the listing's own MPN
+    distributor: str
+    sku: str
+    part_key: str           # where the merge put it last time; a retrieval index
+    listing: dict           # the whole RawListing, via cache.serde
+    as_of: datetime
+
+
+@dataclass
+class SearchCacheRow:
+    query: str
+    limit_used: int         # the per-adapter limit this fan-out asked for
+    part_keys: list[str]    # ordered, the full list at that depth
+    statuses: list[dict]    # per-distributor status at cache time
+    as_of: datetime
+
+
+@dataclass
+class PartCacheRow:
+    mpn_key: str
+    statuses: list[dict]
+    as_of: datetime
 
 
 class SqliteCacheStore:
@@ -52,7 +94,28 @@ class SqliteCacheStore:
     def open(self) -> None:
         self._conn = sqlite3.connect(self._path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
+        self._migrate()
         self._conn.executescript(_SCHEMA)
+        self._conn.execute("DELETE FROM schema_meta")
+        self._conn.execute("INSERT INTO schema_meta (version) VALUES (?)",
+                           (CACHE_SCHEMA_VERSION,))
+        self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Drop and rebuild on a version mismatch.
+
+        Legitimate because no source of truth lives here: rebuilding is free
+        and correct, and on Render free the file is ephemeral anyway. Postgres
+        (the SP2a history series) is never touched by this path.
+        """
+        try:
+            row = self._conn.execute("SELECT version FROM schema_meta").fetchone()
+        except sqlite3.OperationalError:
+            row = None
+        if row is not None and row[0] == CACHE_SCHEMA_VERSION:
+            return
+        for table in _CACHE_TABLES:
+            self._conn.execute(f"DROP TABLE IF EXISTS {table}")
         self._conn.commit()
 
     def close(self) -> None:
@@ -61,59 +124,122 @@ class SqliteCacheStore:
                 self._conn.close()
                 self._conn = None
 
-    async def get_search(self, query: str, page: int) -> tuple[list[dict], datetime] | None:
-        return await asyncio.to_thread(self._get_search, query, page)
+    async def get_search(self, query: str) -> SearchCacheRow | None:
+        return await asyncio.to_thread(self._get_search, query)
 
-    async def put_search(self, query: str, page: int,
-                         results: list[dict], as_of: datetime) -> None:
-        await asyncio.to_thread(self._put_search, query, page, results, as_of)
+    async def put_search(self, query: str, limit_used: int,
+                         part_keys: list[str], statuses: list[dict],
+                         as_of: datetime) -> None:
+        await asyncio.to_thread(self._put_search, query, limit_used,
+                                part_keys, statuses, as_of)
 
-    async def get_part(self, lcsc: str) -> CachedPart | None:
-        return await asyncio.to_thread(self._get_part, lcsc)
+    async def get_part_status(self, mpn_key: str) -> PartCacheRow | None:
+        return await asyncio.to_thread(self._get_part_status, mpn_key)
 
-    async def upsert_part(self, lcsc: str, specs: dict, stock: int,
-                          price_usd: float, specs_as_of: datetime,
-                          stock_as_of: datetime) -> None:
-        await asyncio.to_thread(self._upsert_part, lcsc, specs, stock,
-                                price_usd, specs_as_of, stock_as_of)
+    async def put_part_status(self, mpn_key: str, statuses: list[dict],
+                              as_of: datetime) -> None:
+        await asyncio.to_thread(self._put_part_status, mpn_key, statuses, as_of)
+
+    async def get_offers(self, part_keys: list[str]) -> list[CachedOffer]:
+        return await asyncio.to_thread(self._get_offers, part_keys)
+
+    async def put_offers(self, offers: list[CachedOffer]) -> None:
+        await asyncio.to_thread(self._put_offers, offers)
+
+    async def find_part_key_by_sku(self, distributor: str,
+                                   sku: str) -> str | None:
+        return await asyncio.to_thread(self._find_part_key_by_sku,
+                                       distributor, sku)
+
+    async def get_quota_markers(self) -> dict[str, datetime]:
+        return await asyncio.to_thread(self._get_quota_markers)
+
+    async def put_quota_marker(self, distributor: str,
+                               resets_at: datetime) -> None:
+        await asyncio.to_thread(self._put_quota_marker, distributor, resets_at)
 
     # -- sync internals (run in worker threads, serialized by the lock) --
 
-    def _get_search(self, query: str, page: int):
+    def _get_search(self, query: str):
         with self._lock:
             row = self._conn.execute(
-                "SELECT results_json, as_of FROM search_cache"
-                " WHERE query = ? AND page = ?", (query, page)).fetchone()
+                "SELECT query, limit_used, part_keys_json, status_json, as_of"
+                " FROM search_cache WHERE query = ?", (query,)).fetchone()
         if row is None:
             return None
-        return json.loads(row[0]), datetime.fromisoformat(row[1])
+        return SearchCacheRow(query=row[0], limit_used=row[1],
+                              part_keys=json.loads(row[2]),
+                              statuses=json.loads(row[3]),
+                              as_of=datetime.fromisoformat(row[4]))
 
-    def _put_search(self, query, page, results, as_of):
+    def _put_search(self, query, limit_used, part_keys, statuses, as_of):
         with self._lock:
             self._conn.execute(
                 "INSERT OR REPLACE INTO search_cache"
-                " (query, page, results_json, as_of) VALUES (?, ?, ?, ?)",
-                (query, page, json.dumps(results), as_of.isoformat()))
+                " (query, limit_used, part_keys_json, status_json, as_of)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (query, limit_used, json.dumps(part_keys),
+                 json.dumps(statuses), as_of.isoformat()))
             self._conn.commit()
 
-    def _get_part(self, lcsc: str):
+    def _get_part_status(self, mpn_key: str):
         with self._lock:
             row = self._conn.execute(
-                "SELECT lcsc, specs_json, specs_as_of, stock, price_usd,"
-                " stock_as_of FROM parts WHERE lcsc = ?", (lcsc,)).fetchone()
+                "SELECT mpn_key, status_json, as_of FROM part_cache"
+                " WHERE mpn_key = ?", (mpn_key,)).fetchone()
         if row is None:
             return None
-        return CachedPart(
-            lcsc=row[0], specs=json.loads(row[1]),
-            specs_as_of=datetime.fromisoformat(row[2]),
-            stock=row[3], price_usd=row[4],
-            stock_as_of=datetime.fromisoformat(row[5]))
+        return PartCacheRow(mpn_key=row[0], statuses=json.loads(row[1]),
+                            as_of=datetime.fromisoformat(row[2]))
 
-    def _upsert_part(self, lcsc, specs, stock, price_usd, specs_as_of, stock_as_of):
+    def _put_part_status(self, mpn_key, statuses, as_of):
         with self._lock:
             self._conn.execute(
-                "INSERT OR REPLACE INTO parts (lcsc, specs_json, specs_as_of,"
-                " stock, price_usd, stock_as_of) VALUES (?, ?, ?, ?, ?, ?)",
-                (lcsc, json.dumps(specs), specs_as_of.isoformat(),
-                 stock, price_usd, stock_as_of.isoformat()))
+                "INSERT OR REPLACE INTO part_cache (mpn_key, status_json, as_of)"
+                " VALUES (?, ?, ?)",
+                (mpn_key, json.dumps(statuses), as_of.isoformat()))
+            self._conn.commit()
+
+    def _get_offers(self, part_keys: list[str]) -> list[CachedOffer]:
+        if not part_keys:
+            return []
+        marks = ",".join("?" * len(part_keys))
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT listing_key, distributor, sku, part_key, listing_json,"
+                f" as_of FROM offers WHERE part_key IN ({marks})",
+                tuple(part_keys)).fetchall()
+        return [CachedOffer(listing_key=r[0], distributor=r[1], sku=r[2],
+                            part_key=r[3], listing=json.loads(r[4]),
+                            as_of=datetime.fromisoformat(r[5])) for r in rows]
+
+    def _put_offers(self, offers: list[CachedOffer]) -> None:
+        if not offers:
+            return
+        with self._lock:
+            self._conn.executemany(
+                "INSERT OR REPLACE INTO offers (listing_key, distributor, sku,"
+                " part_key, listing_json, as_of) VALUES (?, ?, ?, ?, ?, ?)",
+                [(o.listing_key, o.distributor, o.sku, o.part_key,
+                  json.dumps(o.listing), o.as_of.isoformat()) for o in offers])
+            self._conn.commit()
+
+    def _find_part_key_by_sku(self, distributor: str, sku: str) -> str | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT part_key FROM offers WHERE distributor = ? AND sku = ?",
+                (distributor, sku)).fetchone()
+        return row[0] if row is not None else None
+
+    def _get_quota_markers(self) -> dict[str, datetime]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT distributor, resets_at FROM quota_state").fetchall()
+        return {r[0]: datetime.fromisoformat(r[1]) for r in rows}
+
+    def _put_quota_marker(self, distributor: str, resets_at: datetime) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO quota_state (distributor, resets_at)"
+                " VALUES (?, ?)", (distributor, resets_at.isoformat()))
             self._conn.commit()

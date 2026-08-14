@@ -4,9 +4,6 @@ from fastapi.testclient import TestClient
 
 import services.deps as deps
 from main import app
-from cache.caching_datasource import CachingPartDataSource
-from cache.store import SqliteCacheStore
-from config import settings
 from services.datasource import JlcSearchDataSource
 
 RAW = {"lcsc": 8734, "mfr": "STM32F103C8T6", "package": "LQFP-48(7x7)",
@@ -72,38 +69,5 @@ def test_upstream_error_maps_to_502():
     assert c.get("/api/part/C8734").status_code == 502
 
 
-@pytest.fixture
-def cache_client(tmp_path):
-    calls = {"n": 0}
-
-    def handler(request):
-        calls["n"] += 1
-        return httpx.Response(200, json={"components": [RAW]})
-
-    transport = httpx.MockTransport(handler)
-    http_client = httpx.AsyncClient(base_url="https://example.test",
-                                    transport=transport)
-    store = SqliteCacheStore(str(tmp_path / "cache.db"))
-    store.open()
-    ds = CachingPartDataSource(inner=JlcSearchDataSource(http_client),
-                               store=store,
-                               specs_ttl_secs=settings.specs_cache_ttl_secs,
-                               stock_ttl_secs=settings.stock_cache_ttl_secs)
-    app.dependency_overrides[deps.get_datasource] = lambda: ds
-    yield TestClient(app), calls
-    store.close()
-
-
-def test_second_detail_served_from_cache(cache_client):
-    c, calls = cache_client
-    first = c.get("/api/part/C8734").json()
-    second = c.get("/api/part/C8734").json()
-    assert calls["n"] == 1
-    assert second == first
-
-
-def test_refresh_forces_refetch(cache_client):
-    c, calls = cache_client
-    c.get("/api/part/C8734")
-    c.get("/api/part/C8734", params={"refresh": "true"})
-    assert calls["n"] == 2
+# The v1 caching integration tests lived here. Caching moved to
+# CachedPartService in Task 21 and 22, which own their own tests.

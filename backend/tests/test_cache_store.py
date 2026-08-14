@@ -1,82 +1,122 @@
-"""Unit tests for the SQLite cache store (dumb storage, no TTL logic)."""
+"""Unit tests for the SQLite cache store, v2 (dumb storage, no TTL logic)."""
 
+import sqlite3
 from datetime import datetime, timezone
 
 import pytest
 
-from cache.store import CachedPart, SqliteCacheStore
+from cache.store import CACHE_SCHEMA_VERSION, CachedOffer, SqliteCacheStore
 
 pytestmark = pytest.mark.anyio
 
-AS_OF = datetime(2026, 7, 10, 12, 0, 0, tzinfo=timezone.utc)
-ROW = {"lcsc": "C8734", "mpn": "STM32F103C8T6", "brand": None,
-       "package": "LQFP-48(7x7)", "description": "", "stock": 214596,
-       "price_usd": 1.0371, "datasheet_url": None,
-       "as_of": "2026-07-10T12:00:00+00:00"}
-SPECS = {"mpn": "STM32F103C8T6", "brand": None, "package": "LQFP-48(7x7)",
-         "description": "", "datasheet_url": None}
+AS_OF = datetime(2026, 8, 14, 9, 14, tzinfo=timezone.utc)
 
 
 @pytest.fixture
 def store(tmp_path):
-    s = SqliteCacheStore(str(tmp_path / "cache.db"))
+    s = SqliteCacheStore(str(tmp_path / "c.db"))
     s.open()
     yield s
     s.close()
 
 
-async def test_search_miss_returns_none(store):
-    assert await store.get_search("stm32", 1) is None
+def offer(listing_key="PART-A", distributor="lcsc", sku="C1", part_key=None):
+    return CachedOffer(listing_key=listing_key, distributor=distributor,
+                       sku=sku, part_key=part_key or listing_key,
+                       listing={"mpn": listing_key}, as_of=AS_OF)
 
 
-async def test_search_round_trip(store):
-    await store.put_search("stm32", 1, [ROW], AS_OF)
-    got = await store.get_search("stm32", 1)
-    assert got is not None
-    rows, as_of = got
-    assert rows == [ROW]
-    assert as_of == AS_OF
+async def test_offers_round_trip_by_part_key(store):
+    await store.put_offers([offer(), offer("PART-A-TR", "mouser", "M1", "PART-A")])
+
+    got = await store.get_offers(["PART-A"])
+
+    assert {o.sku for o in got} == {"C1", "M1"}
+    assert got[0].as_of == AS_OF
 
 
-async def test_search_key_includes_page(store):
-    await store.put_search("stm32", 1, [ROW], AS_OF)
-    assert await store.get_search("stm32", 2) is None
+async def test_put_offers_replaces_a_listing_in_place(store):
+    await store.put_offers([offer()])
+    updated = offer()
+    updated.listing = {"mpn": "PART-A", "price": 1.5}
+    await store.put_offers([updated])
+
+    got = await store.get_offers(["PART-A"])
+
+    assert len(got) == 1 and got[0].listing["price"] == 1.5
 
 
-async def test_put_search_overwrites(store):
-    await store.put_search("stm32", 1, [ROW], AS_OF)
-    later = datetime(2026, 7, 10, 15, 0, 0, tzinfo=timezone.utc)
-    await store.put_search("stm32", 1, [], later)
-    rows, as_of = await store.get_search("stm32", 1)
-    assert rows == [] and as_of == later
+async def test_search_row_round_trips(store):
+    await store.put_search("stm32", 20, ["PART-A", "PART-B"],
+                           [{"distributor": "lcsc", "state": "ok"}], AS_OF)
+
+    row = await store.get_search("stm32")
+
+    assert row.limit_used == 20
+    assert row.part_keys == ["PART-A", "PART-B"]
+    assert row.statuses[0]["state"] == "ok"
+    assert row.as_of == AS_OF
+    assert await store.get_search("nothing") is None
 
 
-async def test_part_miss_returns_none(store):
-    assert await store.get_part("C8734") is None
+async def test_part_status_row_round_trips(store):
+    await store.put_part_status("PART-A",
+                                [{"distributor": "lcsc", "state": "ok"}], AS_OF)
+
+    row = await store.get_part_status("PART-A")
+
+    assert row.statuses[0]["distributor"] == "lcsc"
+    assert await store.get_part_status("PART-B") is None
 
 
-async def test_part_round_trip(store):
-    await store.upsert_part("C8734", SPECS, 214596, 1.0371, AS_OF, AS_OF)
-    p = await store.get_part("C8734")
-    assert p == CachedPart(lcsc="C8734", specs=SPECS, specs_as_of=AS_OF,
-                           stock=214596, price_usd=1.0371, stock_as_of=AS_OF)
+async def test_find_part_key_by_sku_powers_the_legacy_redirect(store):
+    await store.put_offers([offer("STM32F103C8T6", "lcsc", "C8734")])
+
+    assert await store.find_part_key_by_sku("lcsc", "C8734") == "STM32F103C8T6"
+    assert await store.find_part_key_by_sku("lcsc", "C9999") is None
 
 
-async def test_upsert_part_overwrites(store):
-    await store.upsert_part("C8734", SPECS, 214596, 1.0371, AS_OF, AS_OF)
-    later = datetime(2026, 7, 10, 15, 0, 0, tzinfo=timezone.utc)
-    await store.upsert_part("C8734", SPECS, 100, 0.99, later, later)
-    p = await store.get_part("C8734")
-    assert p.stock == 100 and p.price_usd == 0.99 and p.stock_as_of == later
+async def test_quota_markers_round_trip(store):
+    await store.put_quota_marker("mouser", AS_OF)
+
+    assert await store.get_quota_markers() == {"mouser": AS_OF}
 
 
-async def test_persists_across_reopen(tmp_path):
-    path = str(tmp_path / "cache.db")
-    s1 = SqliteCacheStore(path)
-    s1.open()
-    await s1.upsert_part("C8734", SPECS, 214596, 1.0371, AS_OF, AS_OF)
-    s1.close()
-    s2 = SqliteCacheStore(path)
-    s2.open()
-    assert (await s2.get_part("C8734")).lcsc == "C8734"
-    s2.close()
+async def test_a_v1_database_is_dropped_and_rebuilt(tmp_path):
+    """The cache holds no source of truth, so rebuilding is free and correct."""
+    path = str(tmp_path / "old.db")
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        "CREATE TABLE parts (lcsc TEXT PRIMARY KEY, specs_json TEXT);"
+        "INSERT INTO parts VALUES ('C8734', '{}');")
+    conn.commit()
+    conn.close()
+
+    s = SqliteCacheStore(path)
+    s.open()
+    try:
+        with sqlite3.connect(path) as check:
+            names = {r[0] for r in check.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            version = check.execute("SELECT version FROM schema_meta").fetchone()[0]
+    finally:
+        s.close()
+
+    assert "parts" not in names
+    assert {"offers", "search_cache", "part_cache", "quota_state"} <= names
+    assert version == CACHE_SCHEMA_VERSION
+
+
+async def test_opening_a_current_database_twice_keeps_its_rows(tmp_path):
+    path = str(tmp_path / "c.db")
+    first = SqliteCacheStore(path)
+    first.open()
+    await first.put_offers([offer()])
+    first.close()
+
+    second = SqliteCacheStore(path)
+    second.open()
+    try:
+        assert len(await second.get_offers(["PART-A"])) == 1
+    finally:
+        second.close()

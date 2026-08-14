@@ -7,13 +7,11 @@ else changes.
 
 import httpx
 
-from cache.caching_datasource import CachingPartDataSource
 from cache.store import SqliteCacheStore
 from config import settings
 from history.store import HistoryStore, PostgresHistoryStore
 from services.datasource import JlcSearchDataSource, PartDataSource
 from services.part_service import PartService, build_part_service
-from services.throttle import RefreshThrottle
 
 _client: httpx.AsyncClient | None = None
 _store: SqliteCacheStore | None = None
@@ -32,13 +30,10 @@ async def startup() -> None:
     )
     _store = SqliteCacheStore(settings.sqlite_path)
     _store.open()
-    _datasource = CachingPartDataSource(
-        inner=JlcSearchDataSource(_client),
-        store=_store,
-        specs_ttl_secs=settings.specs_cache_ttl_secs,
-        stock_ttl_secs=settings.stock_cache_ttl_secs,
-        throttle=RefreshThrottle(settings.refresh_cooldown_secs),
-    )
+    # The v1 cache wrapper is gone and the v2 cache is not wired to the routes
+    # until Task 25, so the surviving v1 routes run uncached in between. The
+    # whole v1 stack, this line included, is deleted in Task 27.
+    _datasource = JlcSearchDataSource(_client)
     _part_service, _distributor_clients = build_part_service(settings, _client)
     if settings.database_url:
         pg = PostgresHistoryStore(settings.database_url)
