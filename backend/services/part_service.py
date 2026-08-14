@@ -315,6 +315,11 @@ class PartService:
     def disabled_names(self) -> list[str]:
         return [n for n in ALL_DISTRIBUTORS if n in self._disabled]
 
+    def attach_quota_markers(self, markers, loaded: dict[str, datetime]) -> None:
+        """Wire persistence after construction, because deps owns the store
+        and the factory does not."""
+        self._quota.attach_markers(markers, loaded)
+
 
 def select_part(parts: list[Part], mpn_key: str) -> tuple[Part | None, bool]:
     """Pick the part a detail request asked for.

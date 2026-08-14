@@ -74,3 +74,8 @@ class SearchResponseV2(BaseModel):
     query: str
     results: list[Part]
     sources: list[DistributorStatus]
+
+
+class PartResponse(BaseModel):
+    part: Part
+    sources: list[DistributorStatus]

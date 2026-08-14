@@ -1,23 +1,27 @@
-"""GET /api/search: spec §9."""
+"""GET /api/search: the multi-distributor search surface."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from models.search import SearchResponse
-from services.datasource import PartDataSource, UpstreamError, UPSTREAM_STATUS
-from services.deps import get_datasource
+from cache.cached_part_service import CachedPartService
+from models.offer import SearchResponseV2
+from services.datasource import UPSTREAM_STATUS, UpstreamError
+from services.deps import get_cached_service
 
 router = APIRouter(prefix="/api")
 
 
-@router.get("/search", response_model=SearchResponse)
+@router.get("/search", response_model=SearchResponseV2)
 async def search(
     q: str = "",
     page: int = Query(1, ge=1),
     refresh: bool = False,
-    ds: PartDataSource = Depends(get_datasource),
-) -> SearchResponse:
+    cached: CachedPartService = Depends(get_cached_service),
+) -> SearchResponseV2:
+    # A partial failure is a 200 with an honest sources block. UpstreamError
+    # only reaches here when every callable distributor failed, because
+    # PartService turns a single source's failure into a status.
     try:
-        results = await ds.search(q, page, refresh=refresh)
+        return await cached.search(q, page, refresh=refresh)
     except UpstreamError as exc:
-        raise HTTPException(status_code=UPSTREAM_STATUS[exc.kind], detail=str(exc)) from exc
-    return SearchResponse(page=page, results=results)
+        raise HTTPException(status_code=UPSTREAM_STATUS[exc.kind],
+                            detail=str(exc)) from exc

@@ -49,6 +49,12 @@ class QuotaTracker:
         self._counted_on: dict[str, str] = {}
         self._exhausted_until: dict[str, datetime] = dict(loaded or {})
 
+    def attach_markers(self, markers: QuotaMarkerStore,
+                       loaded: dict[str, datetime]) -> None:
+        self._markers = markers
+        for distributor, until in loaded.items():
+            self._exhausted_until.setdefault(distributor, until)
+
     def _roll(self, distributor: str) -> None:
         """Zero the counter when the UTC date has moved on."""
         today = self._now().date().isoformat()
