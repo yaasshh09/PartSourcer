@@ -78,6 +78,8 @@ test('clears the input text when q is removed from the URL', async () => {
 test('shows the oldest as_of across results, never the newest', async () => {
   vi.spyOn(api, 'search').mockResolvedValue({
     page: 1, query: 'stm32', sources: OK_SOURCES,
+    // The NEWEST stamp must stay first. Reversed, a first-result read and an
+    // oldest read both land on Aug 14 and this test stops discriminating.
     results: [
       part({ mpn_key: 'A', mpn: 'A', as_of: '2026-08-15T10:00:00Z' }),
       part({ mpn_key: 'B', mpn: 'B', as_of: '2026-08-14T09:00:00Z' }),
@@ -99,6 +101,12 @@ test('warns above the results when a distributor did not answer', async () => {
   renderAt('/?q=stm32')
   await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument())
   expect(screen.getByText(/Mouser unavailable/)).toBeInTheDocument()
+  // Above, not merely present. A caveat rendered under the prices is read
+  // after the user has already priced the part, which defeats the warning.
+  const status = screen.getByRole('status')
+  const header = screen.getByText(/RESULTS: 1 MATCHES/)
+  expect(status.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING)
+    .toBeTruthy()
 })
 
 test('stays silent about sources when everything answered', async () => {
