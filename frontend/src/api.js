@@ -26,14 +26,24 @@ async function getJson(path) {
   return body
 }
 
+// Real MPNs contain slashes (LM358P/NOPB) and the backend path converter is
+// greedy so they survive. Escaping the slash would still route, but the
+// canonical Location the server builds would then disagree with the address
+// bar and the page would bounce. Escape everything else.
+export function encodeKey(key) {
+  return encodeURIComponent(key).replace(/%2F/g, '/')
+}
+
 export function search(q, page = 1) {
   return getJson(`/search?q=${encodeURIComponent(q)}&page=${page}`)
 }
 
-export function getPart(lcsc) {
-  return getJson(`/part/${encodeURIComponent(lcsc)}`)
+export function getPart(mpnKey) {
+  return getJson(`/part/${encodeKey(mpnKey)}`)
 }
 
-export function getEquivalent(lcsc) {
-  return getJson(`/part/${encodeURIComponent(lcsc)}/equivalent`)
+// Moved out from under /part: a greedy path converter on /part would swallow
+// a trailing /equivalent as part of the identifier.
+export function getEquivalent(mpnKey) {
+  return getJson(`/equivalent/${encodeKey(mpnKey)}`)
 }
