@@ -1,0 +1,126 @@
+import { C, fmtPrice, fmtAsOf } from '../theme.js'
+import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
+import StockBadge from './StockBadge.jsx'
+import CopyButton from './CopyButton.jsx'
+
+const ARCHIVO = "'Archivo',sans-serif"
+const MONO = "'IBM Plex Mono',monospace"
+
+const TH = {
+  textAlign: 'left', fontFamily: ARCHIVO, fontWeight: 900, fontSize: 11,
+  letterSpacing: '0.06em', color: C.sub, padding: '0 12px 10px 0',
+  borderBottom: `3px solid ${C.ink}`,
+}
+const TD = {
+  padding: '12px 12px 12px 0', borderBottom: '1px solid #e8e4d4',
+  fontSize: 14, verticalAlign: 'top',
+}
+
+function isClaimed(offer, cheapest) {
+  return !!cheapest
+    && cheapest.distributor === offer.distributor
+    && cheapest.sku === offer.sku
+}
+
+function OfferRow({ offer, cheapest, showNote }) {
+  const claimed = isClaimed(offer, cheapest)
+  return (
+    <tr>
+      <td style={TD}>
+        <span style={{ fontWeight: 700 }}>
+          {DISTRIBUTOR_LABEL[offer.distributor] || offer.distributor}
+        </span>
+        {claimed ? (
+          <div style={{ display: 'inline-block', background: C.yellow, fontSize: 11,
+            fontWeight: 700, padding: '2px 7px', marginLeft: 8 }}>
+            {`cheapest of ${cheapest.compared_sources} sources`}
+          </div>
+        ) : null}
+        {showNote && offer.match_note ? (
+          <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 4 }}>
+            {offer.match_note}
+          </div>
+        ) : null}
+      </td>
+      <td style={TD}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontFamily: MONO, fontSize: 13 }}>{offer.sku}</span>
+          <CopyButton value={offer.sku} label={`Copy ${offer.sku}`} />
+        </div>
+      </td>
+      <td style={TD}><StockBadge stock={offer.stock} /></td>
+      <td style={{ ...TD, fontFamily: ARCHIVO, fontWeight: 900, fontSize: 17 }}>
+        {fmtPrice(offer.price_usd)}
+      </td>
+      <td style={{ ...TD, fontSize: 12, color: C.muted, fontWeight: 600 }}>
+        {fmtAsOf(offer.as_of)}
+      </td>
+      <td style={TD}>
+        {/* Null for LCSC over jlcsearch, real for Mouser and DigiKey, so this
+            cell is conditional per row rather than per table. */}
+        {offer.product_url ? (
+          <a href={offer.product_url} target="_blank" rel="noopener noreferrer"
+            aria-label={`View ${offer.sku} on ${DISTRIBUTOR_LABEL[offer.distributor] || offer.distributor}`}
+            style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12, color: C.ink }}>
+            View ↗
+          </a>
+        ) : null}
+      </td>
+    </tr>
+  )
+}
+
+function Block({ title, offers, cheapest, showNote, caption }) {
+  if (!offers.length) return null
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13 }}>{title}</div>
+      {caption ? (
+        <div style={{ fontSize: 13, color: C.sub, fontWeight: 500, margin: '6px 0 0' }}>
+          {caption}
+        </div>
+      ) : null}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+        <thead>
+          <tr>
+            <th style={TH}>DISTRIBUTOR</th>
+            <th style={TH}>SKU</th>
+            <th style={TH}>STOCK</th>
+            <th style={TH}>UNIT PRICE</th>
+            <th style={TH}>AS OF</th>
+            <th style={TH}><span style={{ position: 'absolute', left: -9999 }}>LINK</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {offers.map((o) => (
+            <OfferRow key={`${o.distributor}:${o.sku}`} offer={o}
+              cheapest={cheapest} showNote={showNote} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/**
+ * Every distributor listing for one part, with exact matches and packaging
+ * variants kept in separate blocks so a cheaper reel cannot silently undercut
+ * the tube the user searched for.
+ */
+export default function OfferTable({ offers, cheapest = null, unavailableReason = null }) {
+  const { exact, packaging } = groupOffersByTier(offers)
+  if (!exact.length && !packaging.length) return null
+
+  return (
+    <div style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 22, marginTop: 20 }}>
+      <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} />
+      <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote
+        caption="Same part number, different packaging. These are not the same physical part, so check the reel or tube before you swap." />
+      {!cheapest && unavailableReason ? (
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 14 }}>
+          {`No cheapest claim: ${unavailableReason}.`}
+        </div>
+      ) : null}
+    </div>
+  )
+}
