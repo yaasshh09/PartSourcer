@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
 import { C, fmtAsOf } from '../theme.js'
+import { oldestAsOf } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
+import SourceStatusBar from '../components/SourceStatusBar.jsx'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 const COMING_SOON = ['BOM bulk upload', 'Price history', 'Browse by category', 'Biggest savings this week']
@@ -19,11 +21,13 @@ export default function SearchPage() {
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState('')
   const [asOf, setAsOf] = useState(null)
+  const [sources, setSources] = useState([])
   const inputRef = useRef(null)
 
   useEffect(() => {
     if (!q) {
-      setResults([]); setError(null); setSubmitted(''); setAsOf(null); setLoading(false); setQuery('')
+      setResults([]); setError(null); setSubmitted(''); setAsOf(null)
+      setSources([]); setLoading(false); setQuery('')
       return
     }
     setQuery(q)
@@ -34,7 +38,10 @@ export default function SearchPage() {
       .then((data) => {
         if (cancelled) return
         setResults(data.results)
-        setAsOf(data.results[0]?.as_of || null)
+        // Oldest, not first: a fast distributor must not make the page look
+        // fresher than its stalest record.
+        setAsOf(oldestAsOf(data.results))
+        setSources(data.sources || [])
         setSubmitted(q)
       })
       .catch((e) => { if (!cancelled) setError(e) })
@@ -85,6 +92,7 @@ export default function SearchPage() {
   } else if (q && results.length) {
     body = (
       <div>
+        <SourceStatusBar sources={sources} />
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
           paddingBottom: 12, borderBottom: `3px solid ${C.ink}`, marginBottom: 18 }}>
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14 }}>
@@ -95,7 +103,7 @@ export default function SearchPage() {
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {results.map((part) => <ResultCard key={part.lcsc} part={part} />)}
+          {results.map((p) => <ResultCard key={p.mpn_key} part={p} />)}
         </div>
       </div>
     )
