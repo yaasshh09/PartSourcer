@@ -83,12 +83,14 @@ function Block({ title, offers, cheapest, showNote, caption }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
         <thead>
           <tr>
-            <th style={TH}>DISTRIBUTOR</th>
-            <th style={TH}>SKU</th>
-            <th style={TH}>STOCK</th>
-            <th style={TH}>UNIT PRICE</th>
-            <th style={TH}>AS OF</th>
-            <th style={TH}><span style={{ position: 'absolute', left: -9999 }}>LINK</span></th>
+            {/* scope="col" is the point of using a real table: it is what ties
+                each cell to its column for a screen reader. */}
+            <th scope="col" style={TH}>DISTRIBUTOR</th>
+            <th scope="col" style={TH}>SKU</th>
+            <th scope="col" style={TH}>STOCK</th>
+            <th scope="col" style={TH}>UNIT PRICE</th>
+            <th scope="col" style={TH}>AS OF</th>
+            <th scope="col" style={TH}><span style={{ position: 'absolute', left: -9999 }}>LINK</span></th>
           </tr>
         </thead>
         <tbody>

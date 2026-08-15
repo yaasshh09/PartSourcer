@@ -31,6 +31,14 @@ test('renders one row per offer under an exact-match heading', () => {
   expect(screen.getByText('$0.50')).toBeInTheDocument()
 })
 
+test('column headers are scoped, which is the reason for a real table', () => {
+  noClipboard()
+  render(<OfferTable offers={[offer()]} />)
+  const headers = screen.getAllByRole('columnheader')
+  expect(headers).toHaveLength(6)
+  headers.forEach((h) => expect(h).toHaveAttribute('scope', 'col'))
+})
+
 test('omits the packaging block entirely when there are no variants', () => {
   noClipboard()
   render(<OfferTable offers={[offer()]} />)
