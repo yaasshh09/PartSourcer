@@ -15,7 +15,9 @@ export default function App() {
       <main style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<SearchPage />} />
-          <Route path="/part/:lcsc" element={<DetailPage />} />
+          {/* Splat, not a named param: a named param stops at the first
+              slash, and real MPNs contain them (LM358P/NOPB). */}
+          <Route path="/part/*" element={<DetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/how" element={<HowPage />} />
           <Route path="/faq" element={<FaqPage />} />
