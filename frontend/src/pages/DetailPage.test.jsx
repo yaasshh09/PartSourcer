@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import DetailPage from './DetailPage.jsx'
 import * as api from '../api.js'
@@ -91,6 +91,34 @@ test('leaves the URL alone when the key already matches', async () => {
   renderPart('/part/0402WGJ0103TCE')
   await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
   expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE')
+})
+
+function BackButton() {
+  const navigate = useNavigate()
+  return <button type="button" onClick={() => navigate(-1)}>go back</button>
+}
+
+// The correction must REPLACE the stale entry, not push over it. With a push,
+// Back returns to the legacy key, which redirects forward again and traps the
+// user. Asserting the pathname alone cannot tell the two apart, so this walks
+// the history instead.
+test('self-correcting replaces the stale entry, so Back escapes instead of re-redirecting', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  render(
+    <MemoryRouter initialEntries={['/', '/part/C25531']} initialIndex={1}>
+      <LocationProbe />
+      <BackButton />
+      <Routes>
+        <Route path="/" element={<div>home</div>} />
+        <Route path="/part/*" element={<DetailPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE'))
+  fireEvent.click(screen.getByRole('button', { name: 'go back' }))
+  await waitFor(() => expect(screen.getByTestId('loc').textContent).toBe('/'))
 })
 
 test('warns when a distributor did not answer', async () => {
@@ -197,6 +225,8 @@ test('a part with no LCSC offer shows no LCSC code row and no LCSC links', async
   await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
   expect(screen.queryByRole('link', { name: /^View on LCSC/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /Copy LCSC code/i })).not.toBeInTheDocument()
+  // The spec row too: an omitted row, not a row with a blank value.
+  expect(screen.queryByText('LCSC')).not.toBeInTheDocument()
 })
 
 test('unknown part shows a 404 state', async () => {
