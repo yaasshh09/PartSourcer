@@ -11,6 +11,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
+from api.legacy import LEGACY_CODE, canonical_mpn
 from cache.cached_part_service import CachedPartService
 from models.offer import PartResponse
 from services.adapters.lcsc import LcscAdapter
@@ -20,18 +21,7 @@ from services.matching import normalize_exact
 
 router = APIRouter(prefix="/api")
 
-_LEGACY_CODE = re.compile(r"C\d+")
 _LEGACY_EQUIVALENT = re.compile(r"(C\d+)/equivalent")
-
-
-async def _canonical_mpn(code: str, cached: CachedPartService,
-                         lcsc: LcscAdapter) -> str | None:
-    """An LCSC code to its canonical MPN, cache first then upstream."""
-    part_key = await cached.resolve_sku("lcsc", code)
-    if part_key is not None:
-        return part_key
-    listing = await lcsc.lookup_sku(code)
-    return normalize_exact(listing.mpn) if listing is not None else None
 
 
 @router.get("/part/{mpn_key:path}", response_model=PartResponse)
@@ -48,14 +38,14 @@ async def get_part(
     # does not resolve, rather than 404ing a real part.
     legacy = _LEGACY_EQUIVALENT.fullmatch(raw)
     if legacy is not None:
-        canonical = await _canonical_mpn(legacy.group(1), cached, lcsc)
+        canonical = await canonical_mpn(legacy.group(1), cached, lcsc)
         if canonical is not None:
             return RedirectResponse(f"/api/equivalent/{canonical}",
                                     status_code=302)
         raise HTTPException(status_code=404, detail=f"Part {raw} not found")
 
-    if _LEGACY_CODE.fullmatch(raw):
-        canonical = await _canonical_mpn(raw, cached, lcsc)
+    if LEGACY_CODE.fullmatch(raw):
+        canonical = await canonical_mpn(raw, cached, lcsc)
         if canonical is not None:
             return RedirectResponse(f"/api/part/{canonical}", status_code=302)
 

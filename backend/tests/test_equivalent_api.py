@@ -12,7 +12,7 @@ import services.deps as deps
 from main import app
 from services.adapters.lcsc import LcscAdapter
 from services.lcsc_matcher_source import LcscMatcherSource
-from tests.stub_cached import StubCached, offer, part
+from tests.stub_cached import StubCached, StubLcsc, offer, part
 
 # Upstream rows. A resistor lookup drives: lookup_sku via /api/search, then
 # /resistors/list.json (classify + pool).
@@ -65,14 +65,20 @@ def cap_route(request):
     return httpx.Response(404, json={})
 
 
-def client_with(handler, found=None, canonical=True):
+def client_with(handler, found=None, canonical=True, skus=None, lcsc=None):
+    """`skus` seeds the cache's SKU index, `lcsc` replaces the adapter that
+    legacy-code resolution falls back to. Left unset, the adapter is the real
+    one over `handler`, so resolution goes upstream through the mock."""
     transport = httpx.MockTransport(handler)
     http_client = httpx.AsyncClient(base_url="https://example.test",
                                     transport=transport)
-    source = LcscMatcherSource(LcscAdapter(http_client))
+    adapter = LcscAdapter(http_client)
+    source = LcscMatcherSource(adapter)
     app.dependency_overrides[deps.get_matcher_source] = lambda: source
+    app.dependency_overrides[deps.get_lcsc_adapter] = \
+        lambda: lcsc if lcsc is not None else adapter
     app.dependency_overrides[deps.get_cached_service] = \
-        lambda: StubCached(found=found, canonical=canonical)
+        lambda: StubCached(found=found, canonical=canonical, skus=skus)
     return TestClient(app)
 
 
@@ -162,3 +168,51 @@ def test_equivalent_upstream_error_502():
                     found=resistor_part())
 
     assert c.get("/api/equivalent/R-ORIG").status_code == 502
+
+
+# -- legacy LCSC codes -------------------------------------------------------
+# /api/part/C7593 resolves an old-style code to its canonical MPN and
+# redirects. This route did not, so every legacy link 404'd on the one feature
+# the project exists for. Both routes now share api/legacy.py.
+
+def test_a_legacy_lcsc_code_resolves_from_the_cache():
+    c = client_with(route, found=resistor_part(), skus={"C100": "R-ORIG"},
+                    lcsc=StubLcsc())
+
+    resp = c.get("/api/equivalent/C100", follow_redirects=False)
+
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "/api/equivalent/R-ORIG"
+
+
+def test_a_legacy_lcsc_code_falls_back_to_upstream_when_the_cache_misses():
+    """The cache only knows codes it has already seen, so a cold backend has
+    to ask LCSC directly or the redirect works only after a warm-up."""
+    c = client_with(route, found=resistor_part())
+
+    resp = c.get("/api/equivalent/C100", follow_redirects=False)
+
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "/api/equivalent/R-ORIG"
+
+
+def test_a_code_shaped_mpn_that_resolves_to_nothing_is_still_tried_as_an_mpn():
+    """2SC1815 is catalogued as C1815, so a code-shaped string is not proof of
+    a SKU. Redirecting on shape alone would 404 a real part."""
+    c = client_with(lambda req: httpx.Response(200, json={"components": []}),
+                    found=None, lcsc=StubLcsc())
+
+    resp = c.get("/api/equivalent/C1815", follow_redirects=False)
+
+    assert resp.status_code == 404
+
+
+def test_a_legacy_code_reports_an_upstream_failure_honestly_not_as_a_500():
+    """Resolving the code is an upstream call like any other, so it owes the
+    caller the same 504 the rest of the route gives, not an opaque 500."""
+    def handler(request):
+        raise httpx.ConnectTimeout("boom")
+
+    c = client_with(handler, found=resistor_part())
+
+    assert c.get("/api/equivalent/C100").status_code == 504

@@ -9,11 +9,14 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
+from api.legacy import LEGACY_CODE, canonical_mpn
 from cache.cached_part_service import CachedPartService
 from models.equivalent import EquivalentResponse, OriginalRef
 from models.offer import Part
+from services.adapters.lcsc import LcscAdapter
 from services.datasource import UPSTREAM_STATUS, UpstreamError
-from services.deps import get_cached_service, get_matcher_source
+from services.deps import (get_cached_service, get_lcsc_adapter,
+                           get_matcher_source)
 from services.lcsc_matcher_source import LcscMatcherSource
 from services.matcher import find_equivalent
 from services.matching import normalize_exact
@@ -42,9 +45,21 @@ async def get_equivalent(
     mpn_key: str,
     cached: CachedPartService = Depends(get_cached_service),
     source: LcscMatcherSource = Depends(get_matcher_source),
+    lcsc: LcscAdapter = Depends(get_lcsc_adapter),
 ):
-    key = normalize_exact(mpn_key)
+    raw = mpn_key.strip()
     try:
+        # The part route has always resolved these; this one did not, so every
+        # link minted before the move to MPN keys 404'd on the one feature the
+        # project exists for. An unresolved code falls through to MPN handling
+        # rather than 404ing, because C1815 is a real part number.
+        if LEGACY_CODE.fullmatch(raw):
+            resolved = await canonical_mpn(raw, cached, lcsc)
+            if resolved is not None:
+                return RedirectResponse(f"/api/equivalent/{resolved}",
+                                        status_code=302)
+
+        key = normalize_exact(raw)
         part, _sources, canonical = await cached.lookup(key)
     except UpstreamError as exc:
         raise HTTPException(status_code=UPSTREAM_STATUS[exc.kind],
