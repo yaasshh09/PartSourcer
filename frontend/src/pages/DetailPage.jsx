@@ -114,7 +114,10 @@ export default function DetailPage() {
   const headline = headlineOffer(part)
   const lcsc = lcscOffer(part)
 
-  let tier = 'Standard'
+  // Same rule as ResultCard: only LCSC carries a tier, and only when upstream
+  // actually set one. No flag means no row, rather than a made-up "Standard"
+  // for a part LCSC itself would call Extended.
+  let tier = null
   if (lcsc && lcsc.is_preferred) tier = 'Preferred'
   else if (lcsc && lcsc.is_basic) tier = 'Basic'
 
@@ -125,7 +128,7 @@ export default function DetailPage() {
   if (part.package) specRows.push(['Package', part.package])
   specRows.push(['Offers', String((part.offers || []).length)])
   if (headline) specRows.push(['Unit price', fmtPrice(headline.price_usd)])
-  if (lcsc) specRows.push(['Type', tier])
+  if (tier) specRows.push(['Type', tier])
   if (part.description) specRows.push(['Description', part.description])
 
   const eq = equiv && equiv.equivalent

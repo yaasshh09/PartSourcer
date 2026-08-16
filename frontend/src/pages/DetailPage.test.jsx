@@ -323,6 +323,33 @@ test('a part with no package shows no Package row', async () => {
   expect(screen.queryByText('Package')).not.toBeInTheDocument()
 })
 
+// ResultCard has always refused to invent a tier for a part upstream never
+// tiered. The detail page used to default to "Standard", which is not even a
+// name LCSC uses, so the two surfaces disagreed about the same part.
+test('an untiered LCSC part shows no Type row rather than a made-up one', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    offers: [offer({ is_basic: null, is_preferred: null })],
+  }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.queryByText('Type')).not.toBeInTheDocument()
+  expect(screen.queryByText('Standard')).not.toBeInTheDocument()
+})
+
+test('a tiered LCSC part still shows the tier upstream gave it', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    offers: [offer({ is_basic: false, is_preferred: true })],
+  }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.getByText('Type')).toBeInTheDocument()
+  expect(screen.getByText('Preferred')).toBeInTheDocument()
+})
+
 test('unknown part shows a 404 state', async () => {
   setClipboard(null)
   vi.spyOn(api, 'getPart').mockRejectedValue(new api.ApiError(404, 'Part C000000 not found'))
