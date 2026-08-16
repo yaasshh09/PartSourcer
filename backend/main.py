@@ -30,6 +30,12 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
+# httpx logs every request line, URL and all, at INFO. Mouser takes its API key
+# as a query parameter, so at root's INFO level that line writes a live secret
+# into the log, and on a hosted backend into the provider's log stream. Warnings
+# and above still come through, so a genuine client failure is still reported.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 app = FastAPI(title="PartSourcer API", lifespan=lifespan)
 
 app.add_middleware(
