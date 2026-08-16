@@ -20,7 +20,8 @@ from cache.store import CachedOffer, SqliteCacheStore
 from models.offer import DistributorStatus, Part, SearchResponse
 from services.adapters.base import RawListing
 from services.matching import normalize_exact
-from services.part_service import ALL_DISTRIBUTORS, PartService, select_part
+from services.part_service import (ALL_DISTRIBUTORS, FETCH_DEPTH, PartService,
+                                   select_part)
 from services.throttle import RefreshThrottle
 
 PAGE_SIZE = 20
@@ -140,7 +141,7 @@ class CachedPartService:
             return SearchResponse(page=page, query=query, results=[],
                                   sources=[])
 
-        want = page * PAGE_SIZE
+        want = FETCH_DEPTH
         row = await self._store.get_search(key)
 
         # Gate 1: a row past the offer TTL is discarded whole, so a part that
@@ -220,7 +221,7 @@ class CachedPartService:
         log.info("lookup partial key=%s served=%s retry=%s", mpn_key,
                  sorted(served), sorted(retry))
         result = await self._service.collect(
-            lambda adapter: adapter.lookup_mpn(mpn_key), only=retry)
+            lambda adapter: adapter.lookup_mpn(mpn_key, FETCH_DEPTH), only=retry)
         statuses = self._merge_statuses(row.statuses, result.statuses)
         self._log_sources(statuses)
         parts = self._service.merge(cached_listings + result.listings, statuses)

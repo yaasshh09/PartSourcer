@@ -21,6 +21,16 @@ ALL_DISTRIBUTORS: tuple[str, ...] = ("lcsc", "mouser", "digikey")
 
 NO_CREDENTIALS = "no credentials configured"
 
+# Every distributor read asks for exactly this many rows, whatever the page
+# and whichever path is asking. jlcsearch answers the same query with
+# different prices and stock depending on the limit, and the offer cache is
+# keyed (distributor, sku) with no room for the depth that produced a row, so
+# two paths reading at different depths overwrite each other and the search
+# card ends up contradicting the detail page. A constant rather than a config
+# field on purpose: the value matters far less than the fact that every
+# caller uses the same one, and a settable knob invites tuning one path.
+FETCH_DEPTH = 40
+
 
 def disabled_reasons(settings) -> dict[str, str]:
     """Which distributors are off, and why. Absent means enabled.
@@ -282,7 +292,7 @@ class PartService:
         return FanOutResult(listings=listings, statuses=statuses,
                             parts=self.merge(listings, statuses))
 
-    async def lookup(self, mpn_key: str, limit: int = 20) -> FanOutResult:
+    async def lookup(self, mpn_key: str, limit: int = FETCH_DEPTH) -> FanOutResult:
         return await self.collect(lambda a: a.lookup_mpn(mpn_key, limit))
 
     def callable_names(self) -> list[str]:
@@ -294,12 +304,14 @@ class PartService:
 
     async def search(self, query: str, limit: int,
                      page: int = 1) -> SearchResponse:
-        # An adapter takes a limit and no offset, so paging happens here:
-        # ask upstream for enough rows to reach the page, then window the
-        # merged parts locally. Echoing a page number over page-1 results
-        # would be a lie.
-        want = page * limit
-        result = await self.collect(lambda adapter: adapter.search(query, want))
+        # An adapter takes a limit and no offset, so paging happens here: ask
+        # upstream for the fixed depth, then window the merged parts locally.
+        # The depth cannot scale with the page, or page 2 would re-read every
+        # part at a deeper limit and overwrite page 1's numbers with different
+        # ones. Pages past the depth come back empty rather than reaching
+        # further, which is the price of the two surfaces agreeing.
+        result = await self.collect(
+            lambda adapter: adapter.search(query, FETCH_DEPTH))
         start = (page - 1) * limit
         return SearchResponse(page=page, query=query,
                               results=result.parts[start:start + limit],

@@ -107,14 +107,18 @@ async def test_a_stale_ok_status_inside_a_fresh_row_is_re_attempted(store):
     assert old.calls == 2
 
 
-async def test_a_page_two_request_against_a_page_one_row_misses(store):
+async def test_a_page_two_request_is_served_from_the_page_one_row(store):
+    """Page 1 already fetched the full depth, so page 2 is a window over the
+    same rows, not a second and deeper call. It used to be a call, which is
+    what let page 2 rewrite page 1's prices with a different depth's answers.
+    """
     lcsc = CountingAdapter("lcsc", [f"PART-{i}" for i in range(PAGE_SIZE * 2)])
     cached = build(store, {"lcsc": lcsc})
     await cached.search("stm32", 1)
 
     page2 = await cached.search("stm32", 2)
 
-    assert lcsc.calls == 2
+    assert lcsc.calls == 1
     assert len(page2.results) == PAGE_SIZE
     assert page2.results[0].mpn_key == f"PART-{PAGE_SIZE}"
 

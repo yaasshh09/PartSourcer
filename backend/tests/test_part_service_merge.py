@@ -5,7 +5,7 @@ import pytest
 
 from models.offer import DistributorStatus
 from services.adapters.base import RawListing
-from services.part_service import PartService, select_part
+from services.part_service import FETCH_DEPTH, PartService, select_part
 from services.quota import QuotaTracker
 
 pytestmark = pytest.mark.anyio
@@ -204,7 +204,7 @@ async def test_search_wraps_the_fan_out_in_a_response_envelope():
     service = PartService(adapters={"lcsc": fake}, quota=QuotaTracker())
     resp = await service.search("stm32", limit=3, page=1)
     assert resp.page == 1 and resp.query == "stm32"
-    assert fake.limits == [3]
+    assert fake.limits == [FETCH_DEPTH]   # the page size never reaches upstream
     assert [p.mpn_key for p in resp.results] == ["MPN00", "MPN01", "MPN02"]
     assert [s.distributor for s in resp.sources] == ["lcsc"]
 
@@ -214,7 +214,9 @@ async def test_a_later_page_returns_that_page_not_the_first_one():
     service = PartService(adapters={"lcsc": fake}, quota=QuotaTracker())
     resp = await service.search("stm32", limit=3, page=2)
     assert resp.page == 2 and resp.query == "stm32"
-    assert fake.limits == [6]        # asked upstream for page * limit rows
+    # One fixed depth whatever the page, then windowed locally. Asking upstream
+    # for page * limit is what made two pages disagree about the same part.
+    assert fake.limits == [FETCH_DEPTH]
     assert [p.mpn_key for p in resp.results] == ["MPN03", "MPN04", "MPN05"]
     assert [s.distributor for s in resp.sources] == ["lcsc"]
 
