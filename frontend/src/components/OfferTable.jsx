@@ -6,6 +6,14 @@ import CopyButton from './CopyButton.jsx'
 const ARCHIVO = "'Archivo',sans-serif"
 const MONO = "'IBM Plex Mono',monospace"
 
+// The link column has no visible heading, but the column still needs a name
+// for anyone reading the table through a screen reader. Clipped to nothing
+// rather than parked off to the left, which can widen the page.
+const SR_ONLY = {
+  position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+  overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+}
+
 const TH = {
   textAlign: 'left', fontFamily: ARCHIVO, fontWeight: 900, fontSize: 11,
   letterSpacing: '0.06em', color: C.sub, padding: '0 12px 10px 0',
@@ -90,7 +98,7 @@ function Block({ title, offers, cheapest, showNote, caption }) {
             <th scope="col" style={TH}>STOCK</th>
             <th scope="col" style={TH}>UNIT PRICE</th>
             <th scope="col" style={TH}>AS OF</th>
-            <th scope="col" style={TH}><span style={{ position: 'absolute', left: -9999 }}>LINK</span></th>
+            <th scope="col" style={TH}><span style={SR_ONLY}>LINK</span></th>
           </tr>
         </thead>
         <tbody>

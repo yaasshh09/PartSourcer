@@ -44,7 +44,10 @@ export default function SearchPage() {
         setSources(data.sources || [])
         setSubmitted(q)
       })
-      .catch((e) => { if (!cancelled) setError(e) })
+      // Sources go with the results they describe. A failed search knows
+      // nothing about distributor health, and keeping the previous answer
+      // would let a stale warning outlive the results it came from.
+      .catch((e) => { if (!cancelled) { setError(e); setSources([]) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [q])
