@@ -357,3 +357,60 @@ test('unknown part shows a 404 state', async () => {
   renderPart('/part/C000000')
   await waitFor(() => expect(screen.getByText(/not found|isn't on the board/i)).toBeInTheDocument())
 })
+
+// Brand and datasheet both come from Mouser, so the parts most likely to carry
+// a datasheet are exactly the ones with no LCSC offer. The links row therefore
+// cannot hang off the LCSC branch or the datasheet would be unreachable
+// precisely when it exists.
+test('shows the manufacturer when upstream gave us one', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({ brand: 'Texas Instruments' }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.getByText('Brand')).toBeInTheDocument()
+  expect(screen.getByText('Texas Instruments')).toBeInTheDocument()
+})
+
+test('shows no Brand row when upstream gave us none', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({ brand: null }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.queryByText('Brand')).not.toBeInTheDocument()
+})
+
+test('links the datasheet when there is one', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    datasheet_url: 'https://www.mouser.com/datasheet/3/175/1/NE555.pdf' }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.getByRole('link', { name: /datasheet/i }))
+    .toHaveAttribute('href', 'https://www.mouser.com/datasheet/3/175/1/NE555.pdf')
+})
+
+test('shows no datasheet link when there is none', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({ datasheet_url: null }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.queryByRole('link', { name: /datasheet/i })).not.toBeInTheDocument()
+})
+
+test('reaches the datasheet on a part that has no LCSC offer at all', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    brand: 'Texas Instruments',
+    datasheet_url: 'https://www.mouser.com/datasheet/3/175/1/NE555.pdf',
+    offers: [offer({ distributor: 'mouser', sku: 'M-1', is_basic: null, is_preferred: null })],
+  }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.queryByRole('link', { name: /^View on LCSC/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /datasheet/i })).toBeInTheDocument()
+})

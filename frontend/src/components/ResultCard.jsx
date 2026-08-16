@@ -23,6 +23,15 @@ export default function ResultCard({ part }) {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 20,
       padding: '20px 22px', border: `3px solid ${C.ink}`, boxShadow: `5px 5px 0 ${C.ink}`, background: C.paper }}>
       <div>
+        {/* Only Mouser carries a manufacturer, so this is present on most of a
+            Mouser-heavy query and almost none of an LCSC-heavy one. Absent
+            means no line, not a placeholder. */}
+        {part.brand ? (
+          <div data-testid="brand" style={{ fontSize: 11, fontWeight: 700, color: C.muted,
+            letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>
+            {part.brand}
+          </div>
+        ) : null}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link to={to} style={{ fontFamily: MONO, fontWeight: 600, fontSize: 19,
             color: C.ink, textDecoration: 'none' }}>{part.mpn}</Link>

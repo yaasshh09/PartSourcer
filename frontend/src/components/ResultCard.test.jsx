@@ -137,3 +137,19 @@ test('renders no price block for a part with no offers, rather than $0.00', () =
   // Dropping the price must not drop what we do know about the part.
   expect(screen.getByText('LQFP-48(7x7)')).toBeInTheDocument()
 })
+
+// Brand comes from Mouser only, so it is present on roughly two thirds of a
+// Mouser-heavy query and almost none of an LCSC-heavy one. It has to carry
+// its own absence rather than leave an empty line behind.
+test('shows the manufacturer when upstream gave us one', () => {
+  setClipboard(null)
+  renderCard(part({ brand: 'Texas Instruments' }))
+  expect(screen.getByText('Texas Instruments')).toBeInTheDocument()
+})
+
+test('shows no manufacturer line at all when there is none', () => {
+  setClipboard(null)
+  const { container } = renderCard(part({ brand: null }))
+  expect(screen.queryByTestId('brand')).not.toBeInTheDocument()
+  expect(container.textContent).not.toMatch(/unknown|n\/a|—/i)
+})

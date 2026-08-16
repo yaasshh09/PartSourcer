@@ -125,6 +125,7 @@ export default function DetailPage() {
   // Omitted rather than blanked for a part with no LCSC listing: an empty row
   // reads as data we failed to fetch, not data that does not exist.
   if (lcsc) specRows.push(['LCSC', lcsc.sku])
+  if (part.brand) specRows.push(['Brand', part.brand])
   if (part.package) specRows.push(['Package', part.package])
   specRows.push(['Offers', String((part.offers || []).length)])
   if (headline) specRows.push(['Unit price', fmtPrice(headline.price_usd)])
@@ -166,9 +167,21 @@ export default function DetailPage() {
             ) : null}
             {headline ? <StockBadge stock={headline.stock} /> : null}
           </div>
-          {lcsc ? (
-            <div style={{ marginTop: 16 }}>
-              <DistributorLinks code={lcsc.sku} />
+          {/* Not hung off the LCSC branch: the datasheet comes from Mouser, so
+              the parts most likely to have one are exactly the parts with no
+              LCSC offer, and nesting it there would hide it whenever it exists. */}
+          {lcsc || part.datasheet_url ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+              flexWrap: 'wrap', marginTop: 16 }}>
+              {lcsc ? <DistributorLinks code={lcsc.sku} /> : null}
+              {part.datasheet_url ? (
+                <a href={part.datasheet_url} target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12,
+                    textDecoration: 'none', padding: '7px 12px',
+                    border: `2px solid ${C.ink}`, color: C.ink }}>
+                  Datasheet ↗
+                </a>
+              ) : null}
             </div>
           ) : null}
         </div>
