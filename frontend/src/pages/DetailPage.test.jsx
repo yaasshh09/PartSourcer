@@ -106,6 +106,64 @@ test('leaves the URL alone when the key already matches', async () => {
   expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE')
 })
 
+// The correction changes the key, which would re-run the fetch effect and
+// ask for a part we are already holding. A legacy link should cost one round
+// of requests, not two.
+test('does not refetch the part after correcting the URL', async () => {
+  setClipboard(null)
+  const getPart = vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  const getEquivalent = vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/C25531')
+  await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE'))
+  expect(getPart).toHaveBeenCalledTimes(1)
+  expect(getEquivalent).toHaveBeenCalledTimes(1)
+})
+
+// /part with nothing after it cannot name a part, so there is nothing to ask
+// the backend about. Say so straight away instead of spending a round trip
+// to be told the empty string is not a part.
+test('an empty key goes straight to the not-found state without a request', async () => {
+  setClipboard(null)
+  const getPart = vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/')
+  await waitFor(() => expect(screen.getByText(/not found|isn't on the board/i)).toBeInTheDocument())
+  expect(getPart).not.toHaveBeenCalled()
+})
+
+function GoTo({ to, label }) {
+  const navigate = useNavigate()
+  return <button type="button" onClick={() => navigate(to)}>{label}</button>
+}
+
+// Guards the skip above. Leaving a part mid-flight clears the data, so the
+// key it was loaded under has to be cleared with it, or coming straight back
+// takes the skip branch with nothing in hand and hangs on the loader.
+test('coming back to a part left mid-flight reloads it instead of hanging', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockImplementation((k) => (
+    k === 'SLOWPART'
+      ? new Promise(() => {})
+      : Promise.resolve(partResponse())))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  render(
+    <MemoryRouter initialEntries={['/part/0402WGJ0103TCE']}>
+      <Routes>
+        <Route path="/part/*" element={<>
+          <DetailPage />
+          <GoTo to="/part/SLOWPART" label="to slow" />
+          <GoTo to="/part/0402WGJ0103TCE" label="back to first" />
+        </>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: 'to slow' }))
+  await waitFor(() => expect(screen.queryByText('SPECIFICATIONS')).not.toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: 'back to first' }))
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+})
+
 function BackButton() {
   const navigate = useNavigate()
   return <button type="button" onClick={() => navigate(-1)}>go back</button>
