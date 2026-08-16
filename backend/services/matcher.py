@@ -54,6 +54,19 @@ def _in_stock_ok(c: ParametricPart) -> bool:
     return bool(c.in_stock) and c.stock >= MATCH_MIN_STOCK
 
 
+def _viable(c: ParametricPart, orig: ParametricPart, orig_price: float) -> bool:
+    """The gate every candidate clears before its own specs are read.
+
+    Same package is a HARD requirement. It lives here rather than once per
+    component type so that a third type added later cannot quietly ship
+    without it.
+    """
+    return (c.lcsc != orig.lcsc
+            and c.price_usd < orig_price
+            and c.package == orig.package
+            and _in_stock_ok(c))
+
+
 def resistor_candidates(orig: ParametricPart, pool: list[ParametricPart],
                         orig_price: float) -> list[ParametricPart]:
     r = orig.specs.get("resistance")
@@ -63,11 +76,7 @@ def resistor_candidates(orig: ParametricPart, pool: list[ParametricPart],
         return []
     out = []
     for c in pool:
-        if c.lcsc == orig.lcsc or c.price_usd >= orig_price:
-            continue
-        if c.package != orig.package:   # same package is a HARD requirement
-            continue
-        if not _in_stock_ok(c):
+        if not _viable(c, orig, orig_price):
             continue
         cr = c.specs.get("resistance")
         if cr is None or not math.isclose(cr, r, rel_tol=_REL_TOL):
@@ -92,11 +101,7 @@ def capacitor_candidates(orig: ParametricPart, pool: list[ParametricPart],
         return []
     out = []
     for c in pool:
-        if c.lcsc == orig.lcsc or c.price_usd >= orig_price:
-            continue
-        if c.package != orig.package:   # same package is a HARD requirement
-            continue
-        if not _in_stock_ok(c):
+        if not _viable(c, orig, orig_price):
             continue
         cc = c.specs.get("capacitance_farads")
         if cc is None or not math.isclose(cc, cap, rel_tol=_REL_TOL):
