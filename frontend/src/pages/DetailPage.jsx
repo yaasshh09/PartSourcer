@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
 import { C, fmtPrice, fmtAsOf } from '../theme.js'
@@ -26,10 +26,6 @@ export default function DetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState(null)
 
-  // Which key the part in state actually belongs to. A ref, not state, so
-  // reading it cannot itself retrigger the effect below.
-  const loadedKey = useRef(null)
-
   useEffect(() => {
     let cancelled = false
 
@@ -38,24 +34,21 @@ export default function DetailPage() {
     if (!key) {
       setData(null); setEquiv(null); setEquivError(null)
       setLoading(false); setNotFound(true); setError(null)
-      loadedKey.current = null
       return undefined
     }
 
-    // The URL self-correction below rewrites the key to the canonical one,
-    // which re-runs this effect for a part already in hand. Nothing to do.
-    if (loadedKey.current === key) return undefined
-
-    // Cleared together with the data it describes. Leaving it set while the
-    // data is gone would let a navigation away and back skip the refetch and
-    // sit on the loading state forever.
-    loadedKey.current = null
+    // Deliberately refetches after the URL corrects itself, even though the
+    // part body is already right. getPart follows the backend's redirect for
+    // a legacy LCSC code but getEquivalent does not resolve one at all, so
+    // the first pass on /part/C7593 leaves the equivalent panel showing a
+    // spurious "check unavailable". The second pass, under the canonical key,
+    // is what heals it. Skipping it costs one request and breaks the
+    // flagship feature on every legacy link.
     setData(null); setEquiv(null); setEquivError(null)
     setLoading(true); setNotFound(false); setError(null)
     Promise.allSettled([getPart(key), getEquivalent(key)]).then(([p, e]) => {
       if (cancelled) return
       if (p.status === 'fulfilled') {
-        loadedKey.current = p.value && p.value.part ? p.value.part.mpn_key : key
         setData(p.value)
         if (e.status === 'fulfilled') setEquiv(e.value)
         else setEquivError(e.reason)

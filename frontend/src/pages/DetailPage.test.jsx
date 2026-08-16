@@ -106,17 +106,28 @@ test('leaves the URL alone when the key already matches', async () => {
   expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE')
 })
 
-// The correction changes the key, which would re-run the fetch effect and
-// ask for a part we are already holding. A legacy link should cost one round
-// of requests, not two.
-test('does not refetch the part after correcting the URL', async () => {
+// A legacy LCSC link is the case where the two endpoints disagree: getPart
+// follows the backend redirect, getEquivalent 404s on the same code. The
+// refetch under the corrected key is what rescues the equivalent panel, so
+// the panel must end up showing the match and not the failure note.
+test('a legacy code recovers the equivalent once the URL corrects', async () => {
   setClipboard(null)
-  const getPart = vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
-  const getEquivalent = vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockImplementation((k) => (
+    k === '0402WGJ0103TCE'
+      ? Promise.resolve({
+        ...noEquivalent,
+        equivalent: {
+          mpn_key: 'RC0402FR-0710KL', lcsc: 'C881063', mpn: 'RC0402FR-0710KL',
+          price_usd: 0.0003, stock: 500000, package: '0402',
+          match_reason: 'Same 0402 package, 10 kOhm', percent_cheaper: 25,
+        },
+      })
+      : Promise.reject(new api.ApiError(404, `Part ${k} not found`))))
   renderPart('/part/C25531')
   await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE'))
-  expect(getPart).toHaveBeenCalledTimes(1)
-  expect(getEquivalent).toHaveBeenCalledTimes(1)
+  await waitFor(() => expect(screen.getByText('RC0402FR-0710KL')).toBeInTheDocument())
+  expect(screen.queryByText(/EQUIVALENT CHECK UNAVAILABLE/i)).not.toBeInTheDocument()
 })
 
 // /part with nothing after it cannot name a part, so there is nothing to ask
@@ -136,9 +147,9 @@ function GoTo({ to, label }) {
   return <button type="button" onClick={() => navigate(to)}>{label}</button>
 }
 
-// Guards the skip above. Leaving a part mid-flight clears the data, so the
-// key it was loaded under has to be cleared with it, or coming straight back
-// takes the skip branch with nothing in hand and hangs on the loader.
+// Leaving a part while its request is still in flight and coming straight
+// back has to load it again. Any caching added to the fetch effect later has
+// to keep this true, or the page sits on the loader forever.
 test('coming back to a part left mid-flight reloads it instead of hanging', async () => {
   setClipboard(null)
   vi.spyOn(api, 'getPart').mockImplementation((k) => (
