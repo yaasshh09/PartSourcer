@@ -5,6 +5,7 @@ import { C, ARCHIVO, MONO, fmtAsOf } from '../theme.js'
 import { oldestAsOf } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
+import NoticePanel from '../components/NoticePanel.jsx'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 const COMING_SOON = ['BOM bulk upload', 'Price history', 'Browse by category', 'Biggest savings this week']
@@ -83,12 +84,9 @@ export default function SearchPage() {
     )
   } else if (error) {
     body = (
-      <div style={{ border: `3px dashed ${C.ink}`, padding: '56px 28px', textAlign: 'center', background: C.paper }}>
-        <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30 }}>SEARCH HIT A SNAG</div>
-        <div style={{ fontSize: 15, color: C.sub, fontWeight: 500, marginTop: 10 }}>
-          {`Search is unavailable right now: ${error.detail}`}
-        </div>
-      </div>
+      <NoticePanel title="SEARCH HIT A SNAG">
+        {`Search is unavailable right now: ${error.detail}`}
+      </NoticePanel>
     )
   } else if (q && results.length) {
     body = (
@@ -110,12 +108,9 @@ export default function SearchPage() {
     )
   } else if (q) {
     body = (
-      <div style={{ border: `3px dashed ${C.ink}`, padding: '56px 28px', textAlign: 'center', background: C.paper }}>
-        <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30 }}>NO PARTS FOUND</div>
-        <div style={{ fontSize: 15, color: C.sub, fontWeight: 500, marginTop: 10 }}>
-          Nothing matched &quot;<span style={{ fontFamily: MONO }}>{submitted}</span>&quot;. Check the MPN, or try a broader spec.
-        </div>
-      </div>
+      <NoticePanel title="NO PARTS FOUND">
+        Nothing matched &quot;<span style={{ fontFamily: MONO }}>{submitted}</span>&quot;. Check the MPN, or try a broader spec.
+      </NoticePanel>
     )
   } else {
     body = (

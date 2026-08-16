@@ -8,6 +8,7 @@ import CopyButton from '../components/CopyButton.jsx'
 import DistributorLinks from '../components/DistributorLinks.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import OfferTable from '../components/OfferTable.jsx'
+import NoticePanel from '../components/NoticePanel.jsx'
 
 export default function DetailPage() {
   const params = useParams()
@@ -102,10 +103,7 @@ export default function DetailPage() {
   if (error) {
     return (
       <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
-        <div style={{ border: `3px dashed ${C.ink}`, padding: '56px 28px', textAlign: 'center', background: C.paper }}>
-          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30 }}>{"COULDN'T LOAD THIS PART"}</div>
-          <div style={{ fontSize: 15, color: C.sub, fontWeight: 500, marginTop: 10 }}>{error.detail}</div>
-        </div>
+        <NoticePanel title={"COULDN'T LOAD THIS PART"}>{error.detail}</NoticePanel>
       </section>
     )
   }
@@ -250,23 +248,13 @@ export default function DetailPage() {
           </div>
         </div>
       ) : equiv ? (
-        <div style={{ marginTop: 24, border: `3px dashed ${C.ink}`, background: C.paper, padding: 28 }}>
-          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
-            {"NO CHEAPER EQUIVALENT, AND WE WON'T FAKE ONE"}
-          </div>
-          <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
-            {equiv.reason}
-          </p>
-        </div>
+        <NoticePanel variant="inline" title={"NO CHEAPER EQUIVALENT, AND WE WON'T FAKE ONE"}>
+          {equiv.reason}
+        </NoticePanel>
       ) : equivError ? (
-        <div style={{ marginTop: 24, border: `3px dashed ${C.ink}`, background: C.paper, padding: 28 }}>
-          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
-            EQUIVALENT CHECK UNAVAILABLE
-          </div>
-          <p style={{ fontSize: 14, color: '#4a4838', fontWeight: 500, maxWidth: 560, margin: '10px 0 0' }}>
-            {`We couldn't check for a cheaper equivalent right now: ${equivError.detail}. Try refreshing in a moment.`}
-          </p>
-        </div>
+        <NoticePanel variant="inline" title="EQUIVALENT CHECK UNAVAILABLE">
+          {`We couldn't check for a cheaper equivalent right now: ${equivError.detail}. Try refreshing in a moment.`}
+        </NoticePanel>
       ) : null}
     </section>
   )
