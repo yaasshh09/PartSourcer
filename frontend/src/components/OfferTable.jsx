@@ -88,7 +88,10 @@ function Block({ title, offers, cheapest, showNote, caption }) {
           {caption}
         </div>
       ) : null}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+      {/* Six columns do not fit a phone. The table scrolls inside its own box
+          so the page itself never scrolls sideways. */}
+      <div style={{ overflowX: 'auto', marginTop: 12 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             {/* scope="col" is the point of using a real table: it is what ties
@@ -108,6 +111,7 @@ function Block({ title, offers, cheapest, showNote, caption }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

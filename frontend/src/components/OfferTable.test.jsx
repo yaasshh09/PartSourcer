@@ -39,6 +39,13 @@ test('column headers are scoped, which is the reason for a real table', () => {
   headers.forEach((h) => expect(h).toHaveAttribute('scope', 'col'))
 })
 
+test('the table scrolls in its own box so the page never scrolls sideways', () => {
+  noClipboard()
+  const { container } = render(<OfferTable offers={[offer()]} />)
+  const table = container.querySelector('table')
+  expect(table.parentElement).toHaveStyle({ overflowX: 'auto' })
+})
+
 test('omits the packaging block entirely when there are no variants', () => {
   noClipboard()
   render(<OfferTable offers={[offer()]} />)
