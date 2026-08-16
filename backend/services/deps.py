@@ -76,11 +76,6 @@ def get_history_store() -> HistoryStore | None:
     return _history_store
 
 
-def get_part_service() -> PartService:
-    assert _part_service is not None, "part service not initialized (lifespan not run)"
-    return _part_service
-
-
 def get_cached_service() -> CachedPartService:
     assert _cached_service is not None, "cache not initialized (lifespan not run)"
     return _cached_service

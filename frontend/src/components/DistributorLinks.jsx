@@ -2,11 +2,11 @@ import { C } from '../theme.js'
 
 const ARCHIVO = "'Archivo',sans-serif"
 
-export function lcscUrl(code) {
+function lcscUrl(code) {
   return `https://www.lcsc.com/search?q=${encodeURIComponent(code)}`
 }
 
-export function jlcpcbUrl(code) {
+function jlcpcbUrl(code) {
   return `https://jlcpcb.com/parts/componentSearch?searchTxt=${encodeURIComponent(code)}`
 }
 
