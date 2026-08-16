@@ -34,6 +34,17 @@ describe('encodeKey', () => {
     expect(encodeKey('A%B')).toBe('A%25B')
     expect(encodeKey('A?B')).toBe('A%3FB')
   })
+
+  test('treats a percent as a literal character, not as an escape', () => {
+    // An MPN that literally contains the three characters %23 has to arrive
+    // at the server as those same three characters, so the percent itself
+    // gets escaped. Anything else would silently look up a different part.
+    expect(encodeKey('A%23B')).toBe('A%2523B')
+  })
+
+  test('passes an empty key through without inventing one', () => {
+    expect(encodeKey('')).toBe('')
+  })
 })
 
 describe('getPart', () => {

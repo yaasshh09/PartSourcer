@@ -134,4 +134,6 @@ test('renders no price block for a part with no offers, rather than $0.00', () =
   expect(screen.getByText('STM32F103C8T6')).toBeInTheDocument()
   expect(screen.queryByText('$0.00')).not.toBeInTheDocument()
   expect(screen.queryByText(/IN STOCK|OUT OF STOCK/)).not.toBeInTheDocument()
+  // Dropping the price must not drop what we do know about the part.
+  expect(screen.getByText('LQFP-48(7x7)')).toBeInTheDocument()
 })

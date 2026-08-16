@@ -76,6 +76,19 @@ test('fetches the splat key verbatim, slash and all', async () => {
   await waitFor(() => expect(getPart).toHaveBeenCalledWith('LM358P/NOPB'))
 })
 
+// React Router has already percent-decoded the splat. Decoding it a second
+// time would throw a URIError on a key like this and take the render down
+// with it, so every other fixture key here is decode-invariant and cannot
+// catch that. This one can.
+test('does not decode the splat a second time', async () => {
+  setClipboard(null)
+  const getPart = vi.spyOn(api, 'getPart').mockResolvedValue(
+    partResponse({ mpn_key: '50%-TOL', mpn: '50%-TOL' }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/50%25-TOL')
+  await waitFor(() => expect(getPart).toHaveBeenCalledWith('50%-TOL'))
+})
+
 test('self-corrects the URL when the backend returns a different canonical key', async () => {
   setClipboard(null)
   vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
@@ -227,6 +240,18 @@ test('a part with no LCSC offer shows no LCSC code row and no LCSC links', async
   expect(screen.queryByRole('button', { name: /Copy LCSC code/i })).not.toBeInTheDocument()
   // The spec row too: an omitted row, not a row with a blank value.
   expect(screen.queryByText('LCSC')).not.toBeInTheDocument()
+})
+
+// The header already hides the package badge when the string is empty. The
+// spec panel has to agree, or the page shows a Package row with nothing in
+// it, which reads as data we failed to fetch rather than data that is absent.
+test('a part with no package shows no Package row', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({ package: '' }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.queryByText('Package')).not.toBeInTheDocument()
 })
 
 test('unknown part shows a 404 state', async () => {

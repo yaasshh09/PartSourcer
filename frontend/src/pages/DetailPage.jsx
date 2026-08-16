@@ -111,7 +111,7 @@ export default function DetailPage() {
   // Omitted rather than blanked for a part with no LCSC listing: an empty row
   // reads as data we failed to fetch, not data that does not exist.
   if (lcsc) specRows.push(['LCSC', lcsc.sku])
-  specRows.push(['Package', part.package])
+  if (part.package) specRows.push(['Package', part.package])
   specRows.push(['Offers', String((part.offers || []).length)])
   if (headline) specRows.push(['Unit price', fmtPrice(headline.price_usd)])
   if (lcsc) specRows.push(['Type', tier])
