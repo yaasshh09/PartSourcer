@@ -3,6 +3,9 @@ export const C = {
   paper: '#fff', sub: '#6a6858', muted: '#8a8778',
 }
 
+export const ARCHIVO = "'Archivo',sans-serif"
+export const MONO = "'IBM Plex Mono',monospace"
+
 export function fmtPrice(p) {
   if (p == null) return ''
   return '$' + (p < 0.01 ? p.toFixed(4) : p.toFixed(2))

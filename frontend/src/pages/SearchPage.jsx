@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
-import { C, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf } from '../theme.js'
 import { oldestAsOf } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 const COMING_SOON = ['BOM bulk upload', 'Price history', 'Browse by category', 'Biggest savings this week']
-const MONO = "'IBM Plex Mono',monospace"
-const ARCHIVO = "'Archivo',sans-serif"
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()

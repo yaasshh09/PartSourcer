@@ -1,6 +1,4 @@
-import { C } from '../theme.js'
-
-const ARCHIVO = "'Archivo',sans-serif"
+import { C, ARCHIVO } from '../theme.js'
 
 const QA = [
   { q: 'Is it really free?', a: "Yes. Free forever on core features, no signup to search. It's MIT open-source, fork it if you like." },

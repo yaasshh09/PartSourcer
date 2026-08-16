@@ -1,7 +1,5 @@
-import { C } from '../theme.js'
+import { C, ARCHIVO } from '../theme.js'
 import { degradedSources, DISTRIBUTOR_LABEL, SOURCE_STATE_COPY } from '../offers.js'
-
-const ARCHIVO = "'Archivo',sans-serif"
 
 /**
  * A notice, not a card: when a distributor did not answer, what is on screen

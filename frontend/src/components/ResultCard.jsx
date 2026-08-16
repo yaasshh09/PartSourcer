@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
 import { encodeKey } from '../api.js'
-import { C, fmtPrice } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtPrice } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
-
-const ARCHIVO = "'Archivo',sans-serif"
 
 const BADGE = { padding: '3px 10px', fontSize: 12, fontWeight: 700 }
 
@@ -26,7 +24,7 @@ export default function ResultCard({ part }) {
       padding: '20px 22px', border: `3px solid ${C.ink}`, boxShadow: `5px 5px 0 ${C.ink}`, background: C.paper }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link to={to} style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 19,
+          <Link to={to} style={{ fontFamily: MONO, fontWeight: 600, fontSize: 19,
             color: C.ink, textDecoration: 'none' }}>{part.mpn}</Link>
           <CopyButton value={part.mpn} label={`Copy ${part.mpn}`} />
         </div>

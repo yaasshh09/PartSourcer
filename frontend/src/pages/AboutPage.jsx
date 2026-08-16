@@ -1,6 +1,4 @@
-import { C } from '../theme.js'
-
-const ARCHIVO = "'Archivo',sans-serif"
+import { C, ARCHIVO } from '../theme.js'
 
 const CARDS = [
   { title: 'FREE FOREVER', body: 'No paywall on core features. Any future revenue is optional affiliate links, never gating.' },

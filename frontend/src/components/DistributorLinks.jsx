@@ -1,6 +1,4 @@
-import { C } from '../theme.js'
-
-const ARCHIVO = "'Archivo',sans-serif"
+import { C, ARCHIVO } from '../theme.js'
 
 function lcscUrl(code) {
   return `https://www.lcsc.com/search?q=${encodeURIComponent(code)}`

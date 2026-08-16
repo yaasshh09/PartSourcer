@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
-import { C, fmtPrice, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from '../components/StockBadge.jsx'
 import CopyButton from '../components/CopyButton.jsx'
 import DistributorLinks from '../components/DistributorLinks.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import OfferTable from '../components/OfferTable.jsx'
-
-const MONO = "'IBM Plex Mono',monospace"
-const ARCHIVO = "'Archivo',sans-serif"
 
 export default function DetailPage() {
   const params = useParams()

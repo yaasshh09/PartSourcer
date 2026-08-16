@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom'
-import { C } from '../theme.js'
+import { C, ARCHIVO } from '../theme.js'
 
 const link = ({ isActive }) => ({
   cursor: 'pointer', padding: '6px 12px', fontWeight: 600, fontSize: 14,
@@ -14,7 +14,7 @@ export default function Nav() {
           <div style={{ width: 26, height: 26, background: C.ink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: 11, height: 11, background: C.orange }} />
           </div>
-          <div style={{ fontFamily: "'Archivo',sans-serif", fontWeight: 900, fontSize: 20, letterSpacing: '-0.03em' }}>PARTSOURCER</div>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 20, letterSpacing: '-0.03em' }}>PARTSOURCER</div>
         </Link>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <NavLink to="/" end style={link}>Search</NavLink>

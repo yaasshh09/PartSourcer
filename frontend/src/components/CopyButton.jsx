@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { C } from '../theme.js'
-
-const MONO = "'IBM Plex Mono',monospace"
+import { C, MONO } from '../theme.js'
 
 export default function CopyButton({ value, label = 'Copy', variant = 'default' }) {
   const [copied, setCopied] = useState(false)

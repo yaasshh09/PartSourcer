@@ -1,7 +1,4 @@
-import { C } from '../theme.js'
-
-const ARCHIVO = "'Archivo',sans-serif"
-const MONO = "'IBM Plex Mono',monospace"
+import { C, ARCHIVO, MONO } from '../theme.js'
 
 const STEPS = [
   { n: '01', title: 'You search', body: 'By MPN, LCSC code, or plain-text spec. We query an open parts database and return live stock, price, package and datasheet.' },

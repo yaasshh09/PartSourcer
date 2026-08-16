@@ -1,10 +1,7 @@
-import { C, fmtPrice, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf } from '../theme.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
-
-const ARCHIVO = "'Archivo',sans-serif"
-const MONO = "'IBM Plex Mono',monospace"
 
 // The link column has no visible heading, but the column still needs a name
 // for anyone reading the table through a screen reader. Clipped to nothing
@@ -91,26 +88,26 @@ function Block({ title, offers, cheapest, showNote, caption }) {
       {/* Six columns do not fit a phone. The table scrolls inside its own box
           so the page itself never scrolls sideways. */}
       <div style={{ overflowX: 'auto', marginTop: 12 }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            {/* scope="col" is the point of using a real table: it is what ties
-                each cell to its column for a screen reader. */}
-            <th scope="col" style={TH}>DISTRIBUTOR</th>
-            <th scope="col" style={TH}>SKU</th>
-            <th scope="col" style={TH}>STOCK</th>
-            <th scope="col" style={TH}>UNIT PRICE</th>
-            <th scope="col" style={TH}>AS OF</th>
-            <th scope="col" style={TH}><span style={SR_ONLY}>LINK</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {offers.map((o) => (
-            <OfferRow key={`${o.distributor}:${o.sku}`} offer={o}
-              cheapest={cheapest} showNote={showNote} />
-          ))}
-        </tbody>
-      </table>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {/* scope="col" is the point of using a real table: it is what
+                  ties each cell to its column for a screen reader. */}
+              <th scope="col" style={TH}>DISTRIBUTOR</th>
+              <th scope="col" style={TH}>SKU</th>
+              <th scope="col" style={TH}>STOCK</th>
+              <th scope="col" style={TH}>UNIT PRICE</th>
+              <th scope="col" style={TH}>AS OF</th>
+              <th scope="col" style={TH}><span style={SR_ONLY}>LINK</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {offers.map((o) => (
+              <OfferRow key={`${o.distributor}:${o.sku}`} offer={o}
+                cheapest={cheapest} showNote={showNote} />
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
