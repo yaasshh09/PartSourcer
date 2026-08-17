@@ -9,7 +9,7 @@ class OriginalRef(BaseModel):
     mpn_key: str
     mpn: str
     package: str
-    price_usd: float
+    price_usd: float | None
     stock: int
     # None when the part has no LCSC listing, which is also when the matcher
     # cannot run. The distributor names whose price and stock these are.

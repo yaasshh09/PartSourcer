@@ -109,6 +109,18 @@ def test_capacitor_unranked_dielectric_only_matches_own_exact_string():
     assert [c.lcsc for c in capacitor_candidates(orig, [same], orig.price_usd)] == ["C7"]
 
 
+def test_resistor_rejects_an_unpriced_candidate():
+    # An upstream row with no price arrives as None. Read as free it would
+    # beat every real offer and claim to be 100% cheaper.
+    pool = [rp("C9", price=None, stock=5000)]
+    assert resistor_candidates(ORIG_R, pool, ORIG_R.price_usd) == []
+
+
+def test_capacitor_rejects_an_unpriced_candidate():
+    pool = [cp("C9", price=None, stock=5000)]
+    assert capacitor_candidates(ORIG_C, pool, ORIG_C.price_usd) == []
+
+
 def test_rank_best_price_then_stock():
     a = rp("A", price=0.0005, stock=1000)
     b = rp("B", price=0.0004, stock=10)
@@ -244,6 +256,21 @@ async def test_find_equivalent_capacitor_returns_cheaper_match():
     assert resp.reason is None
     assert "0402" in resp.equivalent.match_reason
     assert "% cheaper" in resp.equivalent.match_reason
+
+
+@pytest.mark.anyio
+async def test_find_equivalent_unpriced_original_is_an_honest_null():
+    # "Cheaper" has no meaning without a price to be cheaper than, and
+    # treating the missing one as 0.0 would reject every real candidate
+    # for a reason the user cannot see.
+    orig_row = rp("C100", price=None, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", None, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C100")
+    assert resp.equivalent is None
+    assert "no published price" in resp.reason
+    assert resp.original.price_usd is None
 
 
 @pytest.mark.anyio

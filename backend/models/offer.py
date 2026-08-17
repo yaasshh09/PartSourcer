@@ -24,7 +24,7 @@ class Offer(BaseModel):
     match_note: str | None      # set only when match_tier == "packaging"
     stock: int
     in_stock: bool
-    price_usd: float            # unit price at quantity 1
+    price_usd: float | None     # unit price at quantity 1, null if unpublished
     price_breaks: list[dict] | None   # real for mouser/digikey, null for lcsc
     currency: str
     product_url: str | None

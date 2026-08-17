@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { encodeKey } from '../api.js'
-import { C, ARCHIVO, MONO, fmtPrice } from '../theme.js'
+import { C, ARCHIVO, MONO } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
+import Price from './Price.jsx'
 
 const BADGE = { padding: '3px 10px', fontSize: 12, fontWeight: 700 }
 
@@ -64,7 +65,7 @@ export default function ResultCard({ part }) {
       <div style={{ textAlign: 'right' }}>
         {headline ? (
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 26 }}>
-            {fmtPrice(headline.price_usd)}
+            <Price value={headline.price_usd} size={14} />
           </div>
         ) : null}
         <Link to={to} style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, color: C.orange,

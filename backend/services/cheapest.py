@@ -1,10 +1,12 @@
 """The cheapest claim, and the rules that stop it lying.
 
-Three gates, all load-bearing:
+Four gates, all load-bearing:
   1. Quorum. Fewer than two answering sources means no claim at all.
   2. Tier. Only exact-MPN offers compete. A packaging variant is a
      different physical product and is surfaced separately.
   3. Comparability. In stock and priced in USD, because we do no FX.
+  4. A price. An offer whose price the distributor never published is not
+     a cheap offer, and sorting it as one would name a $0.00 cheapest.
 """
 
 from models.offer import Cheapest, DistributorStatus, Offer
@@ -34,6 +36,10 @@ def compute_cheapest(
                 if o.match_tier == "exact" and o.in_stock and o.currency == "USD"]
     if not eligible:
         return None, "no in-stock USD offer for the exact part"
+
+    eligible = [o for o in eligible if o.price_usd is not None]
+    if not eligible:
+        return None, "no source published a price for the exact part"
 
     best = min(eligible, key=lambda o: (
         o.price_usd, DISTRIBUTOR_PRECEDENCE.index(o.distributor)))

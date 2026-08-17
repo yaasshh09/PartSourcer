@@ -24,6 +24,16 @@ def test_round_trip_is_lossless():
     assert listing_from_dict(listing_to_dict(original)) == original
 
 
+def test_a_listing_with_no_price_round_trips_as_no_price():
+    """None must survive the cache. Coming back as 0.0 would turn a part we
+    have no price for into a free one on the next read."""
+    unpriced = make_listing()
+    unpriced.price = None
+    unpriced.price_breaks = None
+
+    assert listing_from_dict(listing_to_dict(unpriced)).price is None
+
+
 def test_serialized_form_is_json_safe():
     import json
 

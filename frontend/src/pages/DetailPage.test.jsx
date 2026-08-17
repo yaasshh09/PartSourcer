@@ -224,6 +224,20 @@ test('stays silent about sources when everything answered', async () => {
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
 })
 
+test('a part with no published price names the gap on every surface', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    offers: [offer({ price_usd: null })],
+  }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  // The header price, the Unit price spec row, and the offer table cell.
+  // A surface added later that renders a blank instead should fail here.
+  expect(screen.getAllByText('no price')).toHaveLength(3)
+  expect(screen.queryByText(/\$0\.0000/)).not.toBeInTheDocument()
+})
+
 test('the percent panel compares against original.price_usd, not the headline offer', async () => {
   setClipboard(vi.fn().mockResolvedValue())
   // Mouser at $0.0002 is the cheapest in-stock exact offer, so it is the

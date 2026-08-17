@@ -20,7 +20,7 @@ class PartDetail(BaseModel):
     package: str                     # the footprint identifier
     description: str                 # upstream, usually empty
     stock: int                       # single total (real)
-    price_usd: float                 # single unit price (real), 4dp
+    price_usd: float | None          # single unit price (real), 4dp, or none
     price_breaks: list[dict] | None = None    # honest gap, always null in v1
     stock_breakdown: dict | None = None        # honest gap, always null in v1
     is_basic: bool | None = None     # real upstream flag

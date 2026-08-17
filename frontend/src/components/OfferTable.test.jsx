@@ -31,6 +31,13 @@ test('renders one row per offer under an exact-match heading', () => {
   expect(screen.getByText('$0.50')).toBeInTheDocument()
 })
 
+test('an offer with no price says so instead of leaving the cell blank', () => {
+  noClipboard()
+  render(<OfferTable offers={[offer({ price_usd: null })]} />)
+  expect(screen.getByText('no price')).toBeInTheDocument()
+  expect(screen.queryByText('$0.0000')).not.toBeInTheDocument()
+})
+
 test('column headers are scoped, which is the reason for a real table', () => {
   noClipboard()
   render(<OfferTable offers={[offer()]} />)

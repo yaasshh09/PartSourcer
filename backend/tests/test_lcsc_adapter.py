@@ -39,6 +39,13 @@ async def test_product_url_is_the_jlcpcb_product_page():
     assert r.product_url == "https://jlcpcb.com/partdetail/C8734"
 
 
+async def test_a_row_with_no_price_carries_no_price():
+    row = {k: v for k, v in ROW.items() if k != "price"}
+    async with client_returning({"components": [row]}) as c:
+        r = (await LcscAdapter(c).search("stm32", limit=20))[0]
+    assert r.price is None
+
+
 async def test_zero_stock_is_not_in_stock():
     async with client_returning({"components": [dict(ROW, stock=0)]}) as c:
         r = (await LcscAdapter(c).search("stm32", limit=20))[0]

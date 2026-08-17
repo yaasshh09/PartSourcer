@@ -66,6 +66,25 @@ async def test_product_without_variations_still_maps_with_empty_sku():
     assert r.sku == "" and r.price_breaks is None and r.price == 3.11
 
 
+async def test_a_product_with_no_pricing_at_all_has_no_price():
+    p = dict(PRODUCT)
+    p.pop("ProductVariations")
+    p.pop("UnitPrice")
+    a, c = make({"Products": [p]})
+    async with c:
+        r = (await a.search("stm32", limit=10))[0]
+    assert r.price is None
+
+
+async def test_a_zero_unit_price_is_no_price():
+    # DigiKey sends 0.0 for call-for-quote products. It is not free.
+    a, c = make({"Products": [dict(PRODUCT, UnitPrice=0.0,
+                                   ProductVariations=[])]})
+    async with c:
+        r = (await a.search("stm32", limit=10))[0]
+    assert r.price is None
+
+
 async def test_zero_quantity_is_not_in_stock():
     a, c = make({"Products": [dict(PRODUCT, QuantityAvailable=0)]})
     async with c:

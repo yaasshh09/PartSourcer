@@ -15,10 +15,11 @@ from datetime import datetime
 from typing import Protocol, runtime_checkable
 
 from models.parametric import ParametricPart
-from services.datasource import UPSTREAM_STATUS, UpstreamError  # noqa: F401
+from services.datasource import (UPSTREAM_STATUS, UpstreamError,  # noqa: F401
+                                 priced)
 
 __all__ = ["RawListing", "DistributorAdapter", "ParametricCapable",
-           "UpstreamError", "UPSTREAM_STATUS"]
+           "UpstreamError", "UPSTREAM_STATUS", "priced"]
 
 
 @dataclass
@@ -32,7 +33,7 @@ class RawListing:
     description: str
     stock: int
     in_stock: bool
-    price: float
+    price: float | None          # None when the distributor published none
     currency: str
     price_breaks: list[dict] | None
     datasheet_url: str | None

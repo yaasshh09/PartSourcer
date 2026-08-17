@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 
 import httpx
 
-from services.adapters.base import DistributorAdapter, RawListing, UpstreamError
+from services.adapters.base import (DistributorAdapter, RawListing,
+                                    UpstreamError, priced)
 
 _MONEY = re.compile(r"-?\d[\d,]*\.?\d*")
 
@@ -69,11 +70,12 @@ class MouserAdapter(DistributorAdapter):
         breaks = []
         for b in part.get("PriceBreaks") or []:
             parsed = parse_money(b.get("Price"))
-            if parsed is not None:
+            step = priced(parsed[0]) if parsed else None
+            if step is not None:
                 breaks.append({"qty": _parse_int(b.get("Quantity")),
-                               "price_usd": parsed[0]})
+                               "price_usd": step})
         breaks.sort(key=lambda b: b["qty"])
-        unit = breaks[0]["price_usd"] if breaks else 0.0
+        unit = breaks[0]["price_usd"] if breaks else None
         currency = "USD"
         first_raw = (part.get("PriceBreaks") or [{}])[0]
         if first_raw.get("Currency"):

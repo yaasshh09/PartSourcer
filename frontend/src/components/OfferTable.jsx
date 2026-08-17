@@ -1,7 +1,8 @@
-import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf } from '../theme.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
+import Price from './Price.jsx'
 
 // The link column has no visible heading, but the column still needs a name
 // for anyone reading the table through a screen reader. Clipped to nothing
@@ -55,7 +56,7 @@ function OfferRow({ offer, cheapest, showNote }) {
       </td>
       <td style={TD}><StockBadge stock={offer.stock} /></td>
       <td style={{ ...TD, fontFamily: ARCHIVO, fontWeight: 900, fontSize: 17 }}>
-        {fmtPrice(offer.price_usd)}
+        <Price value={offer.price_usd} />
       </td>
       <td style={{ ...TD, fontSize: 12, color: C.muted, fontWeight: 600 }}>
         {fmtAsOf(offer.as_of)}

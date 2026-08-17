@@ -6,6 +6,10 @@ export const C = {
 export const ARCHIVO = "'Archivo',sans-serif"
 export const MONO = "'IBM Plex Mono',monospace"
 
+// What a missing price is called everywhere it shows. Blank reads as a fetch
+// that failed and $0.0000 reads as free, so the gap gets a name.
+export const NO_PRICE = 'no price'
+
 export function fmtPrice(p) {
   if (p == null) return ''
   return '$' + (p < 0.01 ? p.toFixed(4) : p.toFixed(2))

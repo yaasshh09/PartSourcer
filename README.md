@@ -33,9 +33,10 @@ Browser  -->  Vercel (React + Vite static site)
 ```
 
 - **Frontend.** React + Vite SPA. Inline design system, React Router.
-- **Backend.** FastAPI (async, Python 3.11+) behind a swappable
-  `PartDataSource` abstraction, so the official LCSC API can be dropped in later
-  without rewriting the app.
+- **Backend.** FastAPI (async, Python 3.11+). Each distributor sits behind a
+  `DistributorAdapter` (`backend/services/adapters/`), so the official LCSC API
+  can be dropped in later without rewriting the app. The older single-source
+  `PartDataSource` abstraction was removed when multi-distributor landed.
 - **Cache.** SQLite. Specs cache long (they never change); stock and price cache
   short (hours) and refresh on demand. Every cached record keeps an `as_of`
   timestamp, reported honestly to the UI.
@@ -165,16 +166,24 @@ These are load-bearing, not marketing:
 - **Never overstate a match.** Two parts are only called "equivalent" when the
   package and core specs genuinely match. Unverifiable matches return an honest
   null, never a guess.
-- **Show what is missing.** `brand` and `datasheet_url` are `null` in v1 (absent
-  in the jlcsearch data); the UI shows nothing rather than inventing a value.
-  They light up when the official LCSC API is dropped in behind `PartDataSource`.
+- **Never invent a price.** A distributor that published no price gives us
+  `null`, never `0.0`. A zero would read as free, and it would win the cheapest
+  comparison outright. An unpriced offer is excluded from the cheapest claim
+  and from the equivalent matcher, and the UI says "no price" rather than
+  showing a blank or a `$0.0000`.
+- **Show what is missing.** `brand` and `datasheet_url` are absent from
+  jlcsearch, so a part only LCSC answered for carries neither. Mouser and
+  DigiKey do supply them, so on a merged part they are usually present. The UI
+  renders each only where it exists and omits the line entirely otherwise,
+  rather than showing a blank row or inventing a placeholder.
 
 ## Contributing
 
 Issues and PRs welcome at
 [github.com/yaasshh09/PartSourcer](https://github.com/yaasshh09/PartSourcer).
 The data layer is intentionally swappable, so the most valuable contribution is
-wiring in the official LCSC API behind the existing `PartDataSource` abstraction.
+wiring in the official LCSC API behind the existing `DistributorAdapter`
+abstraction.
 
 ## License
 

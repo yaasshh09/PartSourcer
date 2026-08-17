@@ -52,7 +52,9 @@ async def record_watchlist(
                     summary.errors += 1
                 return
         async with lock:
-            if detail is None:
+            # No price is not a price of zero. History is append-only, so a
+            # 0.0 written once is a permanent false low in that part's chart.
+            if detail is None or detail.price_usd is None:
                 summary.skipped += 1
                 return
             records.append(OfferRecord(

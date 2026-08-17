@@ -56,6 +56,14 @@ describe('headlineOffer', () => {
     expect(headlineOffer({ offers: [reel, eur, plain], cheapest: null })).toBe(plain)
   })
 
+  test('an offer with no price never outranks one that has a price', () => {
+    // null - 2 is -2, so a naive numeric sort reads "no price" as free and
+    // makes the unpriced offer the headline for the whole part.
+    const unpriced = offer({ sku: 'UNPRICED', price_usd: null })
+    const real = offer({ sku: 'REAL', price_usd: 2 })
+    expect(headlineOffer({ offers: [unpriced, real], cheapest: null })).toBe(real)
+  })
+
   test('falls back to the cheapest offer overall when nothing is in stock', () => {
     const a = offer({ sku: 'A', price_usd: 3, in_stock: false, stock: 0 })
     const b = offer({ sku: 'B', price_usd: 2, in_stock: false, stock: 0 })

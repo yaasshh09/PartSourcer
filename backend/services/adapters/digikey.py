@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 
 import httpx
 
-from services.adapters.base import DistributorAdapter, RawListing, UpstreamError
+from services.adapters.base import (DistributorAdapter, RawListing,
+                                    UpstreamError, priced)
 from services.adapters.digikey_auth import DigiKeyTokenClient
 
 
@@ -58,12 +59,15 @@ class DigiKeyAdapter(DistributorAdapter):
                     rank: int = 0) -> RawListing:
         variations = product.get("ProductVariations") or []
         first = variations[0] if variations else {}
-        breaks = [{"qty": int(b.get("BreakQuantity") or 0),
-                   "price_usd": float(b.get("UnitPrice") or 0.0)}
-                  for b in (first.get("StandardPricing") or [])]
+        breaks = []
+        for b in first.get("StandardPricing") or []:
+            step = priced(float(b.get("UnitPrice") or 0.0))
+            if step is not None:
+                breaks.append({"qty": int(b.get("BreakQuantity") or 0),
+                               "price_usd": step})
         breaks.sort(key=lambda b: b["qty"])
-        unit = breaks[0]["price_usd"] if breaks else float(
-            product.get("UnitPrice") or 0.0)
+        unit = (breaks[0]["price_usd"] if breaks
+                else priced(float(product.get("UnitPrice") or 0.0)))
 
         stock = int(product.get("QuantityAvailable") or 0)
         manufacturer = product.get("Manufacturer") or {}

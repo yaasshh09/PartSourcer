@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
-import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf, NO_PRICE } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from '../components/StockBadge.jsx'
 import CopyButton from '../components/CopyButton.jsx'
@@ -9,6 +9,7 @@ import DistributorLinks from '../components/DistributorLinks.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import OfferTable from '../components/OfferTable.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
+import Price from '../components/Price.jsx'
 
 export default function DetailPage() {
   const params = useParams()
@@ -128,7 +129,9 @@ export default function DetailPage() {
   if (part.brand) specRows.push(['Brand', part.brand])
   if (part.package) specRows.push(['Package', part.package])
   specRows.push(['Offers', String((part.offers || []).length)])
-  if (headline) specRows.push(['Unit price', fmtPrice(headline.price_usd)])
+  if (headline) {
+    specRows.push(['Unit price', fmtPrice(headline.price_usd) || NO_PRICE])
+  }
   if (tier) specRows.push(['Type', tier])
   if (part.description) specRows.push(['Description', part.description])
 
@@ -189,7 +192,7 @@ export default function DetailPage() {
           {headline ? (
             <>
               <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 44, lineHeight: 1 }}>
-                {fmtPrice(headline.price_usd)}
+                <Price value={headline.price_usd} size={18} />
               </div>
               <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 6 }}>unit price</div>
             </>
@@ -233,7 +236,7 @@ export default function DetailPage() {
                 <CopyButton value={eq.mpn} label="Copy equivalent MPN" variant="onYellow" />
               </div>
               <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 600, marginTop: 8 }}>
-                {`${eq.package} · ${Number(eq.stock || 0).toLocaleString()} in stock · ${fmtPrice(eq.price_usd)}`}
+                {`${eq.package} · ${Number(eq.stock || 0).toLocaleString()} in stock · ${fmtPrice(eq.price_usd) || NO_PRICE}`}
               </div>
               <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 500, marginTop: 8, maxWidth: 440 }}>
                 {eq.match_reason}
@@ -258,7 +261,7 @@ export default function DetailPage() {
                   computed from this number, and showing a different one would
                   make the arrow contradict the percentage. */}
               <div style={{ fontFamily: MONO, fontSize: 13, color: C.bg, marginTop: 8 }}>
-                {`${fmtPrice(original ? original.price_usd : null)} → ${fmtPrice(eq.price_usd)}`}
+                {`${fmtPrice(original ? original.price_usd : null) || NO_PRICE} → ${fmtPrice(eq.price_usd) || NO_PRICE}`}
               </div>
             </div>
           </div>

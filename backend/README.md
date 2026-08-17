@@ -142,6 +142,12 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
   it so freshness is always honest. `Part.as_of` is the **oldest** contributing
   offer, so a fast distributor never makes a record look fresher than its
   stalest component.
+- `price_usd` is `null` when the distributor published no price: a quote-only
+  part, a missing field, a money string we could not parse. It is never `0.0`,
+  which would read as free and could be named the cheapest offer. An offer
+  with no price is excluded from the cheapest claim and from the equivalent
+  matcher, and the recorder skips it rather than writing a permanent false
+  low into price history.
 - `brand`, `datasheet_url`, and `price_breaks` are no longer global gaps. They
   are per offer: real for Mouser and DigiKey, `null` for LCSC. `is_basic` and
   `is_preferred` are the mirror case, real for LCSC and `null` elsewhere. A

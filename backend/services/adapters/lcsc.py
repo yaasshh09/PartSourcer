@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 import httpx
 
 from models.parametric import ParametricPart
-from services.adapters.base import DistributorAdapter, RawListing, UpstreamError
+from services.adapters.base import (DistributorAdapter, RawListing,
+                                    UpstreamError, priced)
 from services.datasource import _to_parametric
 
 
@@ -46,6 +47,7 @@ class LcscAdapter(DistributorAdapter):
     def _to_listing(self, raw: dict, as_of: datetime, rank: int = 0) -> RawListing:
         code = f"C{raw['lcsc']}"
         stock = raw.get("stock") or 0
+        price = priced(raw.get("price") or raw.get("price1"))
         return RawListing(
             distributor="lcsc",
             sku=code,
@@ -55,7 +57,7 @@ class LcscAdapter(DistributorAdapter):
             description=raw.get("description") or "",
             stock=stock,
             in_stock=stock > 0,
-            price=round(raw.get("price") or raw.get("price1") or 0.0, 4),
+            price=None if price is None else round(price, 4),
             currency="USD",           # assumed, see docs/jlcsearch-notes.md
             price_breaks=None,        # documented gap
             datasheet_url=None,       # documented gap

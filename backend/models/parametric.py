@@ -13,7 +13,7 @@ class ParametricPart(BaseModel):
     mpn: str
     package: str
     stock: int
-    price_usd: float
+    price_usd: float | None
     in_stock: bool
     is_basic: bool | None = None
     is_preferred: bool | None = None

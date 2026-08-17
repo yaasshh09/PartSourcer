@@ -58,6 +58,18 @@ async def test_records_one_row_per_watchlist_part():
     assert r.recorded_at == FIXED
 
 
+async def test_a_part_with_no_price_is_skipped_not_recorded_as_free():
+    # History is append-only, so a 0.0 written once is a permanent false
+    # low in the price chart for that part.
+    store = InMemoryHistoryStore()
+    await store.add_to_watchlist("STM32F103C8T6", "C8734")
+    ds = FakeDs({"C8734": detail(price=None)})
+    summary = await record_watchlist(ds, store, batch_size=10, concurrency=2,
+                                     now=lambda: FIXED)
+    assert (summary.recorded, summary.skipped, summary.errors) == (0, 1, 0)
+    assert store.records == []
+
+
 async def test_upstream_failure_counts_as_error_and_does_not_abort():
     store = InMemoryHistoryStore()
     await store.add_to_watchlist("BAD", "C1")

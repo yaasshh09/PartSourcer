@@ -69,10 +69,18 @@ async def test_fills_the_gaps_lcsc_cannot():
                               {"qty": 100, "price_usd": 2.10}]
 
 
-async def test_missing_price_breaks_means_zero_price_and_no_ladder():
+async def test_missing_price_breaks_means_no_price_and_no_ladder():
+    # Mouser omits pricing on quote-only parts. A 0.0 here reads as free.
     async with client_returning(body([dict(PART, PriceBreaks=[])])) as c:
         r = (await MouserAdapter(c, "k").search("stm32", limit=10))[0]
-    assert r.price == 0.0 and r.price_breaks is None
+    assert r.price is None and r.price_breaks is None
+
+
+async def test_an_unparseable_price_is_no_price():
+    async with client_returning(
+            body([dict(PART, PriceBreaks=[{"Quantity": 1, "Price": "N/A"}])])) as c:
+        r = (await MouserAdapter(c, "k").search("stm32", limit=10))[0]
+    assert r.price is None
 
 
 async def test_unparseable_stock_becomes_zero():

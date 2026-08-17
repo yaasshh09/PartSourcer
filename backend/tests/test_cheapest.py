@@ -85,6 +85,24 @@ def test_quorum_met_but_nothing_eligible():
     assert reason == "no in-stock USD offer for the exact part"
 
 
+def test_an_unpriced_offer_never_wins():
+    # A distributor that published no price arrives as None, not 0.0.
+    # Sorting it as free would publish a $0.00 cheapest claim.
+    c, reason = compute_cheapest(
+        [offer("lcsc", 1.82), offer("mouser", None)],
+        all_three(["lcsc", "mouser"]))
+    assert reason is None
+    assert (c.distributor, c.price_usd) == ("lcsc", 1.82)
+
+
+def test_quorum_met_but_nothing_carries_a_price():
+    c, reason = compute_cheapest(
+        [offer("lcsc", None), offer("mouser", None)],
+        all_three(["lcsc", "mouser"]))
+    assert c is None
+    assert reason == "no source published a price for the exact part"
+
+
 def test_ties_prefer_earlier_distributor_precedence():
     c, _ = compute_cheapest(
         [offer("mouser", 1.00), offer("lcsc", 1.00)],

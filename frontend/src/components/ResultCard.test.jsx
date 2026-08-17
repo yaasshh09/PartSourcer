@@ -51,6 +51,12 @@ test('shows mpn, package, headline price and stock, and links by mpn_key', () =>
   links.forEach((l) => expect(l).toHaveAttribute('href', '/part/STM32F103C8T6'))
 })
 
+test('a part whose only offer has no price says so instead of showing nothing', () => {
+  setClipboard(null)
+  renderCard(part({ offers: [offer({ price_usd: null })] }))
+  expect(screen.getByText('no price')).toBeInTheDocument()
+})
+
 test('escapes a key that would break the URL, but keeps the slash', () => {
   setClipboard(null)
   renderCard(part({ mpn_key: 'LM358P/NOPB', mpn: 'LM358P/NOPB' }))

@@ -59,9 +59,11 @@ def _viable(c: ParametricPart, orig: ParametricPart, orig_price: float) -> bool:
 
     Same package is a HARD requirement. It lives here rather than once per
     component type so that a third type added later cannot quietly ship
-    without it.
+    without it. A candidate upstream published no price for cannot be shown
+    to be cheaper than anything, so it is not a candidate.
     """
     return (c.lcsc != orig.lcsc
+            and c.price_usd is not None
             and c.price_usd < orig_price
             and c.package == orig.package
             and _in_stock_ok(c))
@@ -133,6 +135,8 @@ _NO_TYPE_REASON = ("Equivalent matching in v1 covers resistors and capacitors; "
                    "offered.")
 _NO_MATCH_REASON = ("No cheaper in-stock drop-in was found for this part in v1 "
                     "(same package and specs, healthy stock, lower price).")
+_NO_PRICE_REASON = ("This part has no published price upstream, so there is "
+                    "nothing for a cheaper equivalent to be cheaper than.")
 
 
 def _find(parts: list[ParametricPart], lcsc: str) -> ParametricPart | None:
@@ -216,6 +220,12 @@ async def find_equivalent(ds: MatcherSource,
         # Empty package = specs could not be reliably identified; an unfiltered
         # upstream query could otherwise match a different-package candidate.
         return _null(_NO_TYPE_REASON)
+
+    if original.price_usd is None:
+        # Every candidate gate is "cheaper than the original". With no
+        # original price there is no comparison to run, and treating the
+        # gap as 0.0 would silently reject every real part instead.
+        return _null(_NO_PRICE_REASON)
 
     # Classify as resistor?
     resistors = await ds.list_parametric("resistors", original.package)

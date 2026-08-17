@@ -24,9 +24,18 @@ function precedence(distributor) {
   return i === -1 ? PRECEDENCE.length : i
 }
 
+// A distributor that published no price sends null. Subtracting it reads as
+// zero, which would sort an unpriced offer ahead of every real one and make
+// it the headline. It sorts last instead.
+function sortablePrice(offer) {
+  return offer.price_usd == null ? Number.POSITIVE_INFINITY : offer.price_usd
+}
+
 function byStockThenPrice(a, b) {
   if (a.in_stock !== b.in_stock) return a.in_stock ? -1 : 1
-  if (a.price_usd !== b.price_usd) return a.price_usd - b.price_usd
+  const pa = sortablePrice(a)
+  const pb = sortablePrice(b)
+  if (pa !== pb) return pa - pb
   return precedence(a.distributor) - precedence(b.distributor)
 }
 
