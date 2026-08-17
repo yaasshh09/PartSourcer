@@ -15,6 +15,16 @@ from services.adapters.base import (DistributorAdapter, RawListing,
 
 _MONEY = re.compile(r"-?\d[\d,]*\.?\d*")
 
+# Mouser fills empty text fields with a literal placeholder rather than
+# leaving them out, and "N/A" printed in the SKU column reads as a code you
+# could paste into a cart.
+_PLACEHOLDERS = {"N/A", "NA", "-", "--", "NONE", "NULL"}
+
+
+def _text(value: object) -> str:
+    text = str(value or "").strip()
+    return "" if text.upper() in _PLACEHOLDERS else text
+
 
 def parse_money(text: str | None) -> tuple[float, str] | None:
     """Parse "$2.94" into (2.94, "USD"). None when there is no number."""
@@ -84,11 +94,11 @@ class MouserAdapter(DistributorAdapter):
         stock = _parse_int(part.get("AvailabilityInStock"))
         return RawListing(
             distributor="mouser",
-            sku=part.get("MouserPartNumber") or "",
-            mpn=part.get("ManufacturerPartNumber") or "",
-            brand=part.get("Manufacturer") or None,
+            sku=_text(part.get("MouserPartNumber")),
+            mpn=_text(part.get("ManufacturerPartNumber")),
+            brand=_text(part.get("Manufacturer")) or None,
             package="",                  # not a first-class Mouser field
-            description=part.get("Description") or "",
+            description=_text(part.get("Description")),
             stock=stock,
             in_stock=stock > 0,
             price=unit,

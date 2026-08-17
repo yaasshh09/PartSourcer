@@ -83,6 +83,21 @@ async def test_an_unparseable_price_is_no_price():
     assert r.price is None
 
 
+async def test_a_placeholder_part_number_is_not_a_sku():
+    # Mouser sends the literal string "N/A" when it has no part number, and
+    # printing that in the SKU column reads as an actual orderable code.
+    async with client_returning(body([dict(PART, MouserPartNumber="N/A")])) as c:
+        r = (await MouserAdapter(c, "k").search("stm32", limit=10))[0]
+    assert r.sku == ""
+
+
+async def test_a_placeholder_brand_or_description_is_absent_not_shown():
+    async with client_returning(body([dict(PART, Manufacturer="N/A",
+                                           Description="-")])) as c:
+        r = (await MouserAdapter(c, "k").search("stm32", limit=10))[0]
+    assert r.brand is None and r.description == ""
+
+
 async def test_unparseable_stock_becomes_zero():
     async with client_returning(body([dict(PART, AvailabilityInStock="")])) as c:
         r = (await MouserAdapter(c, "k").search("stm32", limit=10))[0]

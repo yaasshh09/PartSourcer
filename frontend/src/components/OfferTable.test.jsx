@@ -10,6 +10,11 @@ afterEach(() => {
 function noClipboard() {
   Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
 }
+function withClipboard() {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText: () => Promise.resolve() }, configurable: true,
+  })
+}
 
 function offer(over = {}) {
   return {
@@ -36,6 +41,15 @@ test('an offer with no price says so instead of leaving the cell blank', () => {
   render(<OfferTable offers={[offer({ price_usd: null })]} />)
   expect(screen.getByText('no price')).toBeInTheDocument()
   expect(screen.queryByText('$0.0000')).not.toBeInTheDocument()
+})
+
+test('an offer with no SKU says so, and offers nothing to copy', () => {
+  // The clipboard is available here on purpose: the copy button must be
+  // missing because there is no code to copy, not because of the environment.
+  withClipboard()
+  render(<OfferTable offers={[offer({ sku: '' })]} />)
+  expect(screen.getByText('no SKU')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^Copy/ })).not.toBeInTheDocument()
 })
 
 test('column headers are scoped, which is the reason for a real table', () => {

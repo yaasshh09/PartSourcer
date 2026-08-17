@@ -49,10 +49,18 @@ function OfferRow({ offer, cheapest, showNote }) {
         ) : null}
       </td>
       <td style={TD}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: MONO, fontSize: 13 }}>{offer.sku}</span>
-          <CopyButton value={offer.sku} label={`Copy ${offer.sku}`} />
-        </div>
+        {/* A DigiKey product with no variation, and Mouser's literal "N/A",
+            both arrive with no SKU. An empty cell reads as a fetch that
+            failed, and there is nothing to put on the clipboard. */}
+        {offer.sku ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontFamily: MONO, fontSize: 13 }}>{offer.sku}</span>
+            <CopyButton value={offer.sku} label={`Copy ${offer.sku}`} />
+          </div>
+        ) : (
+          <span style={{ fontFamily: ARCHIVO, fontWeight: 700, fontSize: 13,
+            color: C.muted }}>no SKU</span>
+        )}
       </td>
       <td style={TD}><StockBadge stock={offer.stock} /></td>
       <td style={{ ...TD, fontFamily: ARCHIVO, fontWeight: 900, fontSize: 17 }}>
