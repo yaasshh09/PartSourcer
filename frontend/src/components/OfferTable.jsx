@@ -6,16 +6,22 @@ import Price from './Price.jsx'
 
 // The link column has no visible heading, but the column still needs a name
 // for anyone reading the table through a screen reader. Clipped to nothing
-// rather than parked off to the left, which can widen the page.
+// rather than parked off to the left, which can widen the page. See the note
+// on TH for why the cell has to be its positioning context.
 const SR_ONLY = {
   position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
   overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
 }
 
+// position: relative is load-bearing. The clipped LINK label below is
+// absolutely positioned, and without a positioned ancestor it is laid out
+// against the page rather than the cell, so on a phone it sat past the right
+// edge of the screen and dragged the whole document sideways with it. The
+// scroll box around the table cannot clip what was never inside it.
 const TH = {
   textAlign: 'left', fontFamily: ARCHIVO, fontWeight: 900, fontSize: 11,
   letterSpacing: '0.06em', color: C.sub, padding: '0 12px 10px 0',
-  borderBottom: `3px solid ${C.ink}`,
+  borderBottom: `3px solid ${C.ink}`, position: 'relative',
 }
 const TD = {
   padding: '12px 12px 12px 0', borderBottom: '1px solid #e8e4d4',

@@ -123,7 +123,10 @@ export default function SearchPage() {
             that into one search, and points you to a cheaper equivalent when one genuinely exists.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        {/* auto-fit rather than three fixed columns: a grid track never shrinks
+            below its content, so on a phone three of them overflowed the page.
+            This drops to two columns, then one, as the room runs out. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
             { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
             { n: '2', title: 'See live stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
@@ -141,7 +144,7 @@ export default function SearchPage() {
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
             EQUIVALENT vs. SIMILAR: WE DON&apos;T BLUR THE LINE
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, marginTop: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 22, marginTop: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: '#38d17a' }}>✓ Equivalent</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
@@ -174,8 +177,12 @@ export default function SearchPage() {
       <section style={{ maxWidth: 1120, margin: '0 auto', padding: '70px 28px 40px' }}>
         <span style={{ display: 'inline-block', background: C.ink, color: C.yellow, fontWeight: 700,
           fontSize: 13, padding: '6px 12px' }}>FREE &amp; OPEN-SOURCE ✱ MIT</span>
-        <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 60, lineHeight: 0.98,
-          letterSpacing: '-0.035em', margin: '22px 0 0', maxWidth: 900 }}>
+        {/* Scales instead of breaking: at a flat 60px the word CHEAPEST alone
+            is wider than a 320px phone, and a headline is the one place where
+            hyphenating mid-word looks worse than shrinking. 13vw reaches 60px
+            at about 460px wide, so anything desktop-sized is unchanged. */}
+        <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 'clamp(38px, 13vw, 60px)',
+          lineHeight: 0.98, letterSpacing: '-0.035em', margin: '22px 0 0', maxWidth: 900 }}>
           FIND THE CHEAPEST IN-STOCK PART FOR YOUR PCB IN ONE SEARCH.
         </h1>
         <p style={{ fontSize: 18, color: '#4a4838', maxWidth: 560, margin: '20px 0 0', fontWeight: 500 }}>
@@ -185,10 +192,13 @@ export default function SearchPage() {
           style={{ display: 'flex', alignItems: 'center', maxWidth: 720, marginTop: 34,
             border: `3px solid ${C.ink}`, boxShadow: `7px 7px 0 ${C.ink}`, background: C.paper }}>
           <span style={{ paddingLeft: 20, fontSize: 20 }}>⌕</span>
+          {/* minWidth 0 is what lets this shrink. A flex item will not go below
+              its placeholder's width without it, which pushed the SEARCH button
+              past the right edge of a phone and scrolled the whole page. */}
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by MPN, LCSC #, or spec…"
-            style={{ flex: 1, border: 'none', padding: '20px 16px', fontSize: 17, fontWeight: 500,
-              background: 'transparent' }} />
+            style={{ flex: 1, minWidth: 0, border: 'none', padding: '20px 16px', fontSize: 17,
+              fontWeight: 500, background: 'transparent' }} />
           <button type="submit" style={{ background: C.orange, color: '#fff', fontFamily: ARCHIVO,
             fontWeight: 900, fontSize: 16, padding: '0 34px', border: 'none',
             borderLeft: `3px solid ${C.ink}`, alignSelf: 'stretch' }}>SEARCH</button>

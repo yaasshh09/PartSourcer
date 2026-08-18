@@ -145,9 +145,11 @@ export default function DetailPage() {
 
       <SourceStatusBar sources={data.sources} />
 
+      {/* Wraps for the same reason the search card does: fixed columns cannot
+          shrink past the MPN, which put the unit price off the edge of a phone. */}
       <div style={{ border: `3px solid ${C.ink}`, boxShadow: `7px 7px 0 ${C.ink}`, background: C.paper,
-        padding: 28, display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
-        <div>
+        padding: 28, display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
+        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
           {lcsc ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontFamily: MONO, fontSize: 12, color: C.muted }}>{lcsc.sku}</span>
@@ -155,7 +157,8 @@ export default function DetailPage() {
             </div>
           ) : null}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '8px 0 0' }}>
-            <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 38, lineHeight: 1.05, margin: 0 }}>
+            <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 38, lineHeight: 1.05,
+              margin: 0, overflowWrap: 'anywhere' }}>
               {part.mpn}
             </h1>
             <CopyButton value={part.mpn} label="Copy MPN" />
@@ -188,7 +191,7 @@ export default function DetailPage() {
             </div>
           ) : null}
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
           {headline ? (
             <>
               <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 44, lineHeight: 1 }}>
@@ -232,7 +235,11 @@ export default function DetailPage() {
                 <CopyButton value={eq.lcsc} label="Copy equivalent LCSC code" variant="onYellow" />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
-                <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 28 }}>{eq.mpn}</div>
+                {/* Wraps for the same reason the title above does: with no
+                    space to break at, a long part number pushed the copy
+                    button past the edge of the screen. */}
+                <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 28,
+                  minWidth: 0, overflowWrap: 'anywhere' }}>{eq.mpn}</div>
                 <CopyButton value={eq.mpn} label="Copy equivalent MPN" variant="onYellow" />
               </div>
               <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 600, marginTop: 8 }}>

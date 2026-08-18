@@ -20,10 +20,13 @@ export default function ResultCard({ part }) {
   if (lcsc && lcsc.is_preferred) tier = 'Preferred'
   else if (lcsc && lcsc.is_basic) tier = 'Basic'
 
+  // A wrapping flex row, not two grid tracks: a track will not shrink below
+  // its longest word, so a long MPN used to carry the price column off the
+  // side of a phone. The price drops under the part instead.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 20,
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20,
       padding: '20px 22px', border: `3px solid ${C.ink}`, boxShadow: `5px 5px 0 ${C.ink}`, background: C.paper }}>
-      <div>
+      <div style={{ flex: '1 1 240px', minWidth: 0 }}>
         {/* Only Mouser carries a manufacturer, so this is present on most of a
             Mouser-heavy query and almost none of an LCSC-heavy one. Absent
             means no line, not a placeholder. */}
@@ -34,8 +37,10 @@ export default function ResultCard({ part }) {
           </div>
         ) : null}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Part numbers have no spaces to break at, so the long ones need
+              explicit permission to wrap or they overflow the card. */}
           <Link to={to} style={{ fontFamily: MONO, fontWeight: 600, fontSize: 19,
-            color: C.ink, textDecoration: 'none' }}>{part.mpn}</Link>
+            color: C.ink, textDecoration: 'none', overflowWrap: 'anywhere' }}>{part.mpn}</Link>
           <CopyButton value={part.mpn} label={`Copy ${part.mpn}`} />
         </div>
         {part.description ? (
@@ -62,7 +67,7 @@ export default function ResultCard({ part }) {
           ) : null}
         </div>
       </div>
-      <div style={{ textAlign: 'right' }}>
+      <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
         {headline ? (
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 26 }}>
             <Price value={headline.price_usd} size={14} />

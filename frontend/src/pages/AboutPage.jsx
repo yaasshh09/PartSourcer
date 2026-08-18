@@ -21,7 +21,9 @@ export default function AboutPage() {
         with a known footprint. Doing it by hand across distributor sites is slow and painful. PartSourcer does it
         in one search.
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 30 }}>
+      {/* auto-fit, so the pair becomes a stack when there is no room for two. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: 16, marginTop: 30 }}>
         {CARDS.map((card) => (
           <div key={card.title} style={{ border: `3px solid ${C.ink}`, padding: 22,
             background: card.accent ? C.yellow : C.paper }}>
