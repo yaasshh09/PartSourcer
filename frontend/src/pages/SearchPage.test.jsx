@@ -45,7 +45,7 @@ test('bootstraps a search from ?q= and shows results + real as_of', async () => 
   })
   renderAt('/?q=STM32')
   await waitFor(() => expect(screen.getByText('STM32F103C8T6')).toBeInTheDocument())
-  expect(screen.getByText(/RESULTS: 1 MATCHES/)).toBeInTheDocument()
+  expect(screen.getByText(/SHOWING 1 RESULTS/)).toBeInTheDocument()
   expect(screen.getByText(/as of Aug 15, 2026/)).toBeInTheDocument()
 })
 
@@ -104,7 +104,7 @@ test('warns above the results when a distributor did not answer', async () => {
   // Above, not merely present. A caveat rendered under the prices is read
   // after the user has already priced the part, which defeats the warning.
   const status = screen.getByRole('status')
-  const header = screen.getByText(/RESULTS: 1 MATCHES/)
+  const header = screen.getByText(/SHOWING 1 RESULTS/)
   expect(status.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING)
     .toBeTruthy()
 })

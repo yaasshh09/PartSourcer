@@ -94,8 +94,11 @@ export default function SearchPage() {
         <SourceStatusBar sources={sources} />
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
           paddingBottom: 12, borderBottom: `3px solid ${C.ink}`, marginBottom: 18 }}>
+          {/* "showing", not a total. This is one page of what the backend
+              fetched, and upstream holds more than it fetched, so a bare
+              count would read as the number of parts that exist. */}
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14 }}>
-            {`RESULTS: ${results.length} MATCHES`}
+            {`SHOWING ${results.length} RESULTS`}
           </div>
           <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
             {`stock & price as of ${fmtAsOf(asOf)}`}
