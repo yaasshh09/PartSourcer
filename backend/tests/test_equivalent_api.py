@@ -46,10 +46,12 @@ def route(request):
     # the mock has to answer for the candidate too, not just the original.
     p = request.url.path
     if p == "/api/search":
-        q = request.url.params.get("q", "")
+        # Upper-cased: canonical reads go out as normalize_exact of the MPN,
+        # which is the same string the search and detail paths send.
+        q = request.url.params.get("q", "").upper()
         if "8734" in q or "STM32" in q:
             return httpx.Response(200, json={"components": [IC_ROW]})
-        if "R-cheap" in q:
+        if "R-CHEAP" in q:
             return httpx.Response(200, json={"components": [RES_CHEAP]})
         return httpx.Response(200, json={"components": [RES_ROW]})
     if p == "/resistors/list.json":
@@ -62,8 +64,8 @@ def route(request):
 def cap_route(request):
     p = request.url.path
     if p == "/api/search":
-        q = request.url.params.get("q", "")
-        if "C-cheap" in q:
+        q = request.url.params.get("q", "").upper()
+        if "C-CHEAP" in q:
             return httpx.Response(200, json={"components": [CAP_CHEAP]})
         return httpx.Response(200, json={"components": [CAP_ROW]})
     if p == "/capacitors/list.json":

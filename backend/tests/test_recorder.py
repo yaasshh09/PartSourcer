@@ -43,6 +43,8 @@ class FakeDs:
 
     async def canonical_part(self, mpn, lcsc_code, allow_cached=True):
         self.allow_cached.append(allow_cached)
+        if mpn in self.canonical:
+            return self.canonical[mpn]
         if lcsc_code in self.canonical:
             return self.canonical[lcsc_code]
         return self.parts.get(lcsc_code)
@@ -160,3 +162,30 @@ async def test_the_recorder_reads_now_rather_than_from_cache():
                            now=lambda: FIXED)
 
     assert ds.allow_cached == [False]
+
+
+async def test_the_usual_entry_costs_one_upstream_read_not_two():
+    """The watchlist already carries both keys, so resolving the code again
+    was a wasted call against a free community upstream, every night, for
+    every part."""
+    store = InMemoryHistoryStore()
+    await store.add_to_watchlist("STM32F103C8T6", "C8734")
+    ds = FakeDs(parts={"C8734": detail()})
+
+    await record_watchlist(ds, store, batch_size=10, concurrency=2,
+                           now=lambda: FIXED)
+
+    assert ds.calls == [], "resolved the code when it did not need to"
+    assert len(store.records) == 1
+
+
+async def test_a_key_that_does_not_resolve_falls_back_to_the_code():
+    store = InMemoryHistoryStore()
+    await store.add_to_watchlist("RENAMED", "C8734")
+    ds = FakeDs(parts={"C8734": detail()}, canonical={"RENAMED": None})
+
+    await record_watchlist(ds, store, batch_size=10, concurrency=2,
+                           now=lambda: FIXED)
+
+    assert ds.calls == ["C8734"], "did not fall back"
+    assert len(store.records) == 1

@@ -88,7 +88,12 @@ class LcscMatcherSource:
         held = await self._cached(lcsc_code)
         if held is not None and allow_cached:
             return held
-        listings = await self._adapter.lookup_mpn(mpn, FETCH_DEPTH)
+        # normalize_exact, because that is the exact string the search and
+        # detail paths send. Upstream answers by query text, so asking a
+        # different way here would be a different reading of the same part.
+        # It matters for the handful of MPNs with a space in them.
+        listings = await self._adapter.lookup_mpn(normalize_exact(mpn),
+                                                  FETCH_DEPTH)
         for listing in listings:
             if listing.sku == lcsc_code:
                 if held is None:

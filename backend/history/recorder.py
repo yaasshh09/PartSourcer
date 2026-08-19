@@ -50,12 +50,19 @@ async def record_watchlist(
                 # come from the read the pages use, so a part's chart and its
                 # price on screen cannot drift onto different bases. History
                 # is append-only, so a row on the wrong basis never washes out.
-                detail = await ds.get_part(lcsc)
-                if detail is not None:
-                    # Read now, not from cache: the row is stamped with this
-                    # run's time, and a cached one could be most of a TTL old.
-                    detail = await ds.canonical_part(detail.mpn, detail.lcsc,
-                                                     allow_cached=False)
+                # The watchlist already carries both keys, so the usual case
+                # needs one call, not two. Read now rather than from cache:
+                # the row is stamped with this run's time and a held one
+                # could be most of a TTL old.
+                detail = await ds.canonical_part(mpn_key, lcsc,
+                                                 allow_cached=False)
+                if detail is None:
+                    # The key did not resolve on its own, so fall back to
+                    # asking what this code actually is. Costs the second
+                    # call, and only for parts that need it.
+                    found = await ds.get_part(lcsc)
+                    detail = None if found is None else await ds.canonical_part(
+                        found.mpn, found.lcsc, allow_cached=False)
             except UpstreamError:
                 async with lock:
                     summary.errors += 1
