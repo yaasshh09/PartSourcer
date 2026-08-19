@@ -178,6 +178,20 @@ class SqliteCacheStore:
                              as_of: datetime) -> None:
         await asyncio.to_thread(self._put_parametric, key, rows, as_of)
 
+    async def prune(self, before: datetime) -> int:
+        """Drop rows too old to be served, and report how many.
+
+        Nothing here evicts on its own, so on a deploy with a persistent
+        volume every part ever looked at stays forever. A row older than the
+        freshness gates can never be returned, so deleting it loses nothing.
+
+        The horizon is deliberately much longer than the offer TTL: the
+        offers table doubles as the SKU index behind the legacy C-code
+        redirect, and that lookup does not check freshness. Pruning at the
+        TTL would send every old link back upstream for no reason.
+        """
+        return await asyncio.to_thread(self._prune, before)
+
     async def get_quota_markers(self) -> dict[str, datetime]:
         return await asyncio.to_thread(self._get_quota_markers)
 
@@ -299,6 +313,19 @@ class SqliteCacheStore:
                 " as_of) VALUES (?, ?, ?)",
                 (key, json.dumps(rows), as_of.isoformat()))
             self._conn.commit()
+
+    _PRUNABLE = ("offers", "search_cache", "part_cache", "parametric_cache")
+
+    def _prune(self, before: datetime) -> int:
+        cutoff = before.isoformat()
+        removed = 0
+        with self._lock:
+            for table in self._PRUNABLE:
+                cur = self._conn.execute(
+                    f"DELETE FROM {table} WHERE as_of < ?", (cutoff,))
+                removed += cur.rowcount if cur.rowcount > 0 else 0
+            self._conn.commit()
+        return removed
 
     def _get_quota_markers(self) -> dict[str, datetime]:
         with self._lock:

@@ -86,8 +86,9 @@ Loaded via pydantic-settings from the environment or a local `.env`
 |---|---|---|
 | `JLCSEARCH_BASE_URL` | `https://jlcsearch.tscircuit.com` | upstream base URL |
 | `REQUEST_TIMEOUT_SECS` | `10.0` | timeout on every upstream call |
-| `SPECS_CACHE_TTL_SECS` | `2592000` | specs freshness (30 days) |
-| `STOCK_CACHE_TTL_SECS` | `3600` | stock/price freshness (1 hour) |
+| `SPECS_CACHE_TTL_SECS` | `2592000` | unused; a leftover from the v1 cache layer |
+| `STOCK_CACHE_TTL_SECS` | `3600` | stock/price freshness (1 hour), and the matcher's pool |
+| `CACHE_PRUNE_AFTER_DAYS` | `7` | rows older than this are deleted at startup |
 | `SQLITE_PATH` | `./partsourcer.db` | cache DB path |
 | `CORS_ORIGINS` | `["http://localhost:5173", "http://127.0.0.1:5173"]` | allowed browser origins (set Vercel origin in prod) |
 | `REFRESH_COOLDOWN_SECS` | `10.0` | min gap between forced `?refresh=true` upstream hits per key |
@@ -193,6 +194,13 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
 - SQLite cache is single-node; fine for v1, revisit for horizontal scale. The
   whole cache is dropped and rebuilt on a schema-version change, which is safe
   because no source of truth lives there.
+- Nothing in the cache evicts on its own, so rows older than
+  `CACHE_PRUNE_AFTER_DAYS` are deleted once at startup. That matters only
+  where the volume is real: on Render free the file is ephemeral and the whole
+  thing is gone every spin-down anyway. The horizon is much longer than the
+  offer TTL on purpose, because the offers table doubles as the SKU index
+  behind the legacy `C<digits>` redirect and that lookup does not check
+  freshness.
 - The quota exhaustion marker persists to SQLite, so it survives a restart only
   where the volume does. On Render free the file is ephemeral and the first call
   after a restart earns a fresh 429 that re-marks it.

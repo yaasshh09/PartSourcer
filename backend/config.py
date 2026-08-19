@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Caching (caching phase): long TTL for specs, short TTL for stock/price
     specs_cache_ttl_secs: int = 2_592_000  # 30 days
     stock_cache_ttl_secs: int = 3_600      # 1 hour
+    # Nothing in the cache evicts on its own, so on a deploy with a real
+    # volume it grows forever. Far longer than the offer TTL on purpose: the
+    # offers table doubles as the SKU index behind the legacy C-code redirect.
+    cache_prune_after_days: int = 7
     sqlite_path: str = "./partsourcer.db"
 
     # Hardening phase

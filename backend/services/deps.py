@@ -4,6 +4,9 @@ Swapping to the official LCSC API later = build a different adapter here.
 CachedPartService wraps whatever PartService was handed; nothing else changes.
 """
 
+import logging
+from datetime import datetime, timedelta, timezone
+
 import httpx
 
 from cache.cached_part_service import CachedPartService
@@ -14,6 +17,8 @@ from services.adapters.lcsc import LcscAdapter
 from services.lcsc_matcher_source import LcscMatcherSource
 from services.part_service import PartService, build_part_service
 from services.throttle import RefreshThrottle
+
+log = logging.getLogger("partsourcer.deps")
 
 _client: httpx.AsyncClient | None = None
 _store: SqliteCacheStore | None = None
@@ -35,6 +40,11 @@ async def startup() -> None:
     )
     _store = SqliteCacheStore(settings.sqlite_path)
     _store.open()
+    dropped = await _store.prune(
+        datetime.now(timezone.utc)
+        - timedelta(days=settings.cache_prune_after_days))
+    if dropped:
+        log.info("cache pruned rows=%d", dropped)
     _lcsc_adapter = LcscAdapter(_client)
     # Same store and same TTL as the pages, so an equivalent card quotes the
     # row the part's own page is serving rather than a second reading of it.

@@ -120,3 +120,36 @@ async def test_opening_a_current_database_twice_keeps_its_rows(tmp_path):
         assert len(await second.get_offers(["PART-A"])) == 1
     finally:
         second.close()
+
+
+async def test_prune_drops_rows_too_old_to_serve(store):
+    """Nothing evicts on its own, so on a deploy with a real volume the cache
+    grows forever. A row past the freshness gates can never be returned."""
+    from datetime import timedelta
+    from cache.store import CachedOffer
+
+    old = AS_OF - timedelta(days=30)
+    await store.put_offers([
+        CachedOffer(listing_key="OLD", distributor="lcsc", sku="C1",
+                    part_key="OLD", listing={"mpn": "OLD"}, as_of=old),
+        CachedOffer(listing_key="NEW", distributor="lcsc", sku="C2",
+                    part_key="NEW", listing={"mpn": "NEW"}, as_of=AS_OF),
+    ])
+    await store.put_search("stale", 40, ["OLD"], [], old)
+    await store.put_search("fresh", 40, ["NEW"], [], AS_OF)
+    await store.put_part_status("OLD", [], old)
+    await store.put_parametric("resistors|0603|", [{"lcsc": "C1"}], old)
+
+    dropped = await store.prune(AS_OF - timedelta(days=7))
+
+    assert dropped == 4
+    assert [o.listing_key for o in await store.get_offers(["OLD", "NEW"])] == ["NEW"]
+    assert await store.get_search("stale") is None
+    assert await store.get_search("fresh") is not None
+    assert await store.get_part_status("OLD") is None
+    assert await store.get_parametric("resistors|0603|") is None
+
+
+async def test_prune_on_an_empty_cache_is_a_no_op(store):
+    from datetime import timedelta
+    assert await store.prune(AS_OF - timedelta(days=7)) == 0
