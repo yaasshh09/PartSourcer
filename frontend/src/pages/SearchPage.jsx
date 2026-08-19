@@ -129,7 +129,7 @@ export default function SearchPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
             { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
-            { n: '2', title: 'See live stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
+            { n: '2', title: 'See stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
             { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
           ].map((s) => (
             <div key={s.n} style={{ border: `3px solid ${C.ink}`, padding: 20,
@@ -142,19 +142,19 @@ export default function SearchPage() {
         </div>
         <div style={{ border: `3px solid ${C.ink}`, background: C.ink, color: C.bg, padding: 26 }}>
           <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
-            EQUIVALENT vs. SIMILAR: WE DON&apos;T BLUR THE LINE
+            EQUIVALENT OR NOTHING: WE DON&apos;T BLUR THE LINE
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 22, marginTop: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: '#38d17a' }}>✓ Equivalent</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-                Same footprint, matching core specs, verified pin-compatible, in stock, and cheaper. Safe to swap.
+                Same package, matching core specs, well stocked, and confirmed cheaper on a second reading of both prices. Safe to swap.
               </div>
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: '#ffb02e' }}>≈ Similar part</div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: '#ffb02e' }}>✗ No match</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-                Close on specs, but pin-compatibility isn&apos;t confirmed. We show it clearly labelled, never as a drop-in.
+                Close is not good enough. If we cannot verify a drop-in you get a plain no and the reason why, never a maybe.
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function SearchPage() {
           FIND THE CHEAPEST IN-STOCK PART FOR YOUR PCB IN ONE SEARCH.
         </h1>
         <p style={{ fontSize: 18, color: '#4a4838', maxWidth: 560, margin: '20px 0 0', fontWeight: 500 }}>
-          Live stock, price, footprint &amp; datasheet, plus one cheaper in-stock equivalent. No login. No paywall.
+          Stock, price, footprint &amp; datasheet, plus one cheaper in-stock equivalent. No login. No paywall.
         </p>
         <form onSubmit={(e) => { e.preventDefault(); runSearch(query) }}
           style={{ display: 'flex', alignItems: 'center', maxWidth: 720, marginTop: 34,

@@ -1,9 +1,9 @@
 import { C, ARCHIVO, MONO } from '../theme.js'
 
 const STEPS = [
-  { n: '01', title: 'You search', body: 'By MPN, LCSC code, or plain-text spec. We query an open parts database and return live stock, price, package and datasheet.' },
+  { n: '01', title: 'You search', body: 'By MPN, LCSC code, or plain-text spec. We query an open parts database and return stock, price, package and datasheet, each stamped with when we read it.' },
   { n: '02', title: 'We match a cheaper equivalent', body: 'Same footprint (hard requirement), matching key specs, in stock, and cheaper. Sorted by lowest price, tiebroken by stock. We return the best one.' },
-  { n: '03', title: 'You save', body: 'See the % saved, the match reason, and swap with confidence. If we can\'t verify pin compatibility, we label it "similar part," not "equivalent."', accent: true },
+  { n: '03', title: 'You save', body: 'See the % saved, the match reason, and swap with confidence. If we cannot verify a drop-in, you get a plain no and the reason, never a maybe.', accent: true },
 ]
 
 export default function HowPage() {

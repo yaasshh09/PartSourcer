@@ -2,9 +2,9 @@ import { C, ARCHIVO } from '../theme.js'
 
 const QA = [
   { q: 'Is it really free?', a: "Yes. Free forever on core features, no signup to search. It's MIT open-source, fork it if you like." },
-  { q: 'How fresh is the stock data?', a: 'Specs and footprints are cached long (they don\'t change). Stock and price refresh every few hours, and every result shows a "data as of" timestamp.' },
+  { q: 'How fresh is the stock data?', a: 'Specs and footprints are cached long, they don\'t change. We re-read stock and price every few hours, but the LCSC numbers come from an open database that itself syncs about once a day, and that is the real limit, not our cache. Mouser and DigiKey are live when they answer. Every result shows the time we read it.' },
   { q: 'Are you affiliated with LCSC or JLCPCB?', a: 'No. PartSourcer is an independent, community tool built on open data. Not affiliated with or endorsed by LCSC / JLCPCB.' },
-  { q: 'How do I trust the "equivalent"?', a: 'We only call something an equivalent when package and core specs match. When we can\'t verify pin compatibility, we label it "similar part" instead, and if there\'s no valid match, we say none was found.' },
+  { q: 'How do I trust the "equivalent"?', a: 'We only call something an equivalent when the package and the core specs match, and we re-read both prices before claiming a saving. If we cannot verify a match we say none was found rather than guessing. Today that means resistors and capacitors, the parts the open database gives us real specs for.' },
 ]
 
 export default function FaqPage() {
