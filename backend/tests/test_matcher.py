@@ -419,7 +419,10 @@ async def test_only_the_top_three_candidates_are_repriced():
     resp = await find_equivalent(ds, "C100")
 
     assert resp.equivalent is None
-    assert ds.canonical_calls == ["C100", "C1", "C2", "C3"]
+    # Set, not list: the candidate reads run concurrently, so which one lands
+    # first is not part of the contract. Which ones get read is.
+    assert set(ds.canonical_calls) == {"C100", "C1", "C2", "C3"}
+    assert len(ds.canonical_calls) == 4
 
 
 @pytest.mark.anyio
