@@ -11,6 +11,15 @@ import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 const COMING_SOON = ['BOM bulk upload', 'Price history', 'Browse by category', 'Biggest savings this week']
 
+// Fixed content, so it lives out here rather than being rebuilt on every
+// keystroke in the search box.
+const STEPS = [
+  { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
+  { n: '2', title: 'See stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
+  { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
+]
+const SKELETON_DELAYS = [0, 0.15, 0.3]
+
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') || ''
@@ -83,7 +92,7 @@ export default function SearchPage() {
             {WAKE_NOTICE}
           </div>
         ) : null}
-        {[0, 0.15, 0.3].map((delay) => (
+        {SKELETON_DELAYS.map((delay) => (
           <div key={delay} style={{ height: 96, border: `3px solid ${C.ink}`, background: '#f0eee2',
             marginBottom: 14, animation: 'ps-pulse 1s ease-in-out infinite', animationDelay: `${delay}s` }} />
         ))}
@@ -137,11 +146,7 @@ export default function SearchPage() {
             below its content, so on a phone three of them overflowed the page.
             This drops to two columns, then one, as the room runs out. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          {[
-            { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
-            { n: '2', title: 'See stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
-            { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
-          ].map((s) => (
+          {STEPS.map((s) => (
             <div key={s.n} style={{ border: `3px solid ${C.ink}`, padding: 20,
               background: s.accent ? C.yellow : C.paper }}>
               <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 32, color: s.accent ? C.ink : C.orange }}>{s.n}</div>

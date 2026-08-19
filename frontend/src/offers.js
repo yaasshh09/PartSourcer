@@ -108,7 +108,19 @@ export function lcscOffer(part) {
  * Part.as_of applies across offers.
  */
 export function oldestAsOf(parts) {
-  const stamps = (parts || []).map((p) => p && p.as_of).filter(Boolean)
-  if (!stamps.length) return null
-  return stamps.reduce((a, b) => (new Date(a) <= new Date(b) ? a : b))
+  let oldest = null
+  let oldestMs = Infinity
+  for (const part of parts || []) {
+    const stamp = part && part.as_of
+    if (!stamp) continue
+    // Parse once per stamp. Comparing the strings as dates inside a reduce
+    // built two Date objects for every comparison on a page that can hold
+    // twenty parts.
+    const ms = Date.parse(stamp)
+    if (ms < oldestMs) {
+      oldestMs = ms
+      oldest = stamp
+    }
+  }
+  return oldest
 }
