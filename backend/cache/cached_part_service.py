@@ -97,17 +97,40 @@ class CachedPartService:
                 if row.distributor in served]
 
     async def _write_offers(self, listings: Iterable[RawListing],
-                            parts: list[Part]) -> None:
-        """Store the listings under the part key the merge just assigned.
+                            parts: list[Part],
+                            force: bool = False) -> list[RawListing]:
+        """Store the listings and return what the app should now show.
 
         part_key is only a retrieval index. The merge runs again on every read
         and re-derives the fold from scratch, so a key that moves is not a
         stale claim.
+
+        A row that is already here and still fresh is kept, and the caller is
+        handed the kept version rather than the one just fetched. Upstream
+        answers differently depending on how a part is asked for, so a search
+        read and a detail read of the same part disagree about a quarter of
+        the time. Letting the newer read win meant the price a user was
+        already looking at could change by 4x on click-through, both readings
+        honestly timestamped. One row is one answer until it expires. An
+        explicit refresh passes force and does replace it, because that is
+        what the user asked for.
         """
+        listings = list(listings)
         part_of = {normalize_exact(offer.mpn_as_listed): part.mpn_key
                    for part in parts for offer in part.offers}
-        rows = []
+
+        held: dict[tuple[str, str], RawListing] = {}
+        if not force:
+            pairs = [(x.distributor, x.sku) for x in listings]
+            for row in await self._store.get_offers_by_sku(pairs):
+                if self._fresh(row.as_of):
+                    held[(row.distributor, row.sku)] = listing_from_dict(
+                        row.listing)
+
+        effective, rows = [], []
         for listing in listings:
+            listing = held.get((listing.distributor, listing.sku), listing)
+            effective.append(listing)
             listing_key = normalize_exact(listing.mpn)
             if not listing_key:
                 continue
@@ -116,6 +139,7 @@ class CachedPartService:
                 sku=listing.sku, part_key=part_of.get(listing_key, listing_key),
                 listing=listing_to_dict(listing), as_of=listing.as_of))
         await self._store.put_offers(rows)
+        return effective
 
     def _log_sources(self, statuses: list[DistributorStatus]) -> None:
         """One line per distributor outcome. Never the detail: an unmapped
@@ -151,13 +175,18 @@ class CachedPartService:
             log.info("search miss q=%r page=%d depth=%d", key, page, want)
             result = await self._service.collect(
                 lambda adapter: adapter.search(query, want))
+            # Merged again on what the store kept, so a card can never quote a
+            # number the store does not hold for that offer.
+            effective = await self._write_offers(result.listings, result.parts,
+                                                 force=refresh)
+            parts = _spine_order(self._service.merge(effective, result.statuses),
+                                 [p.mpn_key for p in result.parts])
             await self._store.put_search(
-                key, want, [p.mpn_key for p in result.parts],
+                key, want, [p.mpn_key for p in parts],
                 [s.model_dump(mode="json") for s in result.statuses],
                 self._now())
-            await self._write_offers(result.listings, result.parts)
             self._log_sources(result.statuses)
-            return self._window(query, page, result.parts, result.statuses)
+            return self._window(query, page, parts, result.statuses)
 
         served, retry = self._retry_set(row.statuses, f"search:{key}", refresh)
         cached_listings = await self._cached_listings(row.part_keys, served)
@@ -177,13 +206,17 @@ class CachedPartService:
             lambda adapter: adapter.search(query, row.limit_used), only=retry)
         statuses = self._merge_statuses(row.statuses, result.statuses)
         self._log_sources(statuses)
-        parts = _spine_order(
+        provisional = _spine_order(
             self._service.merge(cached_listings + result.listings, statuses),
+            row.part_keys)
+        effective = await self._write_offers(result.listings, provisional,
+                                             force=refresh)
+        parts = _spine_order(
+            self._service.merge(cached_listings + effective, statuses),
             row.part_keys)
         await self._store.put_search(
             key, row.limit_used, [p.mpn_key for p in parts],
             [s.model_dump(mode="json") for s in statuses], self._now())
-        await self._write_offers(result.listings, parts)
         return self._window(query, page, parts, statuses)
 
     # -- the detail path --
@@ -201,10 +234,14 @@ class CachedPartService:
         if row is None or not self._fresh(row.as_of):
             log.info("lookup miss key=%s", mpn_key)
             result = await self._service.lookup(mpn_key)
-            await self._commit_lookup(mpn_key, result.listings, result.parts,
-                                      result.statuses)
+            # A part reached from a search already has offer rows here, and
+            # keeping them is what stops the price moving on click-through.
+            effective = await self._commit_lookup(
+                mpn_key, result.listings, result.parts, result.statuses,
+                force=refresh)
             self._log_sources(result.statuses)
-            part, canonical = select_part(result.parts, mpn_key)
+            parts = self._service.merge(effective, result.statuses)
+            part, canonical = select_part(parts, mpn_key)
             return part, result.statuses, canonical
 
         served, retry = self._retry_set(row.statuses, f"part:{mpn_key}", refresh)
@@ -224,20 +261,26 @@ class CachedPartService:
             lambda adapter: adapter.lookup_mpn(mpn_key, FETCH_DEPTH), only=retry)
         statuses = self._merge_statuses(row.statuses, result.statuses)
         self._log_sources(statuses)
-        parts = self._service.merge(cached_listings + result.listings, statuses)
-        await self._commit_lookup(mpn_key, result.listings, parts, statuses)
+        provisional = self._service.merge(cached_listings + result.listings,
+                                          statuses)
+        effective = await self._commit_lookup(mpn_key, result.listings,
+                                              provisional, statuses,
+                                              force=refresh)
+        parts = self._service.merge(cached_listings + effective, statuses)
         part, canonical = select_part(parts, mpn_key)
         return part, statuses, canonical
 
     async def _commit_lookup(self, mpn_key: str, listings: list[RawListing],
                              parts: list[Part],
-                             statuses: list[DistributorStatus]) -> None:
+                             statuses: list[DistributorStatus],
+                             force: bool = False) -> list[RawListing]:
         # Offers for every listing, including parts the keyword lookup dragged
         # in: that is free cache warming. A status row only for the key we
         # actually asked about, because that is the only question we asked.
-        await self._write_offers(listings, parts)
+        effective = await self._write_offers(listings, parts, force=force)
         await self._store.put_part_status(
             mpn_key, [s.model_dump(mode="json") for s in statuses], self._now())
+        return effective
 
     async def resolve_sku(self, distributor: str, sku: str) -> str | None:
         """A distributor SKU to its part key, for the legacy redirect."""

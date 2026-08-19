@@ -36,7 +36,11 @@ async def startup() -> None:
     _store = SqliteCacheStore(settings.sqlite_path)
     _store.open()
     _lcsc_adapter = LcscAdapter(_client)
-    _matcher_source = LcscMatcherSource(_lcsc_adapter)
+    # Same store and same TTL as the pages, so an equivalent card quotes the
+    # row the part's own page is serving rather than a second reading of it.
+    _matcher_source = LcscMatcherSource(
+        _lcsc_adapter, store=_store,
+        offer_ttl_secs=settings.stock_cache_ttl_secs)
     _part_service, _distributor_clients = build_part_service(settings, _client)
     # The exhaustion marker outlives the process only where the volume does.
     _part_service.attach_quota_markers(_store, await _store.get_quota_markers())

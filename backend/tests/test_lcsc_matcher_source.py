@@ -101,3 +101,64 @@ async def test_canonical_part_reads_at_the_shared_fetch_depth():
         "STM32F103C8T6", "C8734")
 
     assert seen == [{"q": "STM32F103C8T6", "limit": str(FETCH_DEPTH)}]
+
+
+# --- canonical_part reads through the offer cache ------------------------
+# The pages serve one cached row per offer and hold it until it expires, so
+# a second upstream read here would be a second answer for the same part.
+
+
+@pytest.fixture
+def cache_store(tmp_path):
+    from cache.store import SqliteCacheStore
+    s = SqliteCacheStore(str(tmp_path / "c.db"))
+    s.open()
+    yield s
+    s.close()
+
+
+async def _seed(store, price, as_of):
+    from cache.serde import listing_to_dict
+    from cache.store import CachedOffer
+    from services.adapters.base import RawListing
+    listing = RawListing(distributor="lcsc", sku="C8734",
+                         mpn="STM32F103C8T6", brand=None, package="LQFP-48",
+                         description="", stock=999, in_stock=True,
+                         price=price, currency="USD", price_breaks=None,
+                         datasheet_url=None, product_url=None, as_of=as_of,
+                         rank=0)
+    await store.put_offers([CachedOffer(
+        listing_key="STM32F103C8T6", distributor="lcsc", sku="C8734",
+        part_key="STM32F103C8T6", listing=listing_to_dict(listing),
+        as_of=as_of)])
+
+
+async def test_canonical_part_serves_the_cached_row(cache_store):
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    await _seed(cache_store, 0.0039, now)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                               base_url="https://jlcsearch.test")
+    source = LcscMatcherSource(LcscAdapter(client), store=cache_store,
+                               offer_ttl_secs=3600, now=lambda: now)
+
+    detail = await source.canonical_part("STM32F103C8T6", "C8734")
+
+    # 1.8234 is what the mock upstream would say; the held row wins.
+    assert detail.price_usd == 0.0039
+    assert detail.stock == 999
+
+
+async def test_canonical_part_reads_upstream_when_the_row_is_stale(cache_store):
+    from datetime import datetime, timedelta, timezone
+    then = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    await _seed(cache_store, 0.0039, then)
+    later = then + timedelta(seconds=7200)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                               base_url="https://jlcsearch.test")
+    source = LcscMatcherSource(LcscAdapter(client), store=cache_store,
+                               offer_ttl_secs=3600, now=lambda: later)
+
+    detail = await source.canonical_part("STM32F103C8T6", "C8734")
+
+    assert detail.price_usd == 1.8234

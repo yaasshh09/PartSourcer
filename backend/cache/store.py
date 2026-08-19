@@ -146,6 +146,16 @@ class SqliteCacheStore:
     async def put_offers(self, offers: list[CachedOffer]) -> None:
         await asyncio.to_thread(self._put_offers, offers)
 
+    async def get_offers_by_sku(self, pairs: list[tuple[str, str]]
+                                ) -> list[CachedOffer]:
+        """Rows for specific (distributor, sku) pairs.
+
+        By sku rather than part_key because the caller is asking "what do we
+        already hold for this exact offer", and a row's part_key is only where
+        the last merge filed it, which can move.
+        """
+        return await asyncio.to_thread(self._get_offers_by_sku, pairs)
+
     async def find_part_key_by_sku(self, distributor: str,
                                    sku: str) -> str | None:
         return await asyncio.to_thread(self._find_part_key_by_sku,
@@ -209,6 +219,20 @@ class SqliteCacheStore:
                 "SELECT listing_key, distributor, sku, part_key, listing_json,"
                 f" as_of FROM offers WHERE part_key IN ({marks})",
                 tuple(part_keys)).fetchall()
+        return [CachedOffer(listing_key=r[0], distributor=r[1], sku=r[2],
+                            part_key=r[3], listing=json.loads(r[4]),
+                            as_of=datetime.fromisoformat(r[5])) for r in rows]
+
+    def _get_offers_by_sku(self, pairs: list[tuple[str, str]]
+                           ) -> list[CachedOffer]:
+        if not pairs:
+            return []
+        clause = " OR ".join(["(distributor = ? AND sku = ?)"] * len(pairs))
+        params = tuple(x for pair in pairs for x in pair)
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT listing_key, distributor, sku, part_key, listing_json,"
+                f" as_of FROM offers WHERE {clause}", params).fetchall()
         return [CachedOffer(listing_key=r[0], distributor=r[1], sku=r[2],
                             part_key=r[3], listing=json.loads(r[4]),
                             as_of=datetime.fromisoformat(r[5])) for r in rows]
