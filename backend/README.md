@@ -165,7 +165,17 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
   part shows the first populated value across its offers rather than inventing
   one.
 - `?refresh=true` forces a fresh upstream fetch, throttled per
-  (distributor, key) so one distributor's cooldown cannot block another's.
+  (distributor, key) so one distributor's cooldown cannot block another's. It
+  is also the only thing that replaces a still-fresh offer row.
+- **One cached offer row is one answer until it expires.** Upstream returns
+  different prices for the same part depending on how it is asked, and search
+  asks with the user's words while the detail page asks with the MPN, so about
+  a quarter of cards used to disagree with their own part page. A fresh row is
+  never overwritten now, whoever fetched it, and each response is built from
+  what the store kept rather than from what the fetch returned, so a page can
+  never quote a number the store does not hold. The equivalent matcher reads
+  the same rows. A row's `part_key` still updates, because that is only where
+  the last merge filed it.
 
 ## What's fragile / worth watching
 

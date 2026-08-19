@@ -124,8 +124,18 @@ against the parametric price for the same parts, 13 of 14 disagreed, by 1.29x
 to 6.06x. Stock diverges just as hard: one part read 3,441,343 parametrically
 and 19 on the search path.
 
+It is not only the matcher that this reaches. Search asks upstream with the
+user's words and the detail page asks with the MPN, both at `FETCH_DEPTH`, and
+measured over 8 realistic queries **39 of 160 search cards (24.4%) disagreed
+with their own part page**. It clusters: `LM358` disagreed on 20 of 20 and
+`NE555` on 16 of 20, while `STM32F103`, `100nF 0402`, `10k 0805` and `ESP32`
+were clean.
+
 **The rule this forces:** never compare or co-display two prices fetched
-differently. In the backend that means one canonical read,
+differently, and never let a second reading quietly replace one a user is
+already looking at. A cached offer row is one answer until it expires: nothing
+overwrites a fresh row, whoever fetched it, and every surface reads that row.
+`?refresh=true` replaces it, and then all surfaces move together. In the backend that means one canonical read,
 `LcscMatcherSource.canonical_part`, which goes through `lookup_mpn` at
 `FETCH_DEPTH`, exactly as the offer cache behind search and detail does.
 Everything a user sees or a percentage is computed from comes from there.
