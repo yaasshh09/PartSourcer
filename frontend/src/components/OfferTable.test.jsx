@@ -100,7 +100,7 @@ test('names the row the backend called cheapest', () => {
   render(<OfferTable
     offers={[offer({ sku: 'C1', price_usd: 0.5 }), offer({ distributor: 'mouser', sku: 'M1', price_usd: 0.4 })]}
     cheapest={{ distributor: 'mouser', sku: 'M1', price_usd: 0.4, compared_sources: 2, of_sources: 2 }} />)
-  expect(screen.getByText(/cheapest of 2 sources/i)).toBeInTheDocument()
+  expect(screen.getByText(/cheapest of 2 sources checked/i)).toBeInTheDocument()
 })
 
 test('explains an absent cheapest claim instead of implying one', () => {

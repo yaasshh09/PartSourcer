@@ -97,7 +97,7 @@ test('shows the cheapest badge with the compared count when the backend claims o
     cheapest: { distributor: 'mouser', sku: 'M-1', price_usd: 0.9, compared_sources: 2, of_sources: 3 },
     cheapest_unavailable_reason: null,
   }))
-  expect(screen.getByText(/cheapest of 2 sources/i)).toBeInTheDocument()
+  expect(screen.getByText(/cheapest of 2 sources checked/i)).toBeInTheDocument()
   expect(screen.getByText('$0.90')).toBeInTheDocument()
 })
 

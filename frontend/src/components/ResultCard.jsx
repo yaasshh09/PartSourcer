@@ -55,10 +55,13 @@ export default function ResultCard({ part }) {
             <span style={{ ...BADGE, background: 'transparent', color: C.sub,
               border: '2px solid #d8d4c4' }}>{tier}</span>
           ) : null}
-          {/* Only a backend claim may be called cheapest. */}
+          {/* Only a backend claim may be called cheapest. "checked" is
+              load-bearing: compared_sources counts the distributors that
+              answered, not the offers that carried a price, so a part only
+              LCSC stocks would otherwise read as two prices compared. */}
           {part.cheapest ? (
             <span style={{ ...BADGE, background: C.yellow, color: C.ink }}>
-              {`cheapest of ${part.cheapest.compared_sources} sources`}
+              {`cheapest of ${part.cheapest.compared_sources} sources checked`}
             </span>
           ) : null}
           {offerCount > 1 ? (

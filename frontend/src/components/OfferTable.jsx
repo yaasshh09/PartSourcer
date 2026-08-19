@@ -45,7 +45,7 @@ function OfferRow({ offer, cheapest, showNote }) {
         {claimed ? (
           <div style={{ display: 'inline-block', background: C.yellow, fontSize: 11,
             fontWeight: 700, padding: '2px 7px', marginLeft: 8 }}>
-            {`cheapest of ${cheapest.compared_sources} sources`}
+            {`cheapest of ${cheapest.compared_sources} sources checked`}
           </div>
         ) : null}
         {showNote && offer.match_note ? (
