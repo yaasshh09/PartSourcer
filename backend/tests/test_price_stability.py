@@ -138,3 +138,30 @@ async def test_a_held_row_stays_findable_when_upstream_renames_the_part(store):
     again, _, _ = await cached2.lookup("NEW-NAME")
     assert again is not None, "and it is still findable on the next read"
     assert price(again) == 0.0039
+
+
+async def test_two_different_searches_agree_about_the_same_part(store):
+    """Upstream answers by query, so two searches that both surface a part
+    would otherwise price it differently in the same minute."""
+    adapter = VaryingAdapter({"cheap query": 0.0039, "other query": 0.0009},
+                             ["PART-A"])
+    cached = build(store, {"lcsc": adapter})
+
+    first = await cached.search("cheap query", 1)
+    second = await cached.search("other query", 1)
+
+    assert price(first.results[0]) == 0.0039
+    assert price(second.results[0]) == 0.0039, "the second search re-priced it"
+
+
+async def test_a_held_row_keeps_its_own_timestamp(store):
+    """as_of is when those numbers were read. Stamping a held row with now
+    would claim a freshness we did not earn, and would let a row live past
+    its TTL by being looked at."""
+    _adapter, cached = varying(store)
+    found = await cached.search("1k resistor", 1)
+    before = found.results[0].offers[0].as_of
+
+    part, _, _ = await cached.lookup("PART-A")
+
+    assert part.offers[0].as_of == before
