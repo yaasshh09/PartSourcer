@@ -4,13 +4,15 @@ Swapping to the official LCSC API later = build a different adapter here.
 CachedPartService wraps whatever PartService was handed; nothing else changes.
 """
 
+import inspect
 import logging
 from datetime import datetime, timedelta, timezone
 
 import httpx
 
 from cache.cached_part_service import CachedPartService
-from cache.store import SqliteCacheStore
+from cache.pg_store import PostgresCacheStore
+from cache.store import CacheStore, SqliteCacheStore
 from config import settings
 from history.store import HistoryStore, PostgresHistoryStore
 from services.adapters.lcsc import LcscAdapter
@@ -21,13 +23,34 @@ from services.throttle import RefreshThrottle
 log = logging.getLogger("partsourcer.deps")
 
 _client: httpx.AsyncClient | None = None
-_store: SqliteCacheStore | None = None
+_store: CacheStore | None = None
 _history_store: HistoryStore | None = None
 _part_service: PartService | None = None
 _cached_service: CachedPartService | None = None
 _lcsc_adapter: LcscAdapter | None = None
 _matcher_source: LcscMatcherSource | None = None
 _distributor_clients: list[httpx.AsyncClient] = []
+
+
+async def _open_cache() -> CacheStore:
+    """The cache the rest of the app talks to, per configuration.
+
+    Postgres with no DSN raises rather than quietly using SQLite, because on a
+    host that runs several processes that fallback is invisible and its only
+    symptom is the thing this project promises never to do: the same part
+    quoting two prices depending on which instance answered.
+    """
+    if settings.cache_backend == "postgres":
+        if not settings.database_url:
+            raise RuntimeError(
+                "cache_backend=postgres needs DATABASE_URL; refusing to fall"
+                " back to a per-process SQLite file")
+        store = PostgresCacheStore(settings.database_url)
+        await store.open()
+        return store
+    sqlite_store = SqliteCacheStore(settings.sqlite_path)
+    sqlite_store.open()
+    return sqlite_store
 
 
 async def startup() -> None:
@@ -38,8 +61,7 @@ async def startup() -> None:
         timeout=settings.request_timeout_secs,
         follow_redirects=True,
     )
-    _store = SqliteCacheStore(settings.sqlite_path)
-    _store.open()
+    _store = await _open_cache()
     dropped = await _store.prune(
         datetime.now(timezone.utc)
         - timedelta(days=settings.cache_prune_after_days))
@@ -70,7 +92,9 @@ async def shutdown() -> None:
     if _history_store is not None and hasattr(_history_store, "close"):
         await _history_store.close()
     if _store is not None:
-        _store.close()
+        closed = _store.close()
+        if inspect.isawaitable(closed):     # Postgres closes a pool, not a file
+            await closed
     for distributor_client in _distributor_clients:
         await distributor_client.aclose()
     _distributor_clients = []

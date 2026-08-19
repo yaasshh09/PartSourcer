@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     cache_prune_after_days: int = 7
     sqlite_path: str = "./partsourcer.db"
 
+    # Where the cache lives. "sqlite" is right for local work and for any host
+    # that runs exactly one always-on process. "postgres" is required anywhere
+    # the app runs as several, because two processes with their own SQLite
+    # file can serve two different prices for one part and each counts its own
+    # upstream calls. Choosing postgres requires database_url; a silent
+    # fallback to sqlite would reintroduce exactly the bug this setting exists
+    # to prevent, so a missing DSN is a startup failure instead.
+    cache_backend: str = "sqlite"
+
     # Hardening phase
     # Dev default; production Vercel origin(s) supplied via CORS_ORIGINS env.
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]

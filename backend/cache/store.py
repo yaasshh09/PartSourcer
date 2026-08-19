@@ -23,6 +23,7 @@ import sqlite3
 import threading
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Protocol
 
 CACHE_SCHEMA_VERSION = 3
 
@@ -92,6 +93,50 @@ class PartCacheRow:
     mpn_key: str
     statuses: list[dict]
     as_of: datetime
+
+
+class CacheStore(Protocol):
+    """What the app needs from a cache, whatever is behind it.
+
+    Two implementations satisfy this: SqliteCacheStore for local work and a
+    single always-on host, and PostgresCacheStore for anywhere the app runs
+    as more than one process. They are held to one contract by one shared
+    test suite rather than two that can drift apart.
+    """
+
+    async def get_search(self, query: str) -> SearchCacheRow | None: ...
+
+    async def put_search(self, query: str, limit_used: int,
+                         part_keys: list[str], statuses: list[dict],
+                         as_of: datetime) -> None: ...
+
+    async def get_part_status(self, mpn_key: str) -> PartCacheRow | None: ...
+
+    async def put_part_status(self, mpn_key: str, statuses: list[dict],
+                              as_of: datetime) -> None: ...
+
+    async def get_offers(self, part_keys: list[str]) -> list[CachedOffer]: ...
+
+    async def put_offers(self, offers: list[CachedOffer]) -> None: ...
+
+    async def get_offers_by_sku(self, pairs: list[tuple[str, str]]
+                                ) -> list[CachedOffer]: ...
+
+    async def find_part_key_by_sku(self, distributor: str,
+                                   sku: str) -> str | None: ...
+
+    async def get_parametric(self, key: str
+                             ) -> tuple[list[dict], datetime] | None: ...
+
+    async def put_parametric(self, key: str, rows: list[dict],
+                             as_of: datetime) -> None: ...
+
+    async def prune(self, before: datetime) -> int: ...
+
+    async def get_quota_markers(self) -> dict[str, datetime]: ...
+
+    async def put_quota_marker(self, distributor: str,
+                               resets_at: datetime) -> None: ...
 
 
 class SqliteCacheStore:
