@@ -41,19 +41,54 @@ class QuotaTracker:
     def __init__(self, daily_limits: dict[str, int] | None = None,
                  now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
                  markers: QuotaMarkerStore | None = None,
-                 loaded: dict[str, datetime] | None = None):
+                 loaded: dict[str, datetime] | None = None,
+                 marker_ttl_secs: float = 60.0):
         self._limits = dict(daily_limits or {})
         self._now = now
         self._markers = markers
         self._counts: dict[str, int] = {}
         self._counted_on: dict[str, str] = {}
         self._exhausted_until: dict[str, datetime] = dict(loaded or {})
+        self._marker_ttl = marker_ttl_secs
+        self._markers_read_at: datetime | None = None
 
     def attach_markers(self, markers: QuotaMarkerStore,
                        loaded: dict[str, datetime]) -> None:
         self._markers = markers
         for distributor, until in loaded.items():
             self._exhausted_until.setdefault(distributor, until)
+
+    async def sync_markers(self) -> None:
+        """Pick up exhaustion that a different instance discovered.
+
+        The counter is per process, so on a host that runs several of these
+        each one would otherwise have to earn its own 429 before it stopped
+        calling. The marker store is shared, so one read turns that into a
+        single wasted call for the whole deployment instead of one per
+        instance. On a single process there is nothing to learn and this
+        costs one query a minute.
+
+        Best effort for the same reason mark_exhausted is: a cache outage
+        must not turn a working search into a failed one.
+        """
+        if self._markers is None:
+            return
+        now = self._now()
+        if (self._markers_read_at is not None
+                and (now - self._markers_read_at).total_seconds()
+                < self._marker_ttl):
+            return
+        self._markers_read_at = now
+        try:
+            loaded = await self._markers.get_quota_markers()
+        except Exception:                       # noqa: BLE001
+            return
+        for distributor, until in loaded.items():
+            held = self._exhausted_until.get(distributor)
+            # Never shorten: whichever instance saw the later reset is the
+            # one that learned the most recent truth.
+            if held is None or until > held:
+                self._exhausted_until[distributor] = until
 
     def _roll(self, distributor: str) -> None:
         """Zero the counter when the UTC date has moved on."""

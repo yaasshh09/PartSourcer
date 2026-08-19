@@ -156,3 +156,87 @@ def test_a_daily_limit_exhausts_without_a_429():
 
     assert tracker.is_exhausted("mouser") is True
     assert tracker.is_exhausted("lcsc") is False
+
+
+class RecordingMarkers:
+    """A shared marker store, the way two instances would both see one."""
+
+    def __init__(self, rows=None):
+        self.rows = dict(rows or {})
+        self.reads = 0
+
+    async def get_quota_markers(self):
+        self.reads += 1
+        return dict(self.rows)
+
+    async def put_quota_marker(self, distributor, resets_at):
+        self.rows[distributor] = resets_at
+
+
+async def test_one_instances_429_stops_another_instance():
+    """The whole point of running more than one process. Without this, every
+    instance has to earn its own 429 before it stops calling."""
+    clock = Clock(NOON)
+    shared = RecordingMarkers()
+    first = QuotaTracker(daily_limits={"mouser": 1000}, now=clock,
+                         markers=shared)
+    second = QuotaTracker(daily_limits={"mouser": 1000}, now=clock,
+                          markers=shared)
+
+    await first.mark_exhausted("mouser")
+    assert second.is_exhausted("mouser") is False    # has not looked yet
+
+    await second.sync_markers()
+
+    assert second.is_exhausted("mouser") is True
+
+
+async def test_syncing_markers_is_rate_limited():
+    """The counter exists to keep the search path free of I/O, so picking up
+    another instance's marker must not add a query to every request."""
+    clock = Clock(NOON)
+    shared = RecordingMarkers()
+    tracker = QuotaTracker(now=clock, markers=shared, marker_ttl_secs=60.0)
+
+    await tracker.sync_markers()
+    await tracker.sync_markers()
+    await tracker.sync_markers()
+    assert shared.reads == 1
+
+    clock.now = NOON + timedelta(seconds=61)
+    await tracker.sync_markers()
+    assert shared.reads == 2
+
+
+async def test_syncing_never_shortens_a_marker_this_instance_already_holds():
+    clock = Clock(NOON)
+    later = _next_utc_midnight(NOON)
+    shared = RecordingMarkers({"mouser": NOON + timedelta(minutes=1)})
+    tracker = QuotaTracker(now=clock, markers=shared)
+    tracker._exhausted_until["mouser"] = later
+
+    await tracker.sync_markers()
+
+    assert tracker.resets_at("mouser") == later
+
+
+async def test_a_storage_failure_while_syncing_is_survivable():
+    """A cache outage must not turn a working search into a failed one."""
+    class Broken:
+        async def get_quota_markers(self):
+            raise RuntimeError("neon is down")
+
+        async def put_quota_marker(self, distributor, resets_at):
+            raise RuntimeError("neon is down")
+
+    tracker = QuotaTracker(now=Clock(NOON), markers=Broken())
+
+    await tracker.sync_markers()
+
+    assert tracker.is_exhausted("mouser") is False
+
+
+async def test_syncing_without_a_store_is_a_no_op():
+    tracker = QuotaTracker(now=Clock(NOON))
+    await tracker.sync_markers()
+    assert tracker.is_exhausted("mouser") is False

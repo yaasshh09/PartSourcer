@@ -180,6 +180,9 @@ class PartService:
 
     async def fan_out(self, make: Call, only: set[str] | None = None
                       ) -> tuple[list[RawListing], list[DistributorStatus]]:
+        # Before deciding who is worth calling, find out whether another
+        # instance already earned a 429 we should be honouring.
+        await self._quota.sync_markers()
         statuses: list[DistributorStatus] = []
         pending: list[tuple[str, asyncio.Task]] = []
 
