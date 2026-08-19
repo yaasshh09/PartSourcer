@@ -9,6 +9,15 @@ why per-distributor status is stored alongside the results.
 Never stale-serves. Cached listings carry their own as_of, and Part.as_of is
 the oldest of them, so a repaired response can never look fresher than its
 stalest component.
+
+Reading held rows and writing them back is not atomic, so two requests that
+miss on the same cold part will both fetch and the later write wins. That
+costs a duplicated upstream call and nothing else: both issue the identical
+query, `lookup_mpn(mpn_key, FETCH_DEPTH)`, and upstream is deterministic for
+a given query and limit, so the two answers are equal. Verified against the
+live API on concurrent cold loads of the part and equivalent routes, which is
+exactly what a deep link does. Single-flight would save the extra call; it
+would not change a number anyone sees.
 """
 
 import logging
