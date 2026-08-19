@@ -35,9 +35,10 @@ export default function Nav() {
           <NavLink to="/about" style={link}>About</NavLink>
           <NavLink to="/how" style={link}>How it works</NavLink>
           <NavLink to="/faq" style={link}>FAQ</NavLink>
-          <a href="https://github.com/yaasshh09/PartSourcer" target="_blank" rel="noreferrer"
-             style={{ marginLeft: 8, background: C.ink, color: C.yellow, fontWeight: 700,
-               padding: '9px 14px', whiteSpace: 'nowrap', flex: '0 0 auto' }}>GitHub</a>
+          {/* The repo lives in the footer now. Everything up here moves you
+              around the site, so the one item that left it stood out wrongly
+              as the most emphasised thing in the header. */}
+          <NavLink to="/contact" style={link}>Contact</NavLink>
         </nav>
       </div>
     </header>
