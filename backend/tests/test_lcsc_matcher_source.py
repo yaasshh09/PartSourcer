@@ -268,3 +268,41 @@ def test_the_pool_key_does_not_split_on_float_vs_int():
     assert L._parametric_key("resistors", "0603", 1000.0) == \
         L._parametric_key("resistors", "0603", 1000)
     assert L._parametric_key("resistors", "0603", None).endswith("|")
+
+
+async def test_get_part_answers_from_a_held_row(cache_store):
+    """By the time the equivalent route asks, the part has just been looked
+    up, so re-resolving the code upstream is a wasted round trip."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    await _seed(cache_store, 0.0039, now)
+    asked = []
+
+    def counting(request):
+        asked.append(str(request.url))
+        return httpx.Response(200, json={"components": [ROW]})
+
+    source = source_over(counting)
+    source._store = cache_store
+    source._ttl = 3600
+    source._now = lambda: now
+
+    detail = await source.get_part("C8734")
+
+    assert detail.mpn == "STM32F103C8T6"
+    assert asked == [], "went upstream for an identity we already hold"
+
+
+async def test_get_part_still_falls_back_to_the_sku_lookup(cache_store):
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    source = source_over(handler)
+    source._store = cache_store
+    source._ttl = 3600
+    source._now = lambda: now
+
+    detail = await source.get_part("C8734")
+
+    assert detail.mpn == "STM32F103C8T6"
+    assert await cache_store.get_offers_by_sku([("lcsc", "C8734")]) == [], \
+        "a limit=1 read must never become a row a page can serve"

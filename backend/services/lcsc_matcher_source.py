@@ -50,11 +50,19 @@ class LcscMatcherSource:
                        refresh: bool = False) -> PartDetail | None:
         """Resolve a bare LCSC code to a part.
 
-        This is the only way to go from a code to an MPN, so it stays, but
-        its query shape is its own and upstream prices differ by query shape.
-        Callers take the identity from here and the numbers from
-        canonical_part.
+        A held row answers this for free, and by the time the equivalent
+        route gets here the part it is asking about has just been looked up,
+        so that is the usual case.
+
+        Failing that, lookup_sku is the only way from a code to an MPN, so it
+        stays. Its answer is deliberately NOT written back: it reads at its
+        own depth, and a row written from it would then be served to pages as
+        the part's price. Callers take the identity from here and the numbers
+        from canonical_part.
         """
+        held = await self._cached(lcsc_code)
+        if held is not None:
+            return held
         listing = await self._adapter.lookup_sku(lcsc_code)
         return None if listing is None else _to_detail(listing)
 
