@@ -49,3 +49,8 @@ backend/scripts/__pycache__/
 /partsourcer-spec.md
 /partsourcer-backend-prompts.md
 /docs/superpowers/
+
+# Vendor API spec we keep locally to check the DigiKey adapter against.
+# Nothing in the code reads it, and it is 150 KB of someone else's JSON,
+# so it stays out of the repo.
+/docs/digikey-productsearch-v4.json
