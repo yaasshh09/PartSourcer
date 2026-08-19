@@ -19,9 +19,14 @@ row for row is worth more here than a column type nobody reads.
 """
 
 import json
+import logging
+import time
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import asyncpg
+
+log = logging.getLogger("partsourcer.pg")
 
 from cache.store import (CACHE_SCHEMA_VERSION, CachedOffer, PartCacheRow,
                          SearchCacheRow)
@@ -94,10 +99,16 @@ class PostgresCacheStore:
         # statement_cache_size=0 because the Neon pooled endpoint is PgBouncer
         # in transaction mode, where a prepared statement from one checkout is
         # not there on the next and the asyncpg cache would ask for it anyway.
+        t0 = time.perf_counter()
         self._pool = await asyncpg.create_pool(
             self._dsn, min_size=1, max_size=4, statement_cache_size=0)
+        t1 = time.perf_counter()
         async with self._pool.acquire() as conn:
             await self._migrate(conn)
+        # TEMPORARY, alongside _timed. If this line shows up once per request
+        # then the lifespan is restarting and the pool never gets reused.
+        log.info("pg pool opened create=%.0fms migrate=%.0fms",
+                 (t1 - t0) * 1000, (time.perf_counter() - t1) * 1000)
 
     @staticmethod
     async def _schema_version(conn) -> int | None:
@@ -145,8 +156,27 @@ class PostgresCacheStore:
             await self._pool.close()
             self._pool = None
 
-    async def get_search(self, query: str) -> SearchCacheRow | None:
+    @asynccontextmanager
+    async def _timed(self, label: str):
+        """TEMPORARY. Splits waiting for a connection from running the query.
+
+        A cached read costs about 750ms per query in production against a
+        database roughly 60ms away, which is far too much for either half on
+        its own. This says which half it is. Remove once that is answered.
+        """
+        t0 = time.perf_counter()
         async with self._pool.acquire() as conn:
+            t1 = time.perf_counter()
+            try:
+                yield conn
+            finally:
+                t2 = time.perf_counter()
+                log.info("pg %s acquire=%.0fms query=%.0fms size=%d idle=%d",
+                         label, (t1 - t0) * 1000, (t2 - t1) * 1000,
+                         self._pool.get_size(), self._pool.get_idle_size())
+
+    async def get_search(self, query: str) -> SearchCacheRow | None:
+        async with self._timed("get_search") as conn:
             row = await conn.fetchrow(
                 "SELECT query, limit_used, part_keys_json, status_json, as_of"
                 " FROM cache_search WHERE query = $1", query)
@@ -202,7 +232,7 @@ class PostgresCacheStore:
     async def get_offers(self, part_keys: list[str]) -> list[CachedOffer]:
         if not part_keys:
             return []
-        async with self._pool.acquire() as conn:
+        async with self._timed("get_offers") as conn:
             rows = await conn.fetch(
                 "SELECT listing_key, distributor, sku, part_key, listing_json,"
                 " as_of FROM cache_offers WHERE part_key = ANY($1::text[])",
