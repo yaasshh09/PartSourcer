@@ -58,8 +58,8 @@ class LcscMatcherSource:
         listing = await self._adapter.lookup_sku(lcsc_code)
         return None if listing is None else _to_detail(listing)
 
-    async def canonical_part(self, mpn: str,
-                             lcsc_code: str) -> PartDetail | None:
+    async def canonical_part(self, mpn: str, lcsc_code: str,
+                             allow_cached: bool = True) -> PartDetail | None:
         """The one read whose price and stock are fit to publish.
 
         Goes through the offer cache first, so the number on an equivalent
@@ -67,8 +67,13 @@ class LcscMatcherSource:
         reads upstream the same way and at the same depth the cache is filled
         with. Without a store it is just that upstream read, which is what
         the matcher's own tests use.
+
+        allow_cached=False is for the history recorder. A chart point is
+        stamped with the run's time, so it has to be read at that time rather
+        than lifted from a row that could be most of a TTL old, and every
+        point in the series is then read the same way.
         """
-        held = await self._cached(lcsc_code)
+        held = await self._cached(lcsc_code) if allow_cached else None
         if held is not None:
             return held
         listings = await self._adapter.lookup_mpn(mpn, FETCH_DEPTH)

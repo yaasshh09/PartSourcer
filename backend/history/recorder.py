@@ -52,7 +52,10 @@ async def record_watchlist(
                 # is append-only, so a row on the wrong basis never washes out.
                 detail = await ds.get_part(lcsc)
                 if detail is not None:
-                    detail = await ds.canonical_part(detail.mpn, detail.lcsc)
+                    # Read now, not from cache: the row is stamped with this
+                    # run's time, and a cached one could be most of a TTL old.
+                    detail = await ds.canonical_part(detail.mpn, detail.lcsc,
+                                                     allow_cached=False)
             except UpstreamError:
                 async with lock:
                     summary.errors += 1

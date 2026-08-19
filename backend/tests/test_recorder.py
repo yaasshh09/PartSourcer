@@ -33,6 +33,7 @@ class FakeDs:
         self.fail_on = set(fail_on)
         self.canonical = canonical or {}
         self.calls = []
+        self.allow_cached = []
 
     async def get_part(self, lcsc_code, refresh=False):
         self.calls.append(lcsc_code)
@@ -40,7 +41,8 @@ class FakeDs:
             raise UpstreamError("unavailable", "boom")
         return self.parts.get(lcsc_code)
 
-    async def canonical_part(self, mpn, lcsc_code):
+    async def canonical_part(self, mpn, lcsc_code, allow_cached=True):
+        self.allow_cached.append(allow_cached)
         if lcsc_code in self.canonical:
             return self.canonical[lcsc_code]
         return self.parts.get(lcsc_code)
@@ -145,3 +147,16 @@ async def test_a_part_missing_from_the_published_read_is_skipped():
 
     assert (summary.recorded, summary.skipped) == (0, 1)
     assert store.records == []
+
+
+async def test_the_recorder_reads_now_rather_than_from_cache():
+    """A point is stamped with the run's time, so it has to be read at that
+    time. A cached row could be most of a TTL old and would date the chart."""
+    store = InMemoryHistoryStore()
+    await store.add_to_watchlist("STM32F103C8T6", "C8734")
+    ds = FakeDs(parts={"C8734": detail()})
+
+    await record_watchlist(ds, store, batch_size=10, concurrency=2,
+                           now=lambda: FIXED)
+
+    assert ds.allow_cached == [False]

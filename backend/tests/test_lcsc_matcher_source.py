@@ -196,3 +196,18 @@ async def test_remembering_never_displaces_a_live_row(cache_store):
 
     from cache.serde import listing_from_dict as lfd
     assert lfd(rows[0].listing).price == 0.0039
+
+
+async def test_canonical_part_can_be_told_to_skip_the_cache(cache_store):
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    await _seed(cache_store, 0.0039, now)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                               base_url="https://jlcsearch.test")
+    source = LcscMatcherSource(LcscAdapter(client), store=cache_store,
+                               offer_ttl_secs=3600, now=lambda: now)
+
+    detail = await source.canonical_part("STM32F103C8T6", "C8734",
+                                         allow_cached=False)
+
+    assert detail.price_usd == 1.8234

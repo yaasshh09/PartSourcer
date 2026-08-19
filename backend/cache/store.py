@@ -227,15 +227,24 @@ class SqliteCacheStore:
                            ) -> list[CachedOffer]:
         if not pairs:
             return []
-        clause = " OR ".join(["(distributor = ? AND sku = ?)"] * len(pairs))
-        params = tuple(x for pair in pairs for x in pair)
+        # Chunked because one search can ask about every listing it just
+        # fetched, and a deeper FETCH_DEPTH would otherwise walk into
+        # SQLite's bound-parameter ceiling.
+        out: list[CachedOffer] = []
+        chunk = 200
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT listing_key, distributor, sku, part_key, listing_json,"
-                f" as_of FROM offers WHERE {clause}", params).fetchall()
+            for i in range(0, len(pairs), chunk):
+                batch = pairs[i:i + chunk]
+                clause = " OR ".join(
+                    ["(distributor = ? AND sku = ?)"] * len(batch))
+                params = tuple(x for pair in batch for x in pair)
+                out.extend(self._conn.execute(
+                    "SELECT listing_key, distributor, sku, part_key,"
+                    f" listing_json, as_of FROM offers WHERE {clause}",
+                    params).fetchall())
         return [CachedOffer(listing_key=r[0], distributor=r[1], sku=r[2],
                             part_key=r[3], listing=json.loads(r[4]),
-                            as_of=datetime.fromisoformat(r[5])) for r in rows]
+                            as_of=datetime.fromisoformat(r[5])) for r in out]
 
     def _put_offers(self, offers: list[CachedOffer]) -> None:
         if not offers:
