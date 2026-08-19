@@ -264,9 +264,12 @@ export default function DetailPage() {
                 {`${eq.percent_cheaper}%`}
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4 }}>CHEAPER</div>
-              {/* original.price_usd, not the headline offer: percent_cheaper was
-                  computed from this number, and showing a different one would
-                  make the arrow contradict the percentage. */}
+              {/* original.price_usd, not the headline offer: percent_cheaper
+                  was computed from this number, and showing a different one
+                  would make the arrow contradict the percentage. It now also
+                  equals this page's LCSC offer, because the backend reads both
+                  the same way. The headline can still be another distributor
+                  undercutting LCSC, which is a real difference, not a drift. */}
               <div style={{ fontFamily: MONO, fontSize: 13, color: C.bg, marginTop: 8 }}>
                 {`${fmtPrice(original ? original.price_usd : null) || NO_PRICE} → ${fmtPrice(eq.price_usd) || NO_PRICE}`}
               </div>

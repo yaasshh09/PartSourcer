@@ -98,6 +98,46 @@ These four facts hard-shape the matcher design, all confirmed against live upstr
 
 **Also confirmed:** `resistance` is stored in raw ohms (10 kΩ → `10000`); `capacitance_farads` is a float with FP noise (100 nF → `1.0000000000000001e-07`) so exact match needs a relative epsilon; `price1` (not `price`) is the parametric unit-price field; `in_stock` (bool) rides alongside numeric `stock`.
 
+### The price basis problem (live-probed 2026-08-19)
+
+**One part does not have one price upstream. It has at least two, and which
+one you get depends on how you asked.** This is the single most important
+thing to know before touching pricing here.
+
+Probed against live jlcsearch, all within the same minute:
+
+- `/api/search?q=0603WAF1001T5E&limit=1` returns `price` 0.0039, `stock` 8,013,731.
+- The same query at `limit=40` returns `price` 0.000928571, `stock` 15,873,089.
+- `/resistors/list.json` returns `price1` 0.000928571 for that same code.
+
+It is not randomness: 20 identical requests give 20 identical answers, per
+`(query, limit)` pair. It is also not monotonic in `limit`, so it cannot be
+reasoned about as a depth: for that part, limits 2, 10, 30 and 40 give one
+record while 1, 5, 19, 20, 21, 25, 39, 50 and 100 give the other. The shape
+fits a join or aggregate upstream whose row selection shifts with the query
+plan, and `limit` perturbs the plan.
+
+Size of the gap, measured over 15 real 0603 1k resistors: the search price
+was never below the parametric price, equal for 3 of 14 and higher for 11,
+median 1.48x, max 4.20x. Comparing the detail page's read (`q=<mpn>&limit=40`)
+against the parametric price for the same parts, 13 of 14 disagreed, by 1.29x
+to 6.06x. Stock diverges just as hard: one part read 3,441,343 parametrically
+and 19 on the search path.
+
+**The rule this forces:** never compare or co-display two prices fetched
+differently. In the backend that means one canonical read,
+`LcscMatcherSource.canonical_part`, which goes through `lookup_mpn` at
+`FETCH_DEPTH`, exactly as the offer cache behind search and detail does.
+Everything a user sees or a percentage is computed from comes from there.
+`lookup_sku` still resolves a bare code to an MPN, because nothing else can,
+but its price is discarded. Parametric rows still pick and rank candidates,
+because only they carry specs, but their prices never reach a user.
+
+Before this rule the equivalent matcher compared a search-path original
+against parametric candidates, which inflated every published saving: over 24
+real parts the mean claim was 70% where the honest same-basis figure was 52%,
+with individual claims of 82% (true 12%), 94% (true 32%) and 26% (true 3%).
+
 **Direct consequence for the v1 matcher:** honest matching is limited to **resistors and capacitors** (the only types with queryable specs). ICs and everything else carry no parametric specs here, so they return `equivalent: null` with a clear reason, never a guessed "similar part." An arbitrary part's own specs are only recoverable if it appears in the top-100 of its package list; otherwise the matcher honestly reports it could not identify the part's specs.
 
 ---

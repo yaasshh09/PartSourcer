@@ -66,6 +66,17 @@ only; every other type returns an honest null (never a guessed "similar part").
 A part with no LCSC offer also returns an honest null, because v1 matching
 reads LCSC parametric data and cannot verify a drop-in without it.
 
+**Price basis.** Upstream returns different prices and stock for the same part
+depending on how it is asked (see `docs/jlcsearch-notes.md`), so this route
+never compares two numbers fetched differently. Parametric rows pick and rank
+candidates, because only they carry specs. The top three are then re-read
+through `canonical_part`, the same `lookup_mpn` at `FETCH_DEPTH` that fills the
+offer cache behind search and detail, and must clear both gates again on those
+numbers, genuinely cheaper and still above the stock buffer, before a saving is
+claimed. Every figure in the response, on both sides, comes from that one read,
+so the card agrees with the part's own page. A saving that rounds below 1%
+returns a null rather than a 0% claim.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`
@@ -169,4 +180,11 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
   where the volume does. On Render free the file is ephemeral and the first call
   after a restart earns a fresh 429 that re-marks it.
 - Parametric (equivalent-matcher) results are not cached; every equivalent
-  lookup hits upstream.
+  lookup hits upstream, now plus up to four canonical re-reads to verify a
+  claim. Those go through the same path the offer cache uses, so they are the
+  cheap kind of call, but an equivalent lookup is the heaviest route here.
+- The upstream price for a part is not stable across query shapes, and we
+  cannot tell which of the values it returns is the true one. Pinning one read
+  makes our numbers reproducible and mutually consistent, not provably right.
+  The official LCSC API is the fix, and it is the reason the adapter layer
+  exists.
