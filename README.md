@@ -3,19 +3,32 @@
 **Find the cheapest in-stock part for your PCB in one search.**
 
 PartSourcer is a free, open-source web tool for hardware builders. Search any
-electronic component and get live stock, price, footprint, and datasheet, plus
-the standout feature: **one cheaper in-stock equivalent** suggestion, so you can
-swap a part for a drop-in that costs less and is actually available.
+electronic component and get stock, price, footprint, and datasheet, each
+stamped with when we read it, plus the standout feature: **one cheaper in-stock
+equivalent** suggestion, so you can swap a part for a drop-in that costs less
+and is actually available.
 
-> **Status:** v1 feature-complete (backend plus frontend). Deploy configuration
-> is in progress. Not yet hosted live.
+> **Status:** v1 feature-complete and hosted.
+> Frontend <https://partsourcer-1.onrender.com>, backend
+> <https://partsourcer.onrender.com>. Both are on Render's free plan, so the
+> backend sleeps when idle and the first request after a quiet spell takes
+> roughly 20 to 30 seconds to wake it.
+
+> **On "live":** Mouser and DigiKey answer in real time. The LCSC side comes
+> from an open jlcparts snapshot that syncs about once a day, so this is not a
+> live feed from LCSC's warehouse and the UI never calls it one. Every record
+> carries the time we fetched it.
 
 ## The cheaper-equivalent moat
 
 Anyone can show a part's price. PartSourcer's differentiator is the
-`GET /api/part/<code>/equivalent` endpoint: for a given part it finds **one
+`GET /api/equivalent/<mpn_key>` endpoint: for a given part it finds **one
 cheaper, in-stock, drop-in** replacement (same package, matching key specs
 within tolerance, healthy stock buffer) and returns a human-readable reason.
+The saving is re-checked before it is claimed: candidates are found on
+parametric data, then the leaders are re-read the same way the part's own page
+reads them, and only a candidate that comes back genuinely cheaper and still
+well stocked is offered.
 
 If it cannot verify a real match, it says so honestly (`equivalent: null` with a
 reason) rather than guessing. In v1 the matcher covers **resistors and
@@ -166,6 +179,15 @@ These are load-bearing, not marketing:
 - **Never overstate a match.** Two parts are only called "equivalent" when the
   package and core specs genuinely match. Unverifiable matches return an honest
   null, never a guess.
+- **Never compare two prices fetched differently.** Upstream hands back
+  different prices and stock for the same part depending on which endpoint is
+  asked and how, by up to 6x, so a cross-basis comparison is not a comparison.
+  Candidates are ranked on parametric data and then re-read on the one
+  canonical path before any saving is published, and both sides of the
+  percentage come from that path. The same rule governs what a page shows: one
+  cached offer row is one answer until it expires, nothing overwrites a fresh
+  row, and every surface reads that row, so a price cannot change under a user
+  who merely clicked through. Details in `docs/jlcsearch-notes.md`.
 - **Never invent a price.** A distributor that published no price gives us
   `null`, never `0.0`. A zero would read as free, and it would win the cheapest
   comparison outright. An unpriced offer is excluded from the cheapest claim
