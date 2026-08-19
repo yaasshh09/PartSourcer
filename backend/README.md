@@ -170,12 +170,19 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
 - **One cached offer row is one answer until it expires.** Upstream returns
   different prices for the same part depending on how it is asked, and search
   asks with the user's words while the detail page asks with the MPN, so about
-  a quarter of cards used to disagree with their own part page. A fresh row is
-  never overwritten now, whoever fetched it, and each response is built from
+  a quarter of cards used to disagree with their own part page. A fresh row's
+  numbers are now kept whoever fetched them, and each response is built from
   what the store kept rather than from what the fetch returned, so a page can
   never quote a number the store does not hold. The equivalent matcher reads
-  the same rows. A row's `part_key` still updates, because that is only where
-  the last merge filed it.
+  the same rows and keeps what it quotes for a candidate.
+  - Held: `price`, `price_breaks`, `currency`, `stock`, `in_stock`, `as_of`.
+    `as_of` rides with them because it is the moment those were read, which is
+    exactly what the UI labels it.
+  - Not held: what the part *is*. MPN, package, description and links follow
+    the newest read, and `part_key` follows the merge that just ran. Freezing
+    identity would strand a row under a name the merge had moved past, and the
+    offer would go missing from the page.
+  - `?refresh=true` replaces the numbers, and every surface then follows.
 
 ## What's fragile / worth watching
 
