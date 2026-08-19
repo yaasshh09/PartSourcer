@@ -1,0 +1,3 @@
+# Local development and CI only. Not installed on the deployed backend.
+-r requirements.txt
+pytest==9.1.1

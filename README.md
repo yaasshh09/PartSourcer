@@ -93,7 +93,7 @@ locally.
 ```bash
 cd backend
 py -3 -m venv .venv                                   # first time only (Python 3.11+)
-.venv/Scripts/python.exe -m pip install -r requirements.txt
+.venv/Scripts/python.exe -m pip install -r requirements-dev.txt
 .venv/Scripts/python.exe -m uvicorn main:app --reload
 ```
 
@@ -138,6 +138,36 @@ either backend host.
 > behaviour, not a broken build. Test against the production domain, or add a
 > specific preview origin to the list while you need it.
 
+### Backend on Vercel (same platform as the frontend)
+
+Vercel detects FastAPI from `requirements.txt` and serves the `app` exported by
+`backend/main.py`, so there is no wrapper file. `backend/vercel.json` caps a
+request at 30s, which is well clear of the 8s per distributor timeout and stops
+a wedged request burning the 300s default.
+
+1. New project from the same repo, **Root Directory** `backend`.
+2. Set `CACHE_BACKEND=postgres` and `DATABASE_URL` to a Neon **pooled**
+   connection string. Both are required together: the backend refuses to start
+   with `CACHE_BACKEND=postgres` and no DSN rather than quietly falling back to
+   a per instance SQLite file.
+3. Set `CORS_ORIGINS` to the frontend's Vercel origin, and on the frontend
+   project set `VITE_API_BASE` to `https://<this-backend>.vercel.app/api`.
+4. Set `MOUSER_API_KEY`, and `DIGIKEY_CLIENT_ID` / `DIGIKEY_CLIENT_SECRET` once
+   the DigiKey portal is reachable again.
+
+> **Why Postgres is not optional here.** Serverless runs the app as more than
+> one process. Two processes with their own SQLite file hold their own copy of
+> every cached offer, so the same part can quote two different prices depending
+> on which instance answered, and each one counts its own calls against a
+> shared daily quota. The cache and the exhaustion marker are shared through
+> Postgres precisely so neither can happen. Put the database in the same region
+> as the functions; a cross region cache round trip is on the hot path.
+
+> **Optional, removes CORS entirely:** add a rewrite to the frontend project
+> sending `/api/:path*` to the backend project's URL. The browser then only
+> ever sees one origin, `VITE_API_BASE` can stay unset and fall back to `/api`,
+> and `CORS_ORIGINS` stops mattering. Worth doing once both URLs are settled.
+
 ### Backend on Render (free, recommended to start)
 
 1. New **Web Service**, connect the repo, set root to `backend`, environment
@@ -165,7 +195,8 @@ either backend host.
 |---|---|---|
 | `VITE_API_BASE` | Vercel (build-time) | `https://<backend-host>/api` |
 | `CORS_ORIGINS` | Backend host | **JSON array**, e.g. `["https://partsourcer.vercel.app"]` |
-| `SQLITE_PATH` | Backend host | `/data/partsourcer.db` on Fly, default (ephemeral) on Render |
+| `CACHE_BACKEND` | Backend host | `sqlite` (default) or `postgres`. Must be `postgres` on Vercel or anywhere else that runs more than one process, and then `DATABASE_URL` is required too |
+| `SQLITE_PATH` | Backend host | `/data/partsourcer.db` on Fly, default (ephemeral) on Render, unused when `CACHE_BACKEND=postgres` |
 
 > **Gotcha:** `CORS_ORIGINS` is parsed as JSON, so it must be a JSON array
 > string, `["https://your-app.vercel.app"]`, not a bare or comma-separated

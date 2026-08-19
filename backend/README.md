@@ -8,7 +8,7 @@ in-stock equivalent, over a swappable data source (jlcsearch in v1).
 ```bash
 cd backend
 py -3 -m venv .venv                        # first time only (Python 3.11+)
-.venv/Scripts/python.exe -m pip install -r requirements.txt
+.venv/Scripts/python.exe -m pip install -r requirements-dev.txt
 .venv/Scripts/python.exe -m uvicorn main:app --reload
 ```
 
@@ -89,10 +89,11 @@ Loaded via pydantic-settings from the environment or a local `.env`
 | `SPECS_CACHE_TTL_SECS` | `2592000` | unused; a leftover from the v1 cache layer |
 | `STOCK_CACHE_TTL_SECS` | `3600` | stock/price freshness (1 hour), and the matcher's pool |
 | `CACHE_PRUNE_AFTER_DAYS` | `7` | rows older than this are deleted at startup |
-| `SQLITE_PATH` | `./partsourcer.db` | cache DB path |
+| `CACHE_BACKEND` | `sqlite` | `sqlite` or `postgres`. Anywhere the app runs as more than one process this must be `postgres`, and `DATABASE_URL` becomes required |
+| `SQLITE_PATH` | `./partsourcer.db` | cache DB path, ignored when `CACHE_BACKEND=postgres` |
 | `CORS_ORIGINS` | `["http://localhost:5173", "http://127.0.0.1:5173"]` | allowed browser origins (set Vercel origin in prod) |
 | `REFRESH_COOLDOWN_SECS` | `10.0` | min gap between forced `?refresh=true` upstream hits per key |
-| `DATABASE_URL` | unset | Neon Postgres DSN for the history recorder (see below) |
+| `DATABASE_URL` | unset | Neon Postgres DSN. Powers the history recorder, and the cache too when `CACHE_BACKEND=postgres` |
 | `RECORDER_TOKEN` | unset | shared secret for `POST /api/internal/record` (see below) |
 | `RECORDER_BATCH_SIZE` | `500` | max watchlist entries walked per recorder run |
 | `RECORDER_CONCURRENCY` | `4` | max simultaneous upstream fetches during a run |
@@ -195,15 +196,73 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
     offer would go missing from the page.
   - `?refresh=true` replaces the numbers, and every surface then follows.
 
+## Where the cache lives
+
+Two implementations behind one `CacheStore` protocol, held to one shared suite
+in `tests/test_cache_store_contract.py` so they cannot drift:
+
+- **`SqliteCacheStore`** (default). One file, one lock. Right for local work
+  and for any host running exactly one always-on process, and faster than a
+  network round trip on every read.
+- **`PostgresCacheStore`**. Required anywhere the app runs as several
+  processes, which includes every serverless host. Two processes each holding
+  their own SQLite file means the same part can quote two different prices
+  depending on which one answered, which is the defect the one-cached-row rule
+  above exists to prevent, reintroduced by the hosting rather than the code.
+
+Its tables are prefixed `cache_` because this database also holds the history
+series, which *is* a source of truth. A cache version bump drops and rebuilds
+its own tables, and the prefix keeps that blast radius readable. The rebuild
+takes a Postgres advisory lock, so several instances cold-starting together
+cannot race each other into querying a table one of them just dropped.
+
+`statement_cache_size=0` on the pool because Neon's pooled endpoint is
+PgBouncer in transaction mode, where a prepared statement from one checkout is
+gone by the next.
+
+Run the Postgres side against a throwaway database:
+
+```bash
+docker run -d --name pg -e POSTGRES_PASSWORD=postgres -p 55432:5432 postgres:16
+TEST_PG_DSN=postgresql://postgres:postgres@127.0.0.1:55432/postgres   .venv/Scripts/python.exe -m pytest -m live
+```
+
+`TEST_PG_DSN` is deliberately not `DATABASE_URL`: those tests empty every
+`cache_` table between cases.
+
+## Quota across instances
+
+The daily counter is per process and always was, described in `quota.py` as an
+optimistic guess. The authority is a real HTTP 429, which marks a distributor
+exhausted until the next 00:00 UTC and writes that marker to the shared store.
+
+On one process that is the whole story. On several, each instance used to have
+to earn its own 429 before it stopped calling, so the overspend was roughly one
+wasted call per instance. `QuotaTracker.sync_markers()` now reads the shared
+markers at the top of every fan-out, rate limited to one read a minute, so one
+instance's 429 stops the rest. It is best effort: a cache outage must not turn
+a working search into a failed one.
+
 ## What's fragile / worth watching
 
 - LCSC data is a ~daily snapshot from a single free community upstream with no
   SLA. Mouser and DigiKey are live but only run when their credentials are set.
-- Refresh throttle is in-process, so it does not coordinate across multiple
-  workers/instances.
-- SQLite cache is single-node; fine for v1, revisit for horizontal scale. The
-  whole cache is dropped and rebuilt on a schema-version change, which is safe
-  because no source of truth lives there.
+- **Refresh throttle is still in-process, and on Vercel that matters more than
+  it did.** `?refresh=true` is the deliberate upstream bypass, bounded to one
+  hit per (distributor, key) per `REFRESH_COOLDOWN_SECS`. Each instance keeps
+  its own dict, so N instances allow N times that rate, and since serverless
+  scales out under load, a client spamming refresh on one part is exactly what
+  makes N grow. It is a politeness limit on a free community upstream, not an
+  honesty rule, so nothing it does can make the app report a wrong number. The
+  fix is the same shape as the quota marker: an atomic claim in the shared
+  store (`INSERT ... ON CONFLICT DO UPDATE ... WHERE claimed_at < $cutoff
+  RETURNING 1`). It is not done because the decision is made synchronously
+  inside `cached_part_service`, and threading an await through that path means
+  touching the one-cached-row logic for a non-correctness win.
+- The SQLite cache is single-node by nature. That is why `CACHE_BACKEND` exists;
+  anything running more than one process must be on `postgres`. The whole cache
+  is dropped and rebuilt on a schema-version change, which is safe because no
+  source of truth lives there.
 - Nothing in the cache evicts on its own, so rows older than
   `CACHE_PRUNE_AFTER_DAYS` are deleted once at startup. That matters only
   where the volume is real: on Render free the file is ephemeral and the whole
