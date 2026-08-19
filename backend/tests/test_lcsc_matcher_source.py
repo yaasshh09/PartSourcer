@@ -211,3 +211,60 @@ async def test_canonical_part_can_be_told_to_skip_the_cache(cache_store):
                                          allow_cached=False)
 
     assert detail.price_usd == 1.8234
+
+
+async def test_the_candidate_pool_is_cached(cache_store):
+    """Two of these run on every equivalent lookup and they are the slowest
+    calls on the slowest route."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    seen = []
+
+    def counting(request):
+        if request.url.path == "/resistors/list.json":
+            seen.append(dict(request.url.params))
+            return httpx.Response(200, json={"resistors": [RES]})
+        return httpx.Response(200, json={"components": [ROW]})
+
+    source = source_over(counting)
+    source._store = cache_store
+    source._ttl = 3600
+    source._now = lambda: now
+
+    first = await source.list_parametric("resistors", "0603")
+    second = await source.list_parametric("resistors", "0603")
+
+    assert len(seen) == 1, "the second lookup went upstream again"
+    assert [p.lcsc for p in second] == [p.lcsc for p in first]
+    assert second[0].specs == first[0].specs
+
+
+async def test_a_stale_pool_is_refetched(cache_store):
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    seen = []
+
+    def counting(request):
+        if request.url.path == "/resistors/list.json":
+            seen.append(1)
+            return httpx.Response(200, json={"resistors": [RES]})
+        return httpx.Response(200, json={"components": [ROW]})
+
+    clock = [now]
+    source = source_over(counting)
+    source._store = cache_store
+    source._ttl = 3600
+    source._now = lambda: clock[0]
+
+    await source.list_parametric("resistors", "0603")
+    clock[0] = now + timedelta(seconds=7200)
+    await source.list_parametric("resistors", "0603")
+
+    assert len(seen) == 2
+
+
+def test_the_pool_key_does_not_split_on_float_vs_int():
+    from services.lcsc_matcher_source import LcscMatcherSource as L
+    assert L._parametric_key("resistors", "0603", 1000.0) == \
+        L._parametric_key("resistors", "0603", 1000)
+    assert L._parametric_key("resistors", "0603", None).endswith("|")

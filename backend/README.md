@@ -196,12 +196,16 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
 - The quota exhaustion marker persists to SQLite, so it survives a restart only
   where the volume does. On Render free the file is ephemeral and the first call
   after a restart earns a fresh 429 that re-marks it.
-- Parametric (equivalent-matcher) results are not cached; every equivalent
-  lookup hits upstream, now plus up to four canonical re-reads to verify a
-  claim. The three candidate reads run together, so the route measures about
-  1.0s against a warm local backend, down from 1.8s when they ran in turn. It
-  is still the heaviest route here by a wide margin: a cached detail lookup is
-  about 3ms.
+- The equivalent route is the heaviest one here. It resolves the part, reads a
+  parametric pool or two, and re-reads up to three candidates to verify the
+  saving. The candidate reads run together, and the pools are cached on the
+  short TTL, so a repeat measures about 0.28s against a warm local backend,
+  down from 1.8s when nothing was shared and the reads ran in turn. Cold it is
+  still roughly 2s. A cached detail lookup, by contrast, is about 3ms.
+- Caching the parametric pool is safe only because none of its numbers are
+  published: they choose and order candidates, and the winner is re-read on
+  the canonical path before any saving is claimed. If that ever changes, this
+  cache has to go or move to a much shorter TTL.
 - The upstream price for a part is not stable across query shapes, and we
   cannot tell which of the values it returns is the true one. Pinning one read
   makes our numbers reproducible and mutually consistent, not provably right.

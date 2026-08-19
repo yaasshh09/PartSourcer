@@ -11,6 +11,10 @@ stock, and price in the same response, so a spec never outlives the offer
 that carried it, and a separate long-TTL specs row could only ever be read
 after that offer expired. Serving a 30 day old brand next to a 40 minute old
 price is the mixed-freshness record Part.as_of exists to prevent.
+
+parametric_cache is not an exception to that. It holds the matcher's
+candidate pool, nothing in it is ever published, and it rides the same short
+TTL as stock precisely because the pool is ranked by price.
 """
 
 import asyncio
@@ -20,7 +24,7 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime
 
-CACHE_SCHEMA_VERSION = 2
+CACHE_SCHEMA_VERSION = 3
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS offers (
@@ -46,6 +50,11 @@ CREATE TABLE IF NOT EXISTS part_cache (
     status_json TEXT NOT NULL,
     as_of       TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS parametric_cache (
+    key       TEXT PRIMARY KEY,
+    rows_json TEXT NOT NULL,
+    as_of     TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS quota_state (
     distributor TEXT PRIMARY KEY,
     resets_at   TEXT NOT NULL
@@ -55,8 +64,8 @@ CREATE TABLE IF NOT EXISTS schema_meta (
 );
 """
 
-_CACHE_TABLES = ("offers", "search_cache", "part_cache", "quota_state",
-                 "schema_meta", "parts")
+_CACHE_TABLES = ("offers", "search_cache", "part_cache", "parametric_cache",
+                 "quota_state", "schema_meta", "parts")
 
 
 @dataclass
@@ -161,6 +170,14 @@ class SqliteCacheStore:
         return await asyncio.to_thread(self._find_part_key_by_sku,
                                        distributor, sku)
 
+    async def get_parametric(self, key: str
+                             ) -> tuple[list[dict], datetime] | None:
+        return await asyncio.to_thread(self._get_parametric, key)
+
+    async def put_parametric(self, key: str, rows: list[dict],
+                             as_of: datetime) -> None:
+        await asyncio.to_thread(self._put_parametric, key, rows, as_of)
+
     async def get_quota_markers(self) -> dict[str, datetime]:
         return await asyncio.to_thread(self._get_quota_markers)
 
@@ -263,6 +280,25 @@ class SqliteCacheStore:
                 "SELECT part_key FROM offers WHERE distributor = ? AND sku = ?",
                 (distributor, sku)).fetchone()
         return row[0] if row is not None else None
+
+    def _get_parametric(self, key: str
+                        ) -> tuple[list[dict], datetime] | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT rows_json, as_of FROM parametric_cache WHERE key = ?",
+                (key,)).fetchone()
+        if row is None:
+            return None
+        return json.loads(row[0]), datetime.fromisoformat(row[1])
+
+    def _put_parametric(self, key: str, rows: list[dict],
+                        as_of: datetime) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO parametric_cache (key, rows_json,"
+                " as_of) VALUES (?, ?, ?)",
+                (key, json.dumps(rows), as_of.isoformat()))
+            self._conn.commit()
 
     def _get_quota_markers(self) -> dict[str, datetime]:
         with self._lock:

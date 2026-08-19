@@ -113,5 +113,40 @@ class LcscMatcherSource:
     async def list_parametric(self, category: str, package: str,
                               resistance_ohms: float | None = None
                               ) -> list[ParametricPart]:
-        return await self._adapter.list_parametric(category, package,
-                                                   resistance_ohms)
+        """The candidate pool, cached on the same short TTL as stock.
+
+        Every equivalent lookup used to fetch two of these, and they are the
+        slowest calls on the slowest route. Caching them is safe because
+        nothing in here is published any more: these prices only decide which
+        candidates are considered and in what order, and the one that wins is
+        re-read on the canonical path before its saving is claimed. The stock
+        buffer is re-checked there too.
+
+        It rides the short TTL rather than the specs TTL even though specs
+        never change, because the ranking is priced. A pool ordered on
+        month-old prices would bury parts that are cheap today.
+        """
+        key = self._parametric_key(category, package, resistance_ohms)
+        if self._store is not None:
+            row = await self._store.get_parametric(key)
+            if row is not None and self._fresh(row[1]):
+                return [ParametricPart.model_validate(r) for r in row[0]]
+        parts = await self._adapter.list_parametric(category, package,
+                                                    resistance_ohms)
+        if self._store is not None:
+            await self._store.put_parametric(
+                key, [p.model_dump(mode="json") for p in parts], self._now())
+        return parts
+
+    @staticmethod
+    def _parametric_key(category: str, package: str,
+                        resistance_ohms: float | None) -> str:
+        # Formatted the way the adapter formats the query, so 1000 and 1000.0
+        # cannot end up as two entries for one pool.
+        if resistance_ohms is None:
+            value = ""
+        elif float(resistance_ohms).is_integer():
+            value = str(int(resistance_ohms))
+        else:
+            value = str(resistance_ohms)
+        return f"{category}|{package}|{value}"
