@@ -162,3 +162,37 @@ async def test_canonical_part_reads_upstream_when_the_row_is_stale(cache_store):
     detail = await source.canonical_part("STM32F103C8T6", "C8734")
 
     assert detail.price_usd == 1.8234
+
+
+async def test_canonical_part_keeps_what_it_just_quoted(cache_store):
+    """A candidate priced for an equivalent card has no row yet. Without
+    keeping it, following the card could land on a different number."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                               base_url="https://jlcsearch.test")
+    source = LcscMatcherSource(LcscAdapter(client), store=cache_store,
+                               offer_ttl_secs=3600, now=lambda: now)
+
+    quoted = await source.canonical_part("STM32F103C8T6", "C8734")
+    rows = await cache_store.get_offers_by_sku([("lcsc", "C8734")])
+
+    assert quoted.price_usd == 1.8234
+    assert len(rows) == 1
+    assert rows[0].part_key == "STM32F103C8T6"
+
+
+async def test_remembering_never_displaces_a_live_row(cache_store):
+    from datetime import datetime, timezone
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    await _seed(cache_store, 0.0039, now)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                               base_url="https://jlcsearch.test")
+    source = LcscMatcherSource(LcscAdapter(client), store=cache_store,
+                               offer_ttl_secs=3600, now=lambda: now)
+
+    await source.canonical_part("STM32F103C8T6", "C8734")
+    rows = await cache_store.get_offers_by_sku([("lcsc", "C8734")])
+
+    from cache.serde import listing_from_dict as lfd
+    assert lfd(rows[0].listing).price == 0.0039
