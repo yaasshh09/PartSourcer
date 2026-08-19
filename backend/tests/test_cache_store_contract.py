@@ -14,13 +14,14 @@ from DATABASE_URL: these tests empty every cache_ table between cases, and
 that variable normally holds the real one.
 """
 
+import inspect
 import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from cache.pg_store import _TABLES, PostgresCacheStore
-from cache.store import CachedOffer, SqliteCacheStore
+from cache.store import CACHE_SCHEMA_VERSION, CachedOffer, SqliteCacheStore
 
 pytestmark = pytest.mark.anyio
 
@@ -64,6 +65,57 @@ async def store(request, tmp_path):
         await s.close()
 
 
+async def _close(store) -> None:
+    """SQLite closes a file synchronously, Postgres closes a pool."""
+    closed = store.close()
+    if inspect.isawaitable(closed):
+        await closed
+
+
+@pytest.fixture(params=[
+    "sqlite",
+    pytest.param("postgres", marks=pytest.mark.live),
+])
+async def open_store(request, tmp_path):
+    """Opens a cache at one fixed location, as often as a test asks.
+
+    Reopening is what a deployment actually does. Every cold start opens the
+    same database again, so the second open has to be as safe as the first and
+    has to leave the rows alone.
+    """
+    opened = []
+
+    async def _open():
+        if request.param == "sqlite":
+            store = SqliteCacheStore(str(tmp_path / "c.db"))
+            store.open()
+        else:
+            dsn = os.environ.get("TEST_PG_DSN")
+            if not dsn:
+                pytest.skip("set TEST_PG_DSN to a throwaway database")
+            store = PostgresCacheStore(dsn)
+            await store.open()
+            if not opened:
+                await _empty(store)
+        opened.append(store)
+        return store
+
+    yield _open
+    for store in reversed(opened):
+        await _close(store)
+
+
+async def test_opening_the_same_cache_again_keeps_what_is_stored(open_store):
+    first = await open_store()
+    await first.put_offers([offer()])
+    await _close(first)
+
+    second = await open_store()
+
+    got = await second.get_offers(["PART-A"])
+    assert len(got) == 1 and got[0].sku == "C1"
+
+
 async def test_offers_round_trip_by_part_key(store):
     await store.put_offers([offer(), offer("PART-A-TR", "mouser", "M1", "PART-A")])
 
@@ -81,6 +133,24 @@ async def test_put_offers_replaces_a_listing_in_place(store):
 
     got = await store.get_offers(["PART-A"])
 
+    assert len(got) == 1 and got[0].listing["price"] == 1.5
+
+
+async def test_put_offers_takes_the_last_row_when_one_batch_repeats_a_key(store):
+    """One fan-out can hand us the same offer twice.
+
+    Two distributor reads can land on the same (listing_key, distributor, sku)
+    inside a single write, so the batch has to settle on one row the same way
+    two separate writes would: the last one wins.
+    """
+    first = offer()
+    first.listing = {"mpn": "PART-A", "price": 9.0}
+    last = offer()
+    last.listing = {"mpn": "PART-A", "price": 1.5}
+
+    await store.put_offers([first, last])
+
+    got = await store.get_offers(["PART-A"])
     assert len(got) == 1 and got[0].listing["price"] == 1.5
 
 
@@ -210,3 +280,29 @@ async def test_timestamps_come_back_as_the_utc_they_went_in_as(store):
     assert got.as_of.tzinfo is not None
     assert got.as_of == AS_OF
     assert (AS_OF - got.as_of) == timedelta(0)
+
+
+@pytest.mark.live
+async def test_postgres_rebuilds_the_cache_when_the_stamped_version_is_wrong():
+    """Opening skips the rebuild when the version already matches, so this
+    checks the other half: a stale stamp still gets the tables rebuilt."""
+    dsn = os.environ.get("TEST_PG_DSN")
+    if not dsn:
+        pytest.skip("set TEST_PG_DSN to a throwaway database")
+    store = PostgresCacheStore(dsn)
+    await store.open()
+    await store.put_offers([offer()])
+    async with store._pool.acquire() as conn:
+        await conn.execute("UPDATE cache_schema_meta SET version = $1",
+                           CACHE_SCHEMA_VERSION - 1)
+    await store.close()
+
+    reopened = PostgresCacheStore(dsn)
+    await reopened.open()
+    try:
+        assert await reopened.get_offers(["PART-A"]) == []
+        async with reopened._pool.acquire() as conn:
+            stamped = await conn.fetchval("SELECT version FROM cache_schema_meta")
+        assert stamped == CACHE_SCHEMA_VERSION
+    finally:
+        await reopened.close()

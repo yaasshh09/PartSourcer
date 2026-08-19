@@ -4,6 +4,7 @@ Swapping to the official LCSC API later = build a different adapter here.
 CachedPartService wraps whatever PartService was handed; nothing else changes.
 """
 
+import asyncio
 import inspect
 import logging
 from datetime import datetime, timedelta, timezone
@@ -62,11 +63,6 @@ async def startup() -> None:
         follow_redirects=True,
     )
     _store = await _open_cache()
-    dropped = await _store.prune(
-        datetime.now(timezone.utc)
-        - timedelta(days=settings.cache_prune_after_days))
-    if dropped:
-        log.info("cache pruned rows=%d", dropped)
     _lcsc_adapter = LcscAdapter(_client)
     # Same store and same TTL as the pages, so an equivalent card quotes the
     # row the part's own page is serving rather than a second reading of it.
@@ -74,8 +70,17 @@ async def startup() -> None:
         _lcsc_adapter, store=_store,
         offer_ttl_secs=settings.stock_cache_ttl_secs)
     _part_service, _distributor_clients = build_part_service(settings, _client)
-    # The exhaustion marker outlives the process only where the volume does.
-    _part_service.attach_quota_markers(_store, await _store.get_quota_markers())
+    # Two independent round trips to a database that may be a continent away,
+    # and every cold start pays for both, so they go together rather than one
+    # after the other.
+    dropped, markers = await asyncio.gather(
+        _store.prune(datetime.now(timezone.utc)
+                     - timedelta(days=settings.cache_prune_after_days)),
+        _store.get_quota_markers())
+    if dropped:
+        log.info("cache pruned rows=%d", dropped)
+    # The exhaustion marker outlives the process only where the store does.
+    _part_service.attach_quota_markers(_store, markers)
     _cached_service = CachedPartService(
         service=_part_service, store=_store,
         offer_ttl_secs=settings.stock_cache_ttl_secs,

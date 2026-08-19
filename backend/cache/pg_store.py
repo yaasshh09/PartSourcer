@@ -99,24 +99,39 @@ class PostgresCacheStore:
         async with self._pool.acquire() as conn:
             await self._migrate(conn)
 
+    @staticmethod
+    async def _schema_version(conn) -> int | None:
+        """The version stamped in the database, or None before there is one."""
+        try:
+            return await conn.fetchval(
+                "SELECT version FROM cache_schema_meta LIMIT 1")
+        except asyncpg.UndefinedTableError:
+            return None
+
     async def _migrate(self, conn) -> None:
         """Rebuild on a version mismatch, exactly as the SQLite store does.
 
-        Free and correct because no source of truth lives in these tables.
-        The advisory lock makes it safe when several instances start at once,
-        and only cache_ tables are ever dropped, so the history series that
-        shares this database is never in scope.
+        Read the stamped version first and leave if it already matches. Every
+        cold start runs this and the usual answer is that there is nothing to
+        do, so the common path costs one query instead of a lock plus a dozen
+        DDL statements against a database that may be a continent away.
+
+        Rebuilding is free and correct because no source of truth lives in
+        these tables. The advisory lock makes it safe when several instances
+        start at once, and only cache_ tables are ever dropped, so the history
+        series that shares this database is never in scope.
         """
+        if await self._schema_version(conn) == CACHE_SCHEMA_VERSION:
+            return
         await conn.execute("SELECT pg_advisory_lock($1)", _MIGRATION_LOCK)
         try:
-            try:
-                version = await conn.fetchval(
-                    "SELECT version FROM cache_schema_meta LIMIT 1")
-            except asyncpg.UndefinedTableError:
-                version = None
-            if version != CACHE_SCHEMA_VERSION:
-                for table in _TABLES:
-                    await conn.execute(f"DROP TABLE IF EXISTS {table}")
+            # Read again now that we hold the lock. Another instance may have
+            # rebuilt the whole thing while we queued behind it, and dropping
+            # its fresh tables would be pure waste.
+            if await self._schema_version(conn) == CACHE_SCHEMA_VERSION:
+                return
+            for table in _TABLES:
+                await conn.execute(f"DROP TABLE IF EXISTS {table}")
             await conn.execute(_SCHEMA)
             await conn.execute("DELETE FROM cache_schema_meta")
             await conn.execute(
@@ -219,18 +234,33 @@ class PostgresCacheStore:
         return self._offers(rows)
 
     async def put_offers(self, offers: list[CachedOffer]) -> None:
+        """Write the whole batch in one statement.
+
+        A single search writes one row per listing per distributor, which runs
+        to a hundred or so, and sending them one at a time is the slowest thing
+        the write path does against a hosted database.
+
+        Postgres will not let one INSERT touch the same row twice, so the batch
+        is collapsed by key first. Keeping the last row for a key is what
+        separate writes would have left behind anyway.
+        """
         if not offers:
             return
+        latest: dict[tuple[str, str, str], CachedOffer] = {
+            (o.listing_key, o.distributor, o.sku): o for o in offers}
+        rows = list(latest.values())
         async with self._pool.acquire() as conn:
-            await conn.executemany(
+            await conn.execute(
                 "INSERT INTO cache_offers (listing_key, distributor, sku,"
                 " part_key, listing_json, as_of)"
-                " VALUES ($1, $2, $3, $4, $5, $6)"
+                " SELECT * FROM unnest($1::text[], $2::text[], $3::text[],"
+                " $4::text[], $5::text[], $6::timestamptz[])"
                 " ON CONFLICT (listing_key, distributor, sku) DO UPDATE SET"
                 " part_key = EXCLUDED.part_key,"
                 " listing_json = EXCLUDED.listing_json, as_of = EXCLUDED.as_of",
-                [(o.listing_key, o.distributor, o.sku, o.part_key,
-                  json.dumps(o.listing), o.as_of) for o in offers])
+                [o.listing_key for o in rows], [o.distributor for o in rows],
+                [o.sku for o in rows], [o.part_key for o in rows],
+                [json.dumps(o.listing) for o in rows], [o.as_of for o in rows])
 
     async def find_part_key_by_sku(self, distributor: str,
                                    sku: str) -> str | None:
