@@ -21,17 +21,28 @@ def detail(lcsc="C8734", mpn="STM32F103C8T6", price=1.82, stock=12400):
 
 
 class FakeDs:
-    """Duck-typed LcscMatcherSource: the recorder only ever calls get_part."""
+    """Duck-typed LcscMatcherSource: the recorder resolves a code, then
+    re-reads the part on the basis the pages publish.
 
-    def __init__(self, parts=None, fail_on=()):
+    `canonical` overrides what that second read returns; left unset it
+    echoes the first, which is upstream agreeing with itself.
+    """
+
+    def __init__(self, parts=None, fail_on=(), canonical=None):
         self.parts = parts or {}
         self.fail_on = set(fail_on)
+        self.canonical = canonical or {}
         self.calls = []
 
     async def get_part(self, lcsc_code, refresh=False):
         self.calls.append(lcsc_code)
         if lcsc_code in self.fail_on:
             raise UpstreamError("unavailable", "boom")
+        return self.parts.get(lcsc_code)
+
+    async def canonical_part(self, mpn, lcsc_code):
+        if lcsc_code in self.canonical:
+            return self.canonical[lcsc_code]
         return self.parts.get(lcsc_code)
 
     async def list_parametric(self, category, package, resistance_ohms=None):
@@ -105,3 +116,32 @@ async def test_entry_without_lcsc_is_skipped():
     summary = await record_watchlist(FakeDs(), store, batch_size=10,
                                      concurrency=2, now=lambda: FIXED)
     assert (summary.recorded, summary.skipped) == (0, 1)
+
+
+async def test_the_recorded_price_is_the_one_the_pages_show():
+    """Upstream answers differently depending on how a part is asked for.
+    History is append-only, so a row written on the resolving read's basis
+    would sit permanently below the price the part's own page quotes."""
+    store = InMemoryHistoryStore()
+    await store.add_to_watchlist("STM32F103C8T6", "C8734")
+    ds = FakeDs(parts={"C8734": detail(price=0.0039, stock=8013731)},
+                canonical={"C8734": detail(price=0.0009, stock=15873089)})
+
+    await record_watchlist(ds, store, batch_size=10, concurrency=2,
+                           now=lambda: FIXED)
+
+    assert [r.price_usd for r in store.records] == [0.0009]
+    assert [r.stock for r in store.records] == [15873089]
+
+
+async def test_a_part_missing_from_the_published_read_is_skipped():
+    store = InMemoryHistoryStore()
+    await store.add_to_watchlist("STM32F103C8T6", "C8734")
+    ds = FakeDs(parts={"C8734": detail(price=0.0039)},
+                canonical={"C8734": None})
+
+    summary = await record_watchlist(ds, store, batch_size=10, concurrency=2,
+                                     now=lambda: FIXED)
+
+    assert (summary.recorded, summary.skipped) == (0, 1)
+    assert store.records == []

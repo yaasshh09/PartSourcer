@@ -46,7 +46,13 @@ async def record_watchlist(
             return
         async with sem:
             try:
+                # get_part turns the code into an identity; the numbers then
+                # come from the read the pages use, so a part's chart and its
+                # price on screen cannot drift onto different bases. History
+                # is append-only, so a row on the wrong basis never washes out.
                 detail = await ds.get_part(lcsc)
+                if detail is not None:
+                    detail = await ds.canonical_part(detail.mpn, detail.lcsc)
             except UpstreamError:
                 async with lock:
                     summary.errors += 1
