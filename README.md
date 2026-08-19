@@ -127,6 +127,16 @@ either backend host.
 3. Vercel auto-detects Vite. The included `frontend/vercel.json` adds an SPA
    catch-all rewrite so deep links (for example `/part/C25531`) and page
    refreshes do not 404.
+4. Add the new Vercel origin to `CORS_ORIGINS` on the backend host **before**
+   you point anyone at the site. The backend allows exact origins only, with
+   no wildcard and no pattern, so until it is listed every API call from the
+   new domain is blocked by the browser and the site loads but shows nothing.
+
+> **Preview deployments:** every Vercel preview gets its own hostname
+> (`partsourcer-<hash>-<scope>.vercel.app`), and none of them are in
+> `CORS_ORIGINS`, so previews cannot reach the API. That is the expected
+> behaviour, not a broken build. Test against the production domain, or add a
+> specific preview origin to the list while you need it.
 
 ### Backend on Render (free, recommended to start)
 
@@ -159,7 +169,10 @@ either backend host.
 
 > **Gotcha:** `CORS_ORIGINS` is parsed as JSON, so it must be a JSON array
 > string, `["https://your-app.vercel.app"]`, not a bare or comma-separated
-> value. The full backend config table is in
+> value. It is also an exact-match allowlist: the scheme, host and any port
+> must match what the browser sends, and a trailing slash breaks it. List every
+> origin you want to serve, including an old one you are migrating away from if
+> you want both live at once. The full backend config table is in
 > [`backend/README.md`](backend/README.md).
 
 > **Security:** never put a secret in a `VITE_`-prefixed variable. Vite bakes
