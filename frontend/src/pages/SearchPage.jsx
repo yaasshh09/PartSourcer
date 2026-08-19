@@ -6,6 +6,7 @@ import { oldestAsOf } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
+import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 const COMING_SOON = ['BOM bulk upload', 'Price history', 'Browse by category', 'Biggest savings this week']
@@ -22,6 +23,7 @@ export default function SearchPage() {
   const [asOf, setAsOf] = useState(null)
   const [sources, setSources] = useState([])
   const inputRef = useRef(null)
+  const waking = useWaking(loading)
 
   useEffect(() => {
     if (!q) {
@@ -76,6 +78,11 @@ export default function SearchPage() {
       <div>
         <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, paddingBottom: 12,
           borderBottom: `3px solid ${C.ink}`, marginBottom: 16 }}>SEARCHING…</div>
+        {waking ? (
+          <div style={{ fontSize: 14, color: C.sub, fontWeight: 500, marginBottom: 14 }}>
+            {WAKE_NOTICE}
+          </div>
+        ) : null}
         {[0, 0.15, 0.3].map((delay) => (
           <div key={delay} style={{ height: 96, border: `3px solid ${C.ink}`, background: '#f0eee2',
             marginBottom: 14, animation: 'ps-pulse 1s ease-in-out infinite', animationDelay: `${delay}s` }} />

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import SearchPage from './SearchPage.jsx'
@@ -116,4 +116,23 @@ test('stays silent about sources when everything answered', async () => {
   renderAt('/?q=stm32')
   await waitFor(() => expect(screen.getByText('STM32F103C8T6')).toBeInTheDocument())
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
+})
+
+test('a long wait explains itself instead of just spinning', async () => {
+  // The live backend is on a free plan and cold-starts in about 20 seconds.
+  // A bare spinner for that long reads as a broken site.
+  vi.spyOn(api, 'search').mockReturnValue(new Promise(() => {}))
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  try {
+    renderAt('/?q=STM32')
+
+    expect(screen.getByText('SEARCHING…')).toBeInTheDocument()
+    expect(screen.queryByText(/sleeps when nobody/i)).not.toBeInTheDocument()
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+
+    expect(screen.getByText(/sleeps when nobody/i)).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
 })

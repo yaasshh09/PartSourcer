@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import DetailPage from './DetailPage.jsx'
@@ -427,4 +427,21 @@ test('reaches the datasheet on a part that has no LCSC offer at all', async () =
   await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
   expect(screen.queryByRole('link', { name: /^View on LCSC/i })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: /datasheet/i })).toBeInTheDocument()
+})
+
+test('a long part-page wait explains the cold start too', async () => {
+  // Deep links into /part are a common first hit, and they wake the same
+  // sleeping backend a search does.
+  vi.spyOn(api, 'getPart').mockReturnValue(new Promise(() => {}))
+  vi.spyOn(api, 'getEquivalent').mockReturnValue(new Promise(() => {}))
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  try {
+    renderPart('/part/STM32F103C8T6')
+
+    expect(screen.queryByText(/sleeps when nobody/i)).not.toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+    expect(screen.getByText(/sleeps when nobody/i)).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
 })

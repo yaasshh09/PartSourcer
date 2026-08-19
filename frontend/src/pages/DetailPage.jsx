@@ -10,6 +10,7 @@ import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import OfferTable from '../components/OfferTable.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
 import Price from '../components/Price.jsx'
+import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 
 export default function DetailPage() {
   const params = useParams()
@@ -24,6 +25,7 @@ export default function DetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState(null)
+  const waking = useWaking(loading)
 
   useEffect(() => {
     let cancelled = false
@@ -97,6 +99,11 @@ export default function DetailPage() {
         <div style={{ height: 140, border: `3px solid ${C.ink}`, background: '#f0eee2',
           animation: 'ps-pulse 1s ease-in-out infinite' }} />
         <div style={{ marginTop: 14, fontSize: 14, color: C.muted, fontWeight: 600 }}>Loading…</div>
+        {waking ? (
+          <div style={{ marginTop: 10, fontSize: 14, color: C.sub, fontWeight: 500 }}>
+            {WAKE_NOTICE}
+          </div>
+        ) : null}
       </section>
     )
   }
