@@ -82,7 +82,7 @@ export default function DetailPage() {
           {"THIS PART ISN'T ON THE BOARD."}
         </div>
         <p style={{ fontSize: 16, color: C.sub, fontWeight: 500, marginTop: 12 }}>
-          {"We couldn't find that part. Let's get you back to searching."}
+          {"That part number didn't match anything. Try another search."}
         </p>
         <Link to="/" style={{ display: 'inline-block', marginTop: 22, background: C.ink, color: C.yellow,
           fontFamily: ARCHIVO, fontWeight: 900, fontSize: 15, padding: '14px 26px',
@@ -284,12 +284,12 @@ export default function DetailPage() {
           </div>
         </div>
       ) : equiv ? (
-        <NoticePanel variant="inline" title={"NO CHEAPER EQUIVALENT, AND WE WON'T FAKE ONE"}>
+        <NoticePanel variant="inline" title={"NO CHEAPER EQUIVALENT, AND NOTHING FAKED IN ITS PLACE"}>
           {equiv.reason}
         </NoticePanel>
       ) : equivError ? (
         <NoticePanel variant="inline" title="EQUIVALENT CHECK UNAVAILABLE">
-          {`We couldn't check for a cheaper equivalent right now: ${equivError.detail}. Try refreshing in a moment.`}
+          {`The cheaper-equivalent check could not run right now: ${equivError.detail}. Try refreshing in a moment.`}
         </NoticePanel>
       ) : null}
     </section>

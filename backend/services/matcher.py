@@ -162,10 +162,10 @@ _NO_MATCH_REASON = ("No cheaper in-stock drop-in was found for this part in v1 "
                     "(same package and specs, healthy stock, lower price).")
 _NO_PRICE_REASON = ("This part has no published price upstream, so there is "
                     "nothing for a cheaper equivalent to be cheaper than.")
-_UNREADABLE_REASON = ("We could not read this part's price the same way the "
-                      "rest of this page reads it, and we will not compare "
-                      "against a number we cannot confirm, so no swap is "
-                      "offered. Try again in a moment.")
+_UNREADABLE_REASON = ("This part's price could not be read the same way the "
+                      "rest of this page reads it, and nothing is compared "
+                      "against a number that cannot be confirmed, so no swap "
+                      "is offered. Try again in a moment.")
 _TRIVIAL_SAVING_REASON = ("The closest drop-in for this part costs almost "
                           "exactly what it does, so there is nothing worth "
                           "swapping for.")

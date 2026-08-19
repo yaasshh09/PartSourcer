@@ -32,7 +32,7 @@ const PRINCIPLES = [
   },
   {
     title: 'Never invent a price',
-    body: 'A distributor that published nothing gives us nothing, not zero. A zero would read as free and would win the cheapest comparison outright, so it is left out and labelled.',
+    body: 'A distributor that published nothing hands back nothing, not zero. A zero would read as free and would win the cheapest comparison outright, so it is left out and labelled.',
   },
 ]
 
@@ -103,7 +103,7 @@ export default function Landing() {
 
       <div style={{ border: `3px solid ${C.ink}`, background: C.ink, color: C.bg, padding: 26 }}>
         <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
-          EQUIVALENT OR NOTHING: WE DON&apos;T BLUR THE LINE
+          EQUIVALENT OR NOTHING: THE LINE NEVER BLURS
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 22, marginTop: 16 }}>
           <div>
@@ -115,7 +115,7 @@ export default function Landing() {
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: '#ffb02e' }}>✗ No match</div>
             <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-              Close is not good enough. If we cannot verify a drop-in you get a plain no and the reason why, never a maybe.
+              Close is not good enough. If a drop-in cannot be verified you get a plain no and the reason why, never a maybe.
             </div>
           </div>
         </div>

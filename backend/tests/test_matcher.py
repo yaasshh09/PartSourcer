@@ -440,7 +440,7 @@ async def test_a_read_we_could_not_complete_is_not_called_an_absent_price():
 
     assert resp.equivalent is None
     assert resp.original.price_usd is None
-    assert "could not read" in resp.reason
+    assert "could not be read" in resp.reason
     assert "no published price" not in resp.reason
 
 

@@ -3,7 +3,7 @@ import { C, ARCHIVO, MONO } from '../theme.js'
 
 const CARDS = [
   { title: 'FREE FOREVER', body: 'No paywall on core features. Any future revenue is optional affiliate links, never gating.' },
-  { title: 'HONEST', body: "We show data freshness and never fake stock or price. If there's no valid equivalent, we say so." },
+  { title: 'HONEST', body: "Every figure carries the moment it was read, and stock and price are never faked. If there's no valid equivalent, the page says so." },
   { title: 'FAST', body: 'Aggressive caching means search feels instant. Specs cache long; stock & price refresh often.' },
   { title: 'OPEN-SOURCE', body: 'MIT licensed. Fork it, self-host it, send a PR. Built for students, by a student.', accent: true },
 ]
@@ -30,7 +30,7 @@ const PROMISES = [
   },
   {
     title: 'Never overstate a match',
-    body: 'Two parts are only called equivalent when the package and the core specs genuinely line up. Anything we cannot verify comes back as an honest no with the reason, rather than a guess dressed up as a recommendation.',
+    body: 'Two parts are only called equivalent when the package and the core specs genuinely line up. Anything that cannot be verified comes back as an honest no with the reason, rather than a guess dressed up as a recommendation.',
   },
   {
     title: 'Never compare two prices measured differently',
@@ -38,7 +38,7 @@ const PROMISES = [
   },
   {
     title: 'Never invent a price',
-    body: 'A distributor that published no price gives us nothing, not zero. A zero would read as free and would win the cheapest comparison outright, so an unpriced offer is excluded from the claim and the page says so plainly.',
+    body: 'A distributor that published no price hands back nothing, not zero. A zero would read as free and would win the cheapest comparison outright, so an unpriced offer is excluded from the claim and the page says so plainly.',
   },
 ]
 

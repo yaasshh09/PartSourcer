@@ -283,7 +283,7 @@ test('honest null-equivalent shows the backend reason', async () => {
   vi.spyOn(api, 'getEquivalent').mockResolvedValue({
     ...noEquivalent, reason: 'No cheaper in-stock drop-in was found.' })
   renderPart('/part/0402WGJ0103TCE')
-  await waitFor(() => expect(screen.getByText(/WON'T FAKE ONE/)).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText(/NOTHING FAKED IN ITS PLACE/)).toBeInTheDocument())
   expect(screen.getByText(/No cheaper in-stock drop-in/)).toBeInTheDocument()
 })
 
