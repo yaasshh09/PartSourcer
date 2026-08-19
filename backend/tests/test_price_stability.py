@@ -165,3 +165,88 @@ async def test_a_held_row_keeps_its_own_timestamp(store):
     part, _, _ = await cached.lookup("PART-A")
 
     assert part.offers[0].as_of == before
+
+
+class NoSkuAdapter(DistributorAdapter):
+    """A distributor that publishes no part number, which Mouser does: it
+    sends the literal "N/A" and the adapter reads that as absent."""
+
+    name = "mouser"
+
+    def __init__(self, priced):
+        self._priced = priced          # mpn -> price
+        self.queries = []
+
+    async def search(self, query, limit):
+        self.queries.append(query)
+        return [RawListing(distributor="mouser", sku="", mpn=m, brand=None,
+                           package="P", description="d", stock=5000,
+                           in_stock=True, price=p, currency="USD",
+                           price_breaks=None, datasheet_url=None,
+                           product_url=None, as_of=T0, rank=i)
+                for i, (m, p) in enumerate(self._priced.items())]
+
+    async def lookup_mpn(self, mpn, limit=20):
+        return await self.search(mpn, limit)
+
+
+async def test_offers_with_no_sku_never_borrow_each_other_s_price(store):
+    """Every no-SKU offer shares the key ("mouser", ""), so keying the hold
+    on it alone hands one part whatever unrelated row came back last. A
+    fabricated price with an honest timestamp is the worst failure here."""
+    adapter = NoSkuAdapter({"PART-A": 1.0, "PART-B": 2.0})
+    cached = build(store, {"mouser": adapter})
+
+    await cached.search("both", 1)
+    again = await cached.search("both", 1)
+
+    by_key = {p.mpn_key: p.offers[0].price_usd for p in again.results}
+    assert by_key == {"PART-A": 1.0, "PART-B": 2.0}
+
+
+async def test_a_no_sku_offer_takes_the_freshly_fetched_numbers(store):
+    """A second query for the same part is a miss, so it fetches and then
+    looks for a row to hold. There is nothing it can safely identify, so the
+    new read stands rather than a guess drawn from a shared key."""
+    adapter = NoSkuAdapter({"PART-A": 1.0})
+    cached = build(store, {"mouser": adapter})
+    await cached.search("one", 1)
+
+    adapter._priced = {"PART-A": 3.0}
+    second = await cached.search("a different query", 1)
+
+    assert second.results[0].offers[0].price_usd == 3.0
+
+
+async def test_the_index_row_ages_from_its_oldest_held_read(store):
+    """Otherwise a later query touching the same parts restarts the clock,
+    and offers get served at close to twice the TTL behind a row that still
+    looks fresh."""
+    from datetime import timedelta
+    late = T0 + timedelta(seconds=int(TTL * 0.9))
+    adapter = VaryingAdapter({"first": 0.0039, "second": 0.0009}, ["PART-A"])
+
+    at_t0 = build(store, {"lcsc": adapter}, now=lambda: T0)
+    await at_t0.search("first", 1)
+
+    later = build(store, {"lcsc": adapter}, now=lambda: late)
+    await later.search("second", 1)
+
+    row = await store.get_search("second")
+    assert row.as_of == T0, "the new row claimed the numbers were read now"
+
+
+async def test_held_offers_do_not_outlive_the_ttl_by_being_looked_at(store):
+    from datetime import timedelta
+    adapter = VaryingAdapter({"first": 0.0039, "second": 0.0009}, ["PART-A"])
+    late = T0 + timedelta(seconds=int(TTL * 0.9))
+    past = T0 + timedelta(seconds=int(TTL * 1.5))
+
+    await build(store, {"lcsc": adapter}, now=lambda: T0).search("first", 1)
+    await build(store, {"lcsc": adapter}, now=lambda: late).search("second", 1)
+
+    adapter._as_of = past
+    after = build(store, {"lcsc": adapter}, now=lambda: past)
+    result = await after.search("second", 1)
+
+    assert price(result.results[0]) == 0.0009, "served numbers past the TTL"

@@ -46,6 +46,32 @@ def _with_held_numbers(fetched: RawListing,
     return replace(fetched, **{f: getattr(held, f) for f in _HELD_FIELDS})
 
 
+def _pick_held(held: dict[tuple[str, str], list[CachedOffer]],
+               fetched: RawListing) -> RawListing | None:
+    """The stored row that is this offer, or nothing.
+
+    A SKU is not always an identifier. Mouser sends the literal "N/A" for
+    parts it has no number for, which the adapter reads as absent, so every
+    such offer would otherwise share the key ("mouser", "") and be handed
+    whichever unrelated row the database happened to return last. Serving one
+    part another part's price, correctly timestamped, is the exact failure
+    the honesty rules exist to stop, so an ambiguous match holds nothing and
+    the freshly fetched numbers stand.
+    """
+    if not fetched.sku:
+        return None
+    rows = held.get((fetched.distributor, fetched.sku))
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return listing_from_dict(rows[0].listing)
+    # More than one row shares this SKU, which means the MPN moved under it.
+    # Only an exact key match is this offer; anything else is a guess.
+    key = normalize_exact(fetched.mpn)
+    exact = [r for r in rows if r.listing_key == key]
+    return listing_from_dict(exact[0].listing) if len(exact) == 1 else None
+
+
 def _spine_order(parts: list[Part], spine: list[str]) -> list[Part]:
     """Cached order first, newly seen keys appended.
 
@@ -72,6 +98,20 @@ class CachedPartService:
 
     def _fresh(self, as_of: datetime) -> bool:
         return (self._now() - as_of).total_seconds() < self._ttl
+
+    def _stamp(self, listings: Iterable[RawListing]) -> datetime:
+        """When this answer's numbers were really read.
+
+        A held row keeps its own as_of, so stamping the index row with now
+        would restart the clock every time a later query happened to touch
+        the same parts, and offers could then be served at close to twice the
+        TTL behind a row that still looked fresh. Ageing the index from its
+        oldest contributing read keeps a part's whole record expiring
+        together, which is the same rule Part.as_of already follows.
+        """
+        stamps = [x.as_of for x in listings if x.as_of is not None]
+        now = self._now()
+        return min([now, *stamps]) if stamps else now
 
     def _cached_ok(self, statuses: list[dict]) -> set[str]:
         """Distributors whose cached answer is both ok and still fresh."""
@@ -109,6 +149,16 @@ class CachedPartService:
         return [listing_from_dict(row.listing) for row in rows
                 if row.distributor in served]
 
+    async def _held_rows(self, listings: list[RawListing]
+                         ) -> dict[tuple[str, str], list[CachedOffer]]:
+        """Fresh stored rows for these offers, grouped so ties stay visible."""
+        pairs = [(x.distributor, x.sku) for x in listings if x.sku]
+        grouped: dict[tuple[str, str], list[CachedOffer]] = {}
+        for row in await self._store.get_offers_by_sku(pairs):
+            if self._fresh(row.as_of):
+                grouped.setdefault((row.distributor, row.sku), []).append(row)
+        return grouped
+
     async def _write_offers(self, listings: Iterable[RawListing],
                             parts: list[Part],
                             force: bool = False) -> list[RawListing]:
@@ -138,18 +188,11 @@ class CachedPartService:
         part_of = {normalize_exact(offer.mpn_as_listed): part.mpn_key
                    for part in parts for offer in part.offers}
 
-        held: dict[tuple[str, str], RawListing] = {}
-        if not force:
-            pairs = [(x.distributor, x.sku) for x in listings]
-            for row in await self._store.get_offers_by_sku(pairs):
-                if self._fresh(row.as_of):
-                    held[(row.distributor, row.sku)] = listing_from_dict(
-                        row.listing)
+        held = {} if force else await self._held_rows(listings)
 
         effective, rows = [], []
         for fetched in listings:
-            listing = _with_held_numbers(
-                fetched, held.get((fetched.distributor, fetched.sku)))
+            listing = _with_held_numbers(fetched, _pick_held(held, fetched))
             effective.append(listing)
             listing_key = normalize_exact(listing.mpn)
             if not listing_key:
@@ -204,7 +247,7 @@ class CachedPartService:
             await self._store.put_search(
                 key, want, [p.mpn_key for p in parts],
                 [s.model_dump(mode="json") for s in result.statuses],
-                self._now())
+                self._stamp(effective))
             self._log_sources(result.statuses)
             return self._window(query, page, parts, result.statuses)
 
@@ -236,7 +279,8 @@ class CachedPartService:
             row.part_keys)
         await self._store.put_search(
             key, row.limit_used, [p.mpn_key for p in parts],
-            [s.model_dump(mode="json") for s in statuses], self._now())
+            [s.model_dump(mode="json") for s in statuses],
+            self._stamp(cached_listings + effective))
         return self._window(query, page, parts, statuses)
 
     # -- the detail path --
@@ -299,7 +343,8 @@ class CachedPartService:
         # actually asked about, because that is the only question we asked.
         effective = await self._write_offers(listings, parts, force=force)
         await self._store.put_part_status(
-            mpn_key, [s.model_dump(mode="json") for s in statuses], self._now())
+            mpn_key, [s.model_dump(mode="json") for s in statuses],
+            self._stamp(effective))
         return effective
 
     async def resolve_sku(self, distributor: str, sku: str) -> str | None:

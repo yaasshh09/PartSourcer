@@ -306,3 +306,24 @@ async def test_get_part_still_falls_back_to_the_sku_lookup(cache_store):
     assert detail.mpn == "STM32F103C8T6"
     assert await cache_store.get_offers_by_sku([("lcsc", "C8734")]) == [], \
         "a limit=1 read must never become a row a page can serve"
+
+
+async def test_the_recorder_path_does_not_displace_a_live_row(cache_store):
+    """Reading past a held row is not licence to overwrite it. The nightly
+    cron would otherwise move the price under a page mid-session, which is
+    the drift the one-row rule exists to stop."""
+    from datetime import datetime, timezone
+    from cache.serde import listing_from_dict as lfd
+    now = datetime(2026, 8, 19, tzinfo=timezone.utc)
+    await _seed(cache_store, 0.0039, now)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                               base_url="https://jlcsearch.test")
+    source = LcscMatcherSource(LcscAdapter(client), store=cache_store,
+                               offer_ttl_secs=3600, now=lambda: now)
+
+    fresh = await source.canonical_part("STM32F103C8T6", "C8734",
+                                        allow_cached=False)
+    rows = await cache_store.get_offers_by_sku([("lcsc", "C8734")])
+
+    assert fresh.price_usd == 1.8234, "the recorder still reads live"
+    assert lfd(rows[0].listing).price == 0.0039, "but it rewrote the page's row"

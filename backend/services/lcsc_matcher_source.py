@@ -81,13 +81,18 @@ class LcscMatcherSource:
         than lifted from a row that could be most of a TTL old, and every
         point in the series is then read the same way.
         """
-        held = await self._cached(lcsc_code) if allow_cached else None
-        if held is not None:
+        # Looked up even when the caller will not use it, because it also
+        # decides whether we may write. The recorder reads past a held row on
+        # purpose; it must not then overwrite the row a page is serving, or
+        # the nightly cron becomes the price drift this rule exists to stop.
+        held = await self._cached(lcsc_code)
+        if held is not None and allow_cached:
             return held
         listings = await self._adapter.lookup_mpn(mpn, FETCH_DEPTH)
         for listing in listings:
             if listing.sku == lcsc_code:
-                await self._remember(listing)
+                if held is None:
+                    await self._remember(listing)
                 return _to_detail(listing)
         return None
 

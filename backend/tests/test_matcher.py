@@ -189,7 +189,7 @@ class FakeDS:
     async def get_part(self, lcsc_code, refresh=False):
         return self._detail
 
-    async def canonical_part(self, mpn, lcsc_code):
+    async def canonical_part(self, mpn, lcsc_code, allow_cached=True):
         self.canonical_calls.append(lcsc_code)
         if lcsc_code in self._canonical:
             spec = self._canonical[lcsc_code]
@@ -426,7 +426,11 @@ async def test_only_the_top_three_candidates_are_repriced():
 
 
 @pytest.mark.anyio
-async def test_an_original_absent_from_the_canonical_read_is_an_honest_null():
+async def test_a_read_we_could_not_complete_is_not_called_an_absent_price():
+    """Upstream answers for a part at one depth and not another, so an empty
+    read says nothing about whether the part is priced. Calling it unpriced
+    would be a claim we have not earned, and it kills the feature for a part
+    that has a perfectly good price."""
     orig_row = rp("C100", price=0.0010, stock=1000)
     cheaper = rp("C1", price=0.0004, stock=900000)
     ds = FakeDS(detail("C100", "0603", 0.0039, 1000),
@@ -436,6 +440,20 @@ async def test_an_original_absent_from_the_canonical_read_is_an_honest_null():
 
     assert resp.equivalent is None
     assert resp.original.price_usd is None
+    assert "could not read" in resp.reason
+    assert "no published price" not in resp.reason
+
+
+@pytest.mark.anyio
+async def test_a_part_upstream_really_did_not_price_says_so():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0039, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]},
+                canonical={"C100": (None, 1000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
     assert "no published price" in resp.reason
 
 
@@ -489,3 +507,46 @@ async def test_a_one_percent_saving_still_counts():
 
     assert resp.equivalent is not None
     assert resp.equivalent.percent_cheaper == 1
+
+
+@pytest.mark.anyio
+async def test_one_failing_candidate_does_not_sink_the_whole_request():
+    """The other two verified fine. Answering with an error page instead of
+    the match we confirmed would throw away good work over one bad read."""
+    class Flaky(FakeDS):
+        async def canonical_part(self, mpn, lcsc_code, allow_cached=True):
+            if lcsc_code == "C1":
+                raise RuntimeError("upstream fell over")
+            return await super().canonical_part(mpn, lcsc_code, allow_cached)
+
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    ds = Flaky(detail("C100", "0603", 0.0010, 1000),
+               {("resistors", "0603"): [orig_row,
+                                        rp("C1", price=0.0004, stock=900000),
+                                        rp("C2", price=0.0005, stock=800000)]},
+               canonical={"C100": (0.0010, 1000), "C2": (0.0006, 800000)})
+
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is not None
+    assert resp.equivalent.lcsc == "C2"
+
+
+@pytest.mark.anyio
+async def test_every_candidate_failing_is_an_honest_null_not_an_error():
+    class AllFail(FakeDS):
+        async def canonical_part(self, mpn, lcsc_code, allow_cached=True):
+            if lcsc_code == "C100":
+                return await super().canonical_part(mpn, lcsc_code, allow_cached)
+            raise RuntimeError("upstream fell over")
+
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    ds = AllFail(detail("C100", "0603", 0.0010, 1000),
+                 {("resistors", "0603"): [orig_row,
+                                          rp("C1", price=0.0004, stock=900000)]},
+                 canonical={"C100": (0.0010, 1000)})
+
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert "did not confirm" in resp.reason

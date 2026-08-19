@@ -162,6 +162,10 @@ _NO_MATCH_REASON = ("No cheaper in-stock drop-in was found for this part in v1 "
                     "(same package and specs, healthy stock, lower price).")
 _NO_PRICE_REASON = ("This part has no published price upstream, so there is "
                     "nothing for a cheaper equivalent to be cheaper than.")
+_UNREADABLE_REASON = ("We could not read this part's price the same way the "
+                      "rest of this page reads it, and we will not compare "
+                      "against a number we cannot confirm, so no swap is "
+                      "offered. Try again in a moment.")
 _TRIVIAL_SAVING_REASON = ("The closest drop-in for this part costs almost "
                           "exactly what it does, so there is nothing worth "
                           "swapping for.")
@@ -240,11 +244,17 @@ async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
     trips on the slowest route in the app.
     """
     short = ranked[:VERIFY_LIMIT]
+    # Failures are collected rather than raised. One candidate's read going
+    # wrong is not a reason to throw away the two that came back fine and
+    # answer the whole request with an error page; an unverifiable candidate
+    # is simply one we cannot offer.
     parts = await asyncio.gather(*(ds.canonical_part(c.mpn, c.lcsc)
-                                   for c in short))
+                                   for c in short),
+                                 return_exceptions=True)
     best: tuple[ParametricPart, float, int] | None = None
     for cand, part in zip(short, parts):
-        if part is None or part.price_usd is None:
+        if isinstance(part, BaseException) or part is None \
+                or part.price_usd is None:
             continue
         if part.price_usd >= orig_price or part.stock < MATCH_MIN_STOCK:
             continue
@@ -320,6 +330,13 @@ async def find_equivalent(ds: MatcherSource,
         # Empty package = specs could not be reliably identified; an unfiltered
         # upstream query could otherwise match a different-package candidate.
         return _null(_NO_TYPE_REASON)
+
+    if canon is None:
+        # Not the same thing as having no price. Upstream can answer for a
+        # part at one depth and not another, so a read that came back empty
+        # says nothing about whether the part is priced, and claiming it is
+        # unpriced would be a statement we have not earned.
+        return _null(_UNREADABLE_REASON)
 
     if orig_price is None:
         # Every candidate gate is "cheaper than the original". With no
