@@ -157,5 +157,5 @@ test('shows no manufacturer line at all when there is none', () => {
   setClipboard(null)
   const { container } = renderCard(part({ brand: null }))
   expect(screen.queryByTestId('brand')).not.toBeInTheDocument()
-  expect(container.textContent).not.toMatch(/unknown|n\/a|—/i)
+  expect(container.textContent).not.toMatch(/unknown|n\/a|\u2014/i)
 })
