@@ -9,6 +9,7 @@ satisfy the rule. Missing specs are treated conservatively (rejected when the
 original constrains that spec).
 """
 
+import asyncio
 import math
 from datetime import datetime, timezone
 from typing import Protocol
@@ -232,10 +233,17 @@ async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
 
     Only VERIFY_LIMIT candidates are re-read. Measured against live upstream
     data, going deeper than three recovered no further matches.
+
+    All of them are read at once. Every one is needed anyway, since the
+    cheapest confirmed candidate wins rather than the first, so running them
+    together costs upstream the same requests and saves the user two round
+    trips on the slowest route in the app.
     """
+    short = ranked[:VERIFY_LIMIT]
+    parts = await asyncio.gather(*(ds.canonical_part(c.mpn, c.lcsc)
+                                   for c in short))
     best: tuple[ParametricPart, float, int] | None = None
-    for cand in ranked[:VERIFY_LIMIT]:
-        part = await ds.canonical_part(cand.mpn, cand.lcsc)
+    for cand, part in zip(short, parts):
         if part is None or part.price_usd is None:
             continue
         if part.price_usd >= orig_price or part.stock < MATCH_MIN_STOCK:

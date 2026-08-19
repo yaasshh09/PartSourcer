@@ -181,8 +181,10 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
   after a restart earns a fresh 429 that re-marks it.
 - Parametric (equivalent-matcher) results are not cached; every equivalent
   lookup hits upstream, now plus up to four canonical re-reads to verify a
-  claim. Those go through the same path the offer cache uses, so they are the
-  cheap kind of call, but an equivalent lookup is the heaviest route here.
+  claim. The three candidate reads run together, so the route measures about
+  1.0s against a warm local backend, down from 1.8s when they ran in turn. It
+  is still the heaviest route here by a wide margin: a cached detail lookup is
+  about 3ms.
 - The upstream price for a part is not stable across query shapes, and we
   cannot tell which of the values it returns is the true one. Pinning one read
   makes our numbers reproducible and mutually consistent, not provably right.
