@@ -1,4 +1,4 @@
-import { C, ARCHIVO, MONO } from '../theme.js'
+import { C, ARCHIVO } from '../theme.js'
 
 const STEPS = [
   { n: '01', title: 'You search', body: 'By MPN, LCSC code, or plain-text spec. We query an open parts database and return stock, price, package and datasheet, each stamped with when we read it.' },
@@ -29,17 +29,6 @@ export default function HowPage() {
             </div>
           </div>
         ))}
-      </div>
-      <div style={{ border: `3px solid ${C.ink}`, background: C.ink, color: '#fffdf5', padding: 22, marginTop: 24 }}>
-        <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
-          WHERE THE DATA COMES FROM
-        </div>
-        <p style={{ fontSize: 14, color: '#e6e2d4', fontWeight: 500, lineHeight: 1.6, margin: '10px 0 0' }}>
-          Built on the open <span style={{ fontFamily: MONO, color: C.yellow }}>jlcparts</span> / <span
-            style={{ fontFamily: MONO, color: C.yellow }}>jlcsearch</span> ecosystem, a free, parametric API over
-          the LCSC/JLCPCB catalog. Specs &amp; footprints cache long; stock &amp; price refresh in hours. Every
-          result shows a &quot;data as of&quot; timestamp so you always know how fresh it is.
-        </p>
       </div>
     </section>
   )
