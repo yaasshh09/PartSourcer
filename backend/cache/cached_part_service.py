@@ -12,6 +12,7 @@ stalest component.
 """
 
 import logging
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Callable, Iterable
 
@@ -31,6 +32,18 @@ log = logging.getLogger("partsourcer.cache")
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+#: What a held row keeps. Everything outside this follows the newest read.
+_HELD_FIELDS = ("price", "price_breaks", "currency", "stock", "in_stock",
+                "as_of")
+
+
+def _with_held_numbers(fetched: RawListing,
+                       held: RawListing | None) -> RawListing:
+    if held is None:
+        return fetched
+    return replace(fetched, **{f: getattr(held, f) for f in _HELD_FIELDS})
 
 
 def _spine_order(parts: list[Part], spine: list[str]) -> list[Part]:
@@ -105,8 +118,8 @@ class CachedPartService:
         and re-derives the fold from scratch, so a key that moves is not a
         stale claim.
 
-        A row that is already here and still fresh is kept, and the caller is
-        handed the kept version rather than the one just fetched. Upstream
+        Where a row is already here and still fresh, its numbers are kept and
+        the caller is handed those rather than the ones just fetched. Upstream
         answers differently depending on how a part is asked for, so a search
         read and a detail read of the same part disagree about a quarter of
         the time. Letting the newer read win meant the price a user was
@@ -114,6 +127,12 @@ class CachedPartService:
         honestly timestamped. One row is one answer until it expires. An
         explicit refresh passes force and does replace it, because that is
         what the user asked for.
+
+        Only the numbers are held, not the record. What a part *is* (its MPN,
+        package, description, links) follows the latest read, because holding
+        that would freeze an identity the merge has already moved on from and
+        the offer would go missing. as_of rides with the numbers, since it is
+        the moment those were read and the UI labels it exactly that way.
         """
         listings = list(listings)
         part_of = {normalize_exact(offer.mpn_as_listed): part.mpn_key
@@ -128,8 +147,9 @@ class CachedPartService:
                         row.listing)
 
         effective, rows = [], []
-        for listing in listings:
-            listing = held.get((listing.distributor, listing.sku), listing)
+        for fetched in listings:
+            listing = _with_held_numbers(
+                fetched, held.get((fetched.distributor, fetched.sku)))
             effective.append(listing)
             listing_key = normalize_exact(listing.mpn)
             if not listing_key:

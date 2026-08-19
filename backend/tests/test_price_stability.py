@@ -118,3 +118,23 @@ async def test_a_part_with_no_row_yet_takes_the_new_read(store):
     part, _, _ = await cached.lookup("PART-A")
 
     assert price(part) == 0.0009
+
+
+async def test_a_held_row_stays_findable_when_upstream_renames_the_part(store):
+    """Upstream can hand back a different mfr for the same sku. The kept row
+    keeps its own identity, but it still has to be filed where the merge that
+    just ran will look for it, or the offer vanishes on the next read."""
+    first = VaryingAdapter({"q": 0.0039}, ["OLD-NAME"])
+    cached = build(store, {"lcsc": first})
+    await cached.search("q", 1)
+
+    renamed = VaryingAdapter({"NEW-NAME": 0.0009}, ["NEW-NAME"])
+    cached2 = build(store, {"lcsc": renamed})
+    part, _, _ = await cached2.lookup("NEW-NAME")
+
+    assert part is not None
+    assert price(part) == 0.0039, "the held row still supplies the numbers"
+
+    again, _, _ = await cached2.lookup("NEW-NAME")
+    assert again is not None, "and it is still findable on the next read"
+    assert price(again) == 0.0039
