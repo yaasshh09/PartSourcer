@@ -20,16 +20,17 @@ row for row is worth more here than a column type nobody reads.
 
 import json
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 import asyncpg
 
-log = logging.getLogger("partsourcer.pg")
-
 from cache.store import (CACHE_SCHEMA_VERSION, CachedOffer, PartCacheRow,
                          SearchCacheRow)
+
+log = logging.getLogger("partsourcer.pg")
 
 # Any bigint works; it only has to be the same in every process. Two cold
 # starts landing together would otherwise race to drop and recreate the same
@@ -105,10 +106,16 @@ class PostgresCacheStore:
         t1 = time.perf_counter()
         async with self._pool.acquire() as conn:
             await self._migrate(conn)
-        # TEMPORARY, alongside _timed. If this line shows up once per request
-        # then the lifespan is restarting and the pool never gets reused.
-        log.info("pg pool opened create=%.0fms migrate=%.0fms",
-                 (t1 - t0) * 1000, (time.perf_counter() - t1) * 1000)
+            t2 = time.perf_counter()
+            await conn.fetchval("SELECT 1")
+            ping = (time.perf_counter() - t2) * 1000
+        # TEMPORARY, alongside _timed. ping is the floor: SELECT 1 on an open
+        # connection is one round trip and nothing else, so it says how far
+        # away the database really is from wherever this function runs.
+        log.info(
+            "pg pool opened region=%s create=%.0fms migrate=%.0fms ping=%.0fms",
+            os.environ.get("VERCEL_REGION", "?"), (t1 - t0) * 1000,
+            (t2 - t1) * 1000, ping)
 
     @staticmethod
     async def _schema_version(conn) -> int | None:
