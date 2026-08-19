@@ -6,18 +6,11 @@ import { oldestAsOf } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
+import Landing from '../components/Landing.jsx'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
-const COMING_SOON = ['BOM bulk upload', 'Price history', 'Browse by category', 'Biggest savings this week']
 
-// Fixed content, so it lives out here rather than being rebuilt on every
-// keystroke in the search box.
-const STEPS = [
-  { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
-  { n: '2', title: 'See stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
-  { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
-]
 const SKELETON_DELAYS = [0, 0.15, 0.3]
 
 export default function SearchPage() {
@@ -132,59 +125,7 @@ export default function SearchPage() {
       </NoticePanel>
     )
   } else {
-    body = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 30 }}>
-        <div style={{ borderTop: `3px solid ${C.ink}`, paddingTop: 26 }}>
-          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.orange }}>WHY PARTSOURCER</div>
-          <p style={{ fontSize: 18, color: '#2a2822', fontWeight: 500, lineHeight: 1.5, maxWidth: 700, margin: '14px 0 0' }}>
-            Finding a part that&apos;s <b>actually in stock</b>, at a fair price, with a footprint you can drop onto
-            your board means tab-hopping across distributor sites for every line of your BOM. PartSourcer collapses
-            that into one search, and points you to a cheaper equivalent when one genuinely exists.
-          </p>
-        </div>
-        {/* auto-fit rather than three fixed columns: a grid track never shrinks
-            below its content, so on a phone three of them overflowed the page.
-            This drops to two columns, then one, as the room runs out. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          {STEPS.map((s) => (
-            <div key={s.n} style={{ border: `3px solid ${C.ink}`, padding: 20,
-              background: s.accent ? C.yellow : C.paper }}>
-              <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 32, color: s.accent ? C.ink : C.orange }}>{s.n}</div>
-              <div style={{ fontWeight: 700, fontSize: 16, marginTop: 10 }}>{s.title}</div>
-              <div style={{ fontSize: 13, fontWeight: 500, marginTop: 6, color: s.accent ? '#3a3200' : C.sub }}>{s.body}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ border: `3px solid ${C.ink}`, background: C.ink, color: C.bg, padding: 26 }}>
-          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
-            EQUIVALENT OR NOTHING: WE DON&apos;T BLUR THE LINE
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 22, marginTop: 16 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: '#38d17a' }}>✓ Equivalent</div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-                Same package, matching core specs, well stocked, and confirmed cheaper on a second reading of both prices. Safe to swap.
-              </div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: '#ffb02e' }}>✗ No match</div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-                Close is not good enough. If we cannot verify a drop-in you get a plain no and the reason why, never a maybe.
-              </div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <div style={{ color: C.muted, fontWeight: 700, fontSize: 13, letterSpacing: '0.06em' }}>COMING SOON</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
-            {COMING_SOON.map((label) => (
-              <span key={label} style={{ fontFamily: MONO, fontSize: 13, background: C.paper,
-                border: `2px dashed ${C.ink}`, padding: '6px 12px', color: C.sub }}>{label}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+    body = <Landing />
   }
 
   return (
