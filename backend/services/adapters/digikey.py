@@ -3,6 +3,14 @@
 Currency is pinned to USD by header so no FX conversion is ever needed. A
 401 invalidates the cached token and retries exactly once, because the
 common cause is a token that expired between check and use.
+
+DigiKey returns one product once per package type: cut tape, tape and reel,
+Digi-Reel, sometimes a MarketPlace listing that ships from the supplier.
+Each of those has its own SKU, its own price ladder, and its own stock, and
+the product-level QuantityAvailable is the sum across all of them. Taking a
+SKU and a price from one package type and the stock from that sum publishes
+a quantity nobody can buy at the price shown, so one variation is chosen
+here and every field on the listing comes from that same one.
 """
 
 from datetime import datetime, timezone
@@ -12,6 +20,53 @@ import httpx
 from services.adapters.base import (DistributorAdapter, RawListing,
                                     UpstreamError, priced)
 from services.adapters.digikey_auth import DigiKeyTokenClient
+
+
+def _number(value: object, default: float = 0.0) -> float:
+    """Upstream numbers, defensively. One odd row must not kill a search."""
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
+
+def _ladder(variation: dict) -> tuple[float | None, list[dict]]:
+    """This package type's unit price and its full break ladder."""
+    breaks = []
+    for b in variation.get("StandardPricing") or []:
+        step = priced(_number(b.get("UnitPrice")))
+        if step is not None:
+            breaks.append({"qty": int(_number(b.get("BreakQuantity"))),
+                           "price_usd": step})
+    breaks.sort(key=lambda b: b["qty"])
+    return (breaks[0]["price_usd"] if breaks else None), breaks
+
+
+def _variation_stock(variation: dict) -> int | None:
+    """Stock for this package type, or None when DigiKey did not say."""
+    qty = variation.get("QuantityAvailableforPackageType")
+    return None if qty is None else int(_number(qty))
+
+
+def _preference(variation: dict) -> tuple:
+    """Sort key for picking one package type. Lower is better.
+
+    MarketPlace ships direct from the supplier with its own shipping fee, so
+    its unit price is not comparable to an ordinary DigiKey one and it only
+    wins when it is the sole offer. After that the order is what a person
+    sourcing a board actually wants: a real price, stock on the shelf, then
+    the smallest order they are allowed to place. Cheapest breaks the tie,
+    and the SKU breaks that, so upstream ordering never decides the answer.
+    """
+    price, _ = _ladder(variation)
+    return (
+        bool(variation.get("MarketPlace")),
+        price is None,
+        (_variation_stock(variation) or 0) <= 0,
+        int(_number(variation.get("MinimumOrderQuantity"), 1.0) or 1),
+        price if price is not None else float("inf"),
+        str(variation.get("DigiKeyProductNumber") or ""),
+    )
 
 
 class DigiKeyAdapter(DistributorAdapter):
@@ -57,24 +112,30 @@ class DigiKeyAdapter(DistributorAdapter):
 
     def _to_listing(self, product: dict, as_of: datetime,
                     rank: int = 0) -> RawListing:
-        variations = product.get("ProductVariations") or []
-        first = variations[0] if variations else {}
-        breaks = []
-        for b in first.get("StandardPricing") or []:
-            step = priced(float(b.get("UnitPrice") or 0.0))
-            if step is not None:
-                breaks.append({"qty": int(b.get("BreakQuantity") or 0),
-                               "price_usd": step})
-        breaks.sort(key=lambda b: b["qty"])
-        unit = (breaks[0]["price_usd"] if breaks
-                else priced(float(product.get("UnitPrice") or 0.0)))
+        variations = [v for v in product.get("ProductVariations") or []
+                      if isinstance(v, dict)]
+        chosen = min(variations, key=_preference) if variations else {}
 
-        stock = int(product.get("QuantityAvailable") or 0)
+        unit, breaks = _ladder(chosen)
+        if unit is None:
+            # Ranking puts priced package types first, so an unpriced choice
+            # means none of them published a ladder. DigiKey's single-unit
+            # product price is then the only price there is.
+            unit = priced(_number(product.get("UnitPrice")))
+
+        stock = _variation_stock(chosen)
+        if stock is None:
+            # QuantityAvailable is the sum across package types. With one
+            # variation the sum is that variation. With several it belongs to
+            # no single SKU, so this SKU's stock is simply unknown.
+            stock = (int(_number(product.get("QuantityAvailable")))
+                     if len(variations) <= 1 else 0)
+
         manufacturer = product.get("Manufacturer") or {}
         description = product.get("Description") or {}
         return RawListing(
             distributor="digikey",
-            sku=first.get("DigiKeyProductNumber") or "",
+            sku=chosen.get("DigiKeyProductNumber") or "",
             mpn=product.get("ManufacturerProductNumber") or "",
             brand=manufacturer.get("Name") or None,
             package="",

@@ -165,6 +165,16 @@ Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
   `is_preferred` are the mirror case, real for LCSC and `null` elsewhere. A
   part shows the first populated value across its offers rather than inventing
   one.
+- **One DigiKey offer is one package type.** DigiKey lists a part once per
+  package type (cut tape, tape and reel, Digi-Reel, sometimes a MarketPlace
+  listing that ships from the supplier), each with its own SKU, ladder and
+  stock, while the product-level `QuantityAvailable` is the sum across all of
+  them. The adapter picks one variation and reads SKU, price and stock from
+  that same one, so the quantity shown is buyable at the price shown. The
+  pick is ordered: ordinary before MarketPlace, priced before unpriced,
+  stocked before not, then smallest minimum order, then cheapest, then SKU,
+  so upstream ordering never decides it. When several variations exist and
+  DigiKey gave no per-package quantity, stock is `0` rather than the sum.
 - `?refresh=true` forces a fresh upstream fetch, throttled per
   (distributor, key) so one distributor's cooldown cannot block another's. It
   is also the only thing that replaces a still-fresh offer row.
