@@ -42,6 +42,9 @@ Thumbs.db
 .gstack/
 .playwright-mcp/
 backend/scripts/__pycache__/
+# Written by `vercel link`. Holds the project id, not a secret, but it is
+# this machine's link and not something a clone should inherit.
+.vercel/
 
 # ---- Internal docs kept out of the public repo ----
 /CLAUDE.md
