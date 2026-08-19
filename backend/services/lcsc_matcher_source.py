@@ -10,6 +10,7 @@ from models.parametric import ParametricPart
 from models.part import PartDetail
 from services.adapters.base import RawListing
 from services.adapters.lcsc import LcscAdapter
+from services.part_service import FETCH_DEPTH
 
 
 def _to_detail(listing: RawListing) -> PartDetail:
@@ -28,8 +29,29 @@ class LcscMatcherSource:
 
     async def get_part(self, lcsc_code: str,
                        refresh: bool = False) -> PartDetail | None:
+        """Resolve a bare LCSC code to a part.
+
+        This is the only way to go from a code to an MPN, so it stays, but
+        its query shape is its own and upstream prices differ by query shape.
+        Callers take the identity from here and the numbers from
+        canonical_part.
+        """
         listing = await self._adapter.lookup_sku(lcsc_code)
         return None if listing is None else _to_detail(listing)
+
+    async def canonical_part(self, mpn: str,
+                             lcsc_code: str) -> PartDetail | None:
+        """The one read whose price and stock are fit to publish.
+
+        Same call, same depth, as the one that fills the offer cache behind
+        the search and detail pages, so a part costs the same here as it
+        does everywhere else in the app.
+        """
+        listings = await self._adapter.lookup_mpn(mpn, FETCH_DEPTH)
+        for listing in listings:
+            if listing.sku == lcsc_code:
+                return _to_detail(listing)
+        return None
 
     async def list_parametric(self, category: str, package: str,
                               resistance_ohms: float | None = None

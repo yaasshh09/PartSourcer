@@ -172,15 +172,39 @@ def test_capacitor_original_missing_capacitance_yields_nothing():
 
 
 class FakeDS:
-    """Duck-typed MatcherSource: get_part plus list_parametric, nothing else."""
+    """Duck-typed MatcherSource: the three reads the matcher is allowed.
 
-    def __init__(self, detail, parametric):
+    canonical_part defaults to echoing the parametric row for a code, which
+    is the case where upstream happens to agree with itself. Pass `canonical`
+    to make the two bases disagree, which is what upstream really does.
+    """
+
+    def __init__(self, detail, parametric, canonical=None):
         self._detail = detail
         self._parametric = parametric   # dict: (category, package) -> list[ParametricPart]
+        self._canonical = canonical or {}   # lcsc -> (price, stock) or None
         self.calls = []
+        self.canonical_calls = []
 
     async def get_part(self, lcsc_code, refresh=False):
         return self._detail
+
+    async def canonical_part(self, mpn, lcsc_code):
+        self.canonical_calls.append(lcsc_code)
+        if lcsc_code in self._canonical:
+            spec = self._canonical[lcsc_code]
+            if spec is None:
+                return None
+            price, stock = spec
+            return detail(lcsc_code, "0603", price, stock, mpn)
+        for rows in self._parametric.values():
+            for row in rows:
+                if row.lcsc == lcsc_code:
+                    return detail(lcsc_code, row.package, row.price_usd,
+                                  row.stock, mpn)
+        if self._detail is not None and self._detail.lcsc == lcsc_code:
+            return self._detail
+        return None
 
     async def list_parametric(self, category, package, resistance_ohms=None):
         self.calls.append((category, package, resistance_ohms))
@@ -277,3 +301,188 @@ async def test_find_equivalent_unpriced_original_is_an_honest_null():
 async def test_find_equivalent_unknown_code_returns_none():
     ds = FakeDS(None, {})
     assert await find_equivalent(ds, "C000000") is None
+
+
+# --- price basis --------------------------------------------------------
+# Upstream hands back different prices and stock for the same part depending
+# on which endpoint is asked and how. Measured over 24 real parts, the
+# parametric price ran a median 1.5x and up to 6x under the search price for
+# the same code in the same minute. So candidates are ranked on parametric
+# data and then re-priced on the canonical read before anything is claimed.
+
+
+@pytest.mark.anyio
+async def test_the_original_price_shown_is_the_canonical_one():
+    # get_part resolves the code but reads a different query shape, so its
+    # price never reaches the response.
+    orig_row = rp("C100", price=0.000928, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0039, 8013731),
+                {("resistors", "0603"): [orig_row, cheaper]},
+                canonical={"C100": (0.000928, 1000), "C1": (0.0004, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.original.price_usd == 0.000928
+    assert resp.original.stock == 1000
+
+
+@pytest.mark.anyio
+async def test_percent_cheaper_is_computed_from_canonical_prices_only():
+    # Parametric would say 1 - 0.0004/0.000928 = 57%. The canonical basis
+    # says 1 - 0.0008/0.0012 = 33%, and 33 is the honest number.
+    orig_row = rp("C100", price=0.000928, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0039, 8013731),
+                {("resistors", "0603"): [orig_row, cheaper]},
+                canonical={"C100": (0.0012, 1000), "C1": (0.0008, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.percent_cheaper == 33
+    assert resp.equivalent.price_usd == 0.0008
+    assert "33% cheaper" in resp.equivalent.match_reason
+
+
+@pytest.mark.anyio
+async def test_a_candidate_that_is_not_cheaper_once_repriced_is_not_offered():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    looks_cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, looks_cheaper]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0011, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert "did not confirm" in resp.reason
+
+
+@pytest.mark.anyio
+async def test_a_candidate_with_thin_canonical_stock_is_not_offered():
+    # Parametric claimed 3.4M in stock, the canonical read says 19. Quoting
+    # "19 in stock" under a healthy-buffer rule would be the overstatement.
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    looks_deep = rp("C1", price=0.0004, stock=3441343)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, looks_deep]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0004, 19)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert "did not confirm" in resp.reason
+
+
+@pytest.mark.anyio
+async def test_verification_moves_past_a_failing_candidate_to_the_next():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    first = rp("C1", price=0.0004, stock=900000)
+    second = rp("C2", price=0.0005, stock=800000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, first, second]},
+                canonical={"C100": (0.0010, 1000),
+                           "C1": (0.0012, 900000),      # not actually cheaper
+                           "C2": (0.0006, 800000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C2"
+    assert resp.equivalent.price_usd == 0.0006
+
+
+@pytest.mark.anyio
+async def test_the_cheapest_confirmed_candidate_wins_not_the_first():
+    """Parametric order need not survive re-pricing, so all the confirmed
+    ones are compared rather than taking whichever verified first."""
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row,
+                                         rp("C1", price=0.0004, stock=900000),
+                                         rp("C2", price=0.0005, stock=800000)]},
+                canonical={"C100": (0.0010, 1000),
+                           "C1": (0.0009, 900000),
+                           "C2": (0.0002, 800000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C2"
+
+
+@pytest.mark.anyio
+async def test_only_the_top_three_candidates_are_repriced():
+    # Re-pricing costs an upstream call each. Measured live, nothing past
+    # the third candidate ever verified, so the walk stops there.
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    pool = [orig_row] + [rp(f"C{i}", price=0.0001 * i, stock=900000)
+                         for i in range(1, 6)]
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): pool},
+                canonical={"C100": (0.0010, 1000),
+                           "C1": (0.0011, 900000), "C2": (0.0011, 900000),
+                           "C3": (0.0011, 900000), "C4": (0.0002, 900000),
+                           "C5": (0.0002, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert ds.canonical_calls == ["C100", "C1", "C2", "C3"]
+
+
+@pytest.mark.anyio
+async def test_an_original_absent_from_the_canonical_read_is_an_honest_null():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0039, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]},
+                canonical={"C100": None})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert resp.original.price_usd is None
+    assert "no published price" in resp.reason
+
+
+@pytest.mark.anyio
+async def test_the_reason_quotes_the_verified_stock_not_the_parametric_one():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=3441343)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0004, 5102062)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert "5,102,062 in stock" in resp.equivalent.match_reason
+    assert resp.equivalent.stock == 5102062
+
+
+@pytest.mark.anyio
+async def test_capacitors_are_verified_on_the_same_basis():
+    orig_row = cp("C200", price=0.0030, stock=1000)
+    cheaper = cp("C1", price=0.0012, stock=500000, volt=25, tc="C0G")
+    ds = FakeDS(detail("C200", "0402", 0.0030, 1000, mpn="C-orig"),
+                {("capacitors", "0402"): [orig_row, cheaper]},
+                canonical={"C200": (0.0020, 1000), "C1": (0.0015, 500000)})
+    resp = await find_equivalent(ds, "C200")
+
+    assert resp.equivalent.price_usd == 0.0015
+    assert resp.equivalent.percent_cheaper == 25
+
+
+@pytest.mark.anyio
+async def test_a_saving_that_rounds_to_nothing_is_not_sold_as_a_swap():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    barely = rp("C1", price=0.0009, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, barely]},
+                canonical={"C100": (0.001000, 1000), "C1": (0.000999, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert "almost exactly" in resp.reason
+
+
+@pytest.mark.anyio
+async def test_a_one_percent_saving_still_counts():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0009, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.00099, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is not None
+    assert resp.equivalent.percent_cheaper == 1
