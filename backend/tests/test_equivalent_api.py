@@ -41,11 +41,16 @@ CAP_CHEAP = {"lcsc": 2, "mfr": "C-cheap", "package": "0402", "is_basic": False,
 
 
 def route(request):
+    # /api/search answers two different reads: lookup_sku resolves a code to
+    # an identity, and canonical_part re-reads a part by MPN to price it. So
+    # the mock has to answer for the candidate too, not just the original.
     p = request.url.path
     if p == "/api/search":
         q = request.url.params.get("q", "")
-        if "8734" in q:
+        if "8734" in q or "STM32" in q:
             return httpx.Response(200, json={"components": [IC_ROW]})
+        if "R-cheap" in q:
+            return httpx.Response(200, json={"components": [RES_CHEAP]})
         return httpx.Response(200, json={"components": [RES_ROW]})
     if p == "/resistors/list.json":
         return httpx.Response(200, json={"resistors": [RES_ROW, RES_CHEAP]})
@@ -57,6 +62,9 @@ def route(request):
 def cap_route(request):
     p = request.url.path
     if p == "/api/search":
+        q = request.url.params.get("q", "")
+        if "C-cheap" in q:
+            return httpx.Response(200, json={"components": [CAP_CHEAP]})
         return httpx.Response(200, json={"components": [CAP_ROW]})
     if p == "/capacitors/list.json":
         return httpx.Response(200, json={"capacitors": [CAP_ROW, CAP_CHEAP]})
@@ -136,6 +144,35 @@ def test_a_part_with_no_lcsc_offer_gets_an_honest_null_not_an_error():
     assert "LCSC" in body["reason"]
     assert body["original"]["lcsc"] is None
     assert body["original"]["distributor"] == "mouser"
+
+
+def test_an_unpriced_offer_does_not_break_picking_one_to_quote():
+    """Prices are optional now, and ordering None against a float used to
+    raise. An unpriced offer sorts last instead: it is the worst one to
+    quote, not a reason to fail the request."""
+    mixed = part("MOUSER-ONLY", [offer("mouser", "511-X", "MOUSER-ONLY",
+                                       price=None),
+                                 offer("digikey", "DK-1", "MOUSER-ONLY",
+                                       price=2.5)])
+    c = client_with(route, found=mixed)
+
+    resp = c.get("/api/equivalent/MOUSER-ONLY")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["original"]["price_usd"] == 2.5
+    assert body["original"]["distributor"] == "digikey"
+
+
+def test_an_offer_with_no_price_anywhere_still_answers_honestly():
+    only_unpriced = part("MOUSER-ONLY", [offer("mouser", "511-X",
+                                               "MOUSER-ONLY", price=None)])
+    c = client_with(route, found=only_unpriced)
+
+    body = c.get("/api/equivalent/MOUSER-ONLY").json()
+
+    assert body["equivalent"] is None
+    assert body["original"]["price_usd"] is None
 
 
 def test_an_unknown_part_is_a_404():

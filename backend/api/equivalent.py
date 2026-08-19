@@ -29,8 +29,15 @@ NO_LCSC_REASON = ("This part has no LCSC listing, and v1 equivalent matching "
 
 
 def _no_lcsc_response(part: Part) -> EquivalentResponse:
-    """An honest null built from a real offer, never a fabricated original."""
-    best = min(part.offers, key=lambda o: (not o.in_stock, o.price_usd))
+    """An honest null built from a real offer, never a fabricated original.
+
+    Unpriced offers sort last rather than raising: since prices became
+    optional, comparing None against a float here would have thrown, and an
+    offer with no price is the worst one to quote anyway.
+    """
+    best = min(part.offers, key=lambda o: (not o.in_stock,
+                                           o.price_usd is None,
+                                           o.price_usd or 0.0))
     return EquivalentResponse(
         original=OriginalRef(mpn_key=part.mpn_key, mpn=part.mpn,
                              package=part.package, price_usd=best.price_usd,
