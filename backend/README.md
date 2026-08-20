@@ -97,6 +97,11 @@ Loaded via pydantic-settings from the environment or a local `.env`
 | `RECORDER_TOKEN` | unset | shared secret for `POST /api/internal/record` (see below) |
 | `RECORDER_BATCH_SIZE` | `500` | max watchlist entries walked per recorder run |
 | `RECORDER_CONCURRENCY` | `4` | max simultaneous upstream fetches during a run |
+| `ENVIRONMENT` | `development` | `development`, `preview` or `production`. Vercel fills this from `VERCEL_ENV` on its own. Anything but `development` turns off `/docs` and holds CORS to HTTPS origins |
+| `RATE_LIMIT_REQUESTS` | `60` | requests allowed per client per window, per process |
+| `RATE_LIMIT_WINDOW_SECS` | `60.0` | length of that window |
+| `RATE_LIMIT_MAX_KEYS` | `4096` | how many clients the limiter tracks before evicting |
+| `MAX_REQUEST_BYTES` | `65536` | largest request body accepted, over which the answer is `413` |
 
 ## History recorder (SP2a)
 
@@ -145,8 +150,99 @@ against a real database with `DATABASE_URL` set:
 
 ## Errors
 
-Every error is `{"detail": "<message>"}`: `404` not found, `422` bad params,
-`502` upstream unreachable/malformed, `504` upstream timeout, `500` internal.
+Every error is `{"detail": "<message>"}`: `404` not found, `413` request body
+over `MAX_REQUEST_BYTES`, `422` bad params, `429` rate limited (carries
+`Retry-After`), `502` upstream unreachable/malformed, `504` upstream timeout,
+`500` internal.
+
+## Security
+
+What is enforced, where it lives, and what it deliberately does not claim.
+
+### Response headers
+
+`security.py` stamps every API response, including the ones the middleware
+generates itself: `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+`Cross-Origin-Resource-Policy`, and a `Content-Security-Policy` of
+`default-src 'none'` because a JSON API renders, loads and frames nothing.
+`Strict-Transport-Security` is added only when the browser's leg of the
+connection was TLS, read from `X-Forwarded-Proto`.
+
+The static site gets its own, wider policy from the `headers` block in the
+repo-root `vercel.json`: `script-src 'self'` with no `unsafe-inline`, plus the
+two Google Fonts hosts the page actually uses. It was checked against the real
+production bundle rather than assumed.
+
+> On Vercel the platform already sends its own `Strict-Transport-Security`
+> with a longer max-age. Both are strict, so a duplicate is harmless; the
+> app-level header is what covers a self-hosted Fly or Render deploy where
+> nothing else sets one.
+
+### Rate limiting
+
+`services/ratelimit.py`, a fixed window per client, mounted over everything but
+`/health`. The client is identified from headers the platform writes
+(`x-vercel-forwarded-for`, `x-real-ip`, `fly-client-ip`, `cf-connecting-ip`)
+and never from `X-Forwarded-For`, whose left-most entry is whatever the caller
+typed.
+
+**This is per process.** Each warm instance keeps its own counters, so the real
+ceiling is the limit times however many instances are up. That is a brake on
+one hammering client and it is not DDoS protection. The key table is bounded
+(`RATE_LIMIT_MAX_KEYS`) because an unbounded dict keyed by client address would
+turn the limiter itself into the attack.
+
+### Input bounds
+
+`api/validation.py`. These are cost controls, not sanitisers: nothing here is
+interpolated into SQL, a shell or markup, so there is no dangerous character to
+strip. `q` caps at 200 characters, `page` at 50, and a part key at 128, each
+refused before the request can reach the cache or a metered distributor.
+
+### SQL
+
+Every value reaches the database as a bound parameter (`?` on SQLite, `$1` on
+Postgres). Three statements interpolate a name into the string: a table name
+drawn from a module-level tuple of literals, and two variable-length runs of
+`?` placeholders for an `IN` list. `tests/test_repo_hygiene.py` parses the
+source and fails if a fourth appears or if either run starts joining values
+instead of placeholders.
+
+### Secrets
+
+Every credential is read from the environment by `config.py` and used only
+server-side. The frontend has exactly one build-time variable, `VITE_API_BASE`,
+which is not a secret; Vite inlines every `VITE_`-prefixed value into public
+JavaScript, so nothing else may ever carry that prefix. `httpx` request logging
+is pinned to `WARNING` because Mouser takes its API key as a query parameter
+and an INFO-level request line would write it into the host's log stream.
+
+The guard tests check that no `.env` but the two examples is tracked, that the
+real ones are ignored by pattern, that no example ships a filled-in value, and
+that no source file assigns a credential literal.
+
+### What is deliberately absent
+
+- **No accounts, sessions or cookies.** Every endpoint serves the same public
+  catalogue data, so there is no per-user authorization to check and no IDOR
+  surface. A guard test fails if a `Set-Cookie` ever appears, because the first
+  cookie needs `Secure`, `HttpOnly`, `SameSite` and CSRF tokens behind it.
+- **No CSRF tokens.** There is no ambient credential for a forged request to
+  ride: CORS runs with `allow_credentials=False`, and the one state-changing
+  endpoint authenticates on a custom header, which a cross-origin browser
+  cannot send without passing a preflight it will fail.
+- **No file uploads.** `MAX_REQUEST_BYTES` keeps that door shut rather than
+  widening it for a payload nothing accepts.
+
+### The one thing code cannot do
+
+A **Vercel spend cap** is a dashboard setting and there is no repo-side
+equivalent. Set it under Settings, Billing, Spend Management. Everything the
+app can do about cost it already does: per-distributor daily ceilings
+(`MOUSER_DAILY_LIMIT`, `DIGIKEY_DAILY_LIMIT`), a 30 second function timeout in
+`vercel.json`, the cache in front of every upstream call, and the rate limit
+above.
 
 ## Data & honesty notes
 
