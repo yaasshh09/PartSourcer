@@ -74,7 +74,6 @@ export default function Footer() {
               <a key={item.label} href={item.href} target="_blank" rel="noreferrer"
                 style={linkStyle}>{item.label}</a>
             ))}
-            <Link to="/nope" style={linkStyle}>404 demo</Link>
           </Column>
 
           <Column title="CONTACT">
@@ -92,7 +91,8 @@ export default function Footer() {
             Not affiliated with or endorsed by LCSC, JLCPCB, Mouser or DigiKey.
           </div>
           <div style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>
-            MIT licensed. Built by{' '}
+            {/* Read at render, so it never needs remembering in January. */}
+            &copy; {new Date().getFullYear()} PartSourcer. MIT licensed. Built by{' '}
             <a href={CONTACT.githubUrl} target="_blank" rel="noreferrer"
               style={{ color: '#bdb9aa' }}>{CONTACT.github}</a>.
           </div>

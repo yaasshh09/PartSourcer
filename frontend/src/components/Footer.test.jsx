@@ -21,10 +21,19 @@ test('the MIT licence goes to the actual licence file', () => {
     .toHaveAttribute('href', CONTACT.licenseUrl)
 })
 
-test('keeps the 404 demo reachable', () => {
+test('shows the current year, read at render rather than hardcoded', () => {
   wrap()
 
-  expect(screen.getByRole('link', { name: /404/i })).toBeInTheDocument()
+  const year = String(new Date().getFullYear())
+  expect(screen.getByText(new RegExp(`© ${year} PartSourcer`))).toBeInTheDocument()
+})
+
+test('does not ship the 404 demo link', () => {
+  wrap()
+
+  // The 404 page is reachable by mistyping any URL. Advertising it beside
+  // GitHub and the licence read as a dev artifact left switched on.
+  expect(screen.queryByRole('link', { name: /404/i })).not.toBeInTheDocument()
 })
 
 test('carries the contact routes people actually use', () => {
