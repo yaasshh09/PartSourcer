@@ -125,8 +125,10 @@ export default function Landing() {
         title="THE RULES THIS RUNS ON"
         lead="Four promises that cost the product something. Each one means fewer results, more blank fields, or more honest refusals than a tool that simply guessed.">
         {/* 400px so four cards land as two rows of two. At 260px the third
-            row fitted three and left the fourth stranded on its own. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+            row fitted three and left the fourth stranded on its own. The
+            min() caps the track at the container instead of that 400px
+            floor, which is what stopped a 375px phone scrolling sideways. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))',
           gap: 16, marginTop: 18 }}>
           {PRINCIPLES.map((p) => (
             <div key={p.title} style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 20 }}>

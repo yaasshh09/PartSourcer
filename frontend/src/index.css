@@ -16,3 +16,42 @@ input:focus { outline: none; }
 button { cursor: pointer; }
 ::selection { background: #ffe14d; }
 @keyframes ps-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* The header toggle. Inline styles cannot carry a media query, and the width
+   at which the five links stop fitting beside the wordmark is a layout fact,
+   not a piece of state, so it lives here rather than in a resize listener. */
+.ps-nav-toggle { display: none; }
+
+.ps-nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  flex: 1 1 240px;
+  gap: 4px;
+  row-gap: 4px;
+}
+
+@media (max-width: 640px) {
+  .ps-nav-toggle { display: inline-flex; }
+
+  .ps-nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding-bottom: 8px;
+  }
+
+  .ps-nav-links[data-open='true'] { display: flex; }
+
+  /* Stacked, the underline that marks the active page would run the whole
+     width of the panel and read as a divider. A left bar says the same thing
+     without pretending to be a rule. */
+  .ps-nav-links a {
+    border-bottom: 0 !important;
+    border-left: 3px solid transparent;
+    padding: 10px 12px !important;
+  }
+  .ps-nav-links a.active { border-left-color: #111; }
+}

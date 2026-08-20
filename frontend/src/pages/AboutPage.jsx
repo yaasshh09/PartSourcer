@@ -122,8 +122,10 @@ export default function AboutPage() {
       </p>
 
       {/* 340px so the four land as two rows of two. At 200px the row fitted
-          three and left OPEN-SOURCE stranded underneath on its own. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          three and left OPEN-SOURCE stranded underneath on its own. The
+          min() caps the track at the container rather than that 340px
+          floor, which a 375px phone is narrower than. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))',
         gap: 16, marginTop: 30 }}>
         {CARDS.map((card) => (
           <div key={card.title} style={{ border: `3px solid ${C.ink}`, padding: 22,
