@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { C, ARCHIVO } from '../theme.js'
+import { C, ARCHIVO, SHELL_MAX } from '../theme.js'
 import { CONTACT } from '../contact.js'
 
 const PRODUCT = [
@@ -47,7 +47,7 @@ function Column({ title, children }) {
 export default function Footer() {
   return (
     <footer style={{ background: C.ink, color: '#fffdf5', borderTop: `3px solid ${C.ink}` }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '44px 28px 0' }}>
+      <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '44px 28px 0' }}>
         {/* The blurb column is given more room than the link columns, and the
             whole thing collapses to a stack when there is no room for two. */}
         <div style={{ display: 'grid', gap: 32,

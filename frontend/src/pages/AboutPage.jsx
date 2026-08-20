@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { C, ARCHIVO, MONO } from '../theme.js'
+import { C, ARCHIVO, MONO, PROSE_MAX } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
 const CARDS = [
@@ -54,7 +54,7 @@ export default function AboutPage() {
   useDocumentTitle('About')
 
   return (
-    <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
+    <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,
         fontSize: 13, padding: '6px 12px' }}>ABOUT</span>
       <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 46, lineHeight: 1.0,
@@ -121,12 +121,9 @@ export default function AboutPage() {
         placeholder.
       </p>
 
-      {/* 340px so the four land as two rows of two. At 200px the row fitted
-          three and left OPEN-SOURCE stranded underneath on its own. The
-          min() caps the track at the container rather than that 340px
-          floor, which a 375px phone is narrower than. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))',
-        gap: 16, marginTop: 30 }}>
+      {/* Four of them, so ps-grid-4 steps four to two to one and never
+          leaves OPEN-SOURCE stranded underneath on its own. */}
+      <div className="ps-grid-4" style={{ marginTop: 30 }}>
         {CARDS.map((card) => (
           <div key={card.title} style={{ border: `3px solid ${C.ink}`, padding: 22,
             background: card.accent ? C.yellow : C.paper }}>

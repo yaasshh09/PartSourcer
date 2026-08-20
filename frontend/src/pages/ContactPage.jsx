@@ -1,4 +1,4 @@
-import { C, ARCHIVO, MONO } from '../theme.js'
+import { C, ARCHIVO, MONO, PROSE_MAX } from '../theme.js'
 import { CONTACT } from '../contact.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
@@ -30,7 +30,7 @@ export default function ContactPage() {
   useDocumentTitle('Contact')
 
   return (
-    <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
+    <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,
         fontSize: 13, padding: '6px 12px' }}>CONTACT</span>
       <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 46, lineHeight: 1.0,

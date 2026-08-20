@@ -1,4 +1,4 @@
-import { C, ARCHIVO } from '../theme.js'
+import { C, ARCHIVO, PROSE_MAX } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
 const STEPS = [
@@ -11,14 +11,17 @@ export default function HowPage() {
   useDocumentTitle('How it works')
 
   return (
-    <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
+    <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.ink, color: C.yellow, fontWeight: 700,
         fontSize: 13, padding: '6px 12px' }}>HOW IT WORKS</span>
       <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 46, lineHeight: 1.0,
         letterSpacing: '-0.03em', margin: '22px 0 0' }}>
         SEARCH → MATCH → SAVE.
       </h1>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 30 }}>
+      {/* 01 02 03 reads as a sequence, so ps-grid-3 keeps all three on one
+          row and then drops straight to a column. Two across would split a
+          three-step sequence two-and-one, which reads as a mistake. */}
+      <div className="ps-grid-3" style={{ marginTop: 30 }}>
         {STEPS.map((step) => (
           <div key={step.n} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20,
             border: `3px solid ${C.ink}`, padding: 22, background: step.accent ? C.yellow : C.paper,

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { C, ARCHIVO } from '../theme.js'
+import { C, ARCHIVO, PROSE_MAX } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
 export default function NotFoundPage() {
@@ -8,7 +8,7 @@ export default function NotFoundPage() {
   const navigate = useNavigate()
 
   return (
-    <section style={{ maxWidth: 820, margin: '0 auto', padding: '90px 28px', textAlign: 'center' }}>
+    <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '90px 28px', textAlign: 'center' }}>
       <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 140, lineHeight: 1, color: C.orange }}>404</div>
       <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30, marginTop: 8 }}>
         THIS PART ISN&apos;T ON THE BOARD.

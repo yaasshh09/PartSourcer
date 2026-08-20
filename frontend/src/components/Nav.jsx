@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
-import { C, ARCHIVO } from '../theme.js'
+import { C, ARCHIVO, SHELL_MAX } from '../theme.js'
 
 const link = ({ isActive }) => ({
   cursor: 'pointer', padding: '6px 12px', fontWeight: 600, fontSize: 14,
@@ -35,7 +35,7 @@ export default function Nav() {
           took a second row and left Contact stranded alone on a third. Below
           640px they collapse behind the toggle instead. Between there and
           full width they still wrap, which costs a row but hides nothing. */}
-      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '8px 28px', minHeight: 66,
+      <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '8px 28px', minHeight: 66,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', rowGap: 4 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

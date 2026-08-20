@@ -124,12 +124,10 @@ export default function Landing() {
       <Section
         title="THE RULES THIS RUNS ON"
         lead="Four promises that cost the product something. Each one means fewer results, more blank fields, or more honest refusals than a tool that simply guessed.">
-        {/* 400px so four cards land as two rows of two. At 260px the third
-            row fitted three and left the fourth stranded on its own. The
-            min() caps the track at the container instead of that 400px
-            floor, which is what stopped a 375px phone scrolling sideways. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))',
-          gap: 16, marginTop: 18 }}>
+        {/* Four of them, so ps-grid-4 steps straight from four across to two
+            to one. A fluid floor put three on the first row and left the
+            fourth alone on the second. */}
+        <div className="ps-grid-4" style={{ marginTop: 18 }}>
           {PRINCIPLES.map((p) => (
             <div key={p.title} style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 20 }}>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{p.title}</div>

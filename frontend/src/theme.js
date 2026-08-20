@@ -3,6 +3,13 @@ export const C = {
   paper: '#fff', sub: '#6a6858', muted: '#8a8778',
 }
 
+// How wide a page runs before it starts leaving margin, in two tiers. The
+// shell carries offer tables and card grids and wants the room. A prose page
+// still stops narrower, because the cards inside it hold body text and a line
+// that runs the whole monitor is not readable however little space it wastes.
+export const SHELL_MAX = 1600
+export const PROSE_MAX = 1400
+
 export const ARCHIVO = "'Archivo',sans-serif"
 export const MONO = "'IBM Plex Mono',monospace"
 

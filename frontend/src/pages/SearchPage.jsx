@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
-import { C, ARCHIVO, MONO, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX } from '../theme.js'
 import { oldestAsOf } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
@@ -133,7 +133,7 @@ export default function SearchPage() {
 
   return (
     <div>
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '70px 28px 40px' }}>
+      <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '70px 28px 40px' }}>
         <span style={{ display: 'inline-block', background: C.ink, color: C.yellow, fontWeight: 700,
           fontSize: 13, padding: '6px 12px' }}>FREE &amp; OPEN-SOURCE ✱ MIT</span>
         {/* Scales instead of breaking: at a flat 60px the word CHEAPEST alone
@@ -175,7 +175,7 @@ export default function SearchPage() {
           </span>
         </div>
       </section>
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '12px 28px 70px' }}>
+      <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '12px 28px 70px' }}>
         {body}
       </section>
     </div>

@@ -55,3 +55,31 @@ button { cursor: pointer; }
   }
   .ps-nav-links a.active { border-left-color: #111; }
 }
+
+/* Card grids whose item count is fixed and known. auto-fit slides through
+   every column count as the page narrows, so four cards pass through three
+   and strand the fourth on a row of its own, which is exactly what the wider
+   page started doing. These step 4 -> 2 -> 1 and 3 -> 1, skipping the counts
+   that leave a row short. Inline styles would win over these, so the grid
+   itself has to live here and not in the JSX. */
+.ps-grid-4,
+.ps-grid-3 {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.ps-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ps-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (max-width: 1180px) {
+  .ps-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .ps-grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .ps-grid-4 { grid-template-columns: 1fr; }
+}

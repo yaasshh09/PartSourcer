@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
-import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf, NO_PRICE } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf, NO_PRICE, PROSE_MAX, SHELL_MAX } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from '../components/StockBadge.jsx'
 import CopyButton from '../components/CopyButton.jsx'
@@ -79,7 +79,7 @@ export default function DetailPage() {
 
   if (notFound) {
     return (
-      <section style={{ maxWidth: 820, margin: '0 auto', padding: '90px 28px', textAlign: 'center' }}>
+      <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '90px 28px', textAlign: 'center' }}>
         <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 140, lineHeight: 1, color: C.orange }}>404</div>
         <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 30, marginTop: 8 }}>
           {"THIS PART ISN'T ON THE BOARD."}
@@ -98,7 +98,7 @@ export default function DetailPage() {
 
   if (loading) {
     return (
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
+      <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '34px 28px 70px' }}>
         <div style={{ height: 140, border: `3px solid ${C.ink}`, background: '#f0eee2',
           animation: 'ps-pulse 1s ease-in-out infinite' }} />
         <div style={{ marginTop: 14, fontSize: 14, color: C.muted, fontWeight: 600 }}>Loading…</div>
@@ -113,7 +113,7 @@ export default function DetailPage() {
 
   if (error) {
     return (
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
+      <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '34px 28px 70px' }}>
         <NoticePanel title={"COULDN'T LOAD THIS PART"}>{error.detail}</NoticePanel>
       </section>
     )
@@ -149,7 +149,7 @@ export default function DetailPage() {
   const original = equiv && equiv.original
 
   return (
-    <section style={{ maxWidth: 1120, margin: '0 auto', padding: '34px 28px 70px' }}>
+    <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '34px 28px 70px' }}>
       <Link to="/" style={{ display: 'inline-block', fontWeight: 700, fontSize: 14, color: C.ink,
         textDecoration: 'none', marginBottom: 22 }}>← Back to results</Link>
 
