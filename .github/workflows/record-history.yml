@@ -1,33 +1,59 @@
 name: Record price history
 
-# Render free spins the backend down after ~15 min idle, so the first
-# request wakes it and can take 30 to 60 seconds. The generous timeout and
-# single retry below absorb that cold start.
+# The backend runs on Vercel as a service behind part-sourcer.vercel.app. The
+# old Render host is gone, so the URL lives here rather than in a secret: it
+# is public, and keeping it in a secret is how this cron ended up POSTing at a
+# dead host without anyone noticing. Override it with a BACKEND_URL repository
+# variable if the host ever moves.
+#
+# Heads-up: main.py is pinned to maxDuration 30 in vercel.json, so a run that
+# walks a big watchlist gets cut off at 30 seconds whatever --max-time says
+# below. Keep RECORDER_BATCH_SIZE small enough to finish inside that.
+
 on:
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
 
+env:
+  BACKEND_URL: ${{ vars.BACKEND_URL || 'https://part-sourcer.vercel.app' }}
+
 jobs:
   record:
     runs-on: ubuntu-latest
+    env:
+      RECORDER_TOKEN: ${{ secrets.RECORDER_TOKEN }}
     steps:
-      - name: Wake the backend
+      - name: Check the recorder is configured
+        run: |
+          if [ -z "${RECORDER_TOKEN}" ]; then
+            echo "RECORDER_TOKEN is unset here, so the backend would 503 anyway."
+            echo "Set the same value on Vercel and as a GitHub secret to turn"
+            echo "price history on."
+            exit 1
+          fi
+          echo "token present, target is ${BACKEND_URL}"
+
+      - name: Warm the backend
         continue-on-error: true
-        run: curl -sS --max-time 90 "${{ secrets.BACKEND_URL }}/health" || true
+        run: curl -sS --max-time 60 "${BACKEND_URL}/health" || true
 
       - name: Trigger the recorder
         run: |
           set -euo pipefail
           for attempt in 1 2; do
             code=$(curl -sS -o /tmp/out.json -w "%{http_code}" \
-              --max-time 300 \
-              -X POST "${{ secrets.BACKEND_URL }}/api/internal/record" \
-              -H "X-Recorder-Token: ${{ secrets.RECORDER_TOKEN }}")
+              --max-time 90 \
+              -X POST "${BACKEND_URL}/api/internal/record" \
+              -H "X-Recorder-Token: ${RECORDER_TOKEN}")
             if [ "$code" = "200" ]; then
               echo "recorder ok:"; cat /tmp/out.json; exit 0
             fi
             echo "attempt $attempt failed with HTTP $code"; cat /tmp/out.json || true
+            case "$code" in
+              503) echo "503 means RECORDER_TOKEN or DATABASE_URL is unset on the backend." ;;
+              504) echo "504 means the 30s function ceiling was hit. Lower RECORDER_BATCH_SIZE." ;;
+            esac
             sleep 30
           done
           exit 1

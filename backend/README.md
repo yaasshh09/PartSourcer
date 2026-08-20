@@ -138,8 +138,16 @@ Generate a token with:
 ```
 
 Set the same value as `RECORDER_TOKEN` on the backend host and as the
-`RECORDER_TOKEN` GitHub Actions secret. `BACKEND_URL` is the other required
-Actions secret.
+`RECORDER_TOKEN` GitHub Actions secret. That is the only secret the cron
+needs. The backend URL is public, so it lives in the workflow file rather than
+in a secret, with an optional `BACKEND_URL` repository variable to override it
+if the host moves.
+
+On Vercel the backend function is capped at 30 seconds by `maxDuration` in the
+repo-root `vercel.json`, so a run that cannot walk the whole watchlist inside
+that window returns `504`. Lower `RECORDER_BATCH_SIZE` until a run finishes,
+rather than raising the ceiling, which would raise it for every public route
+too.
 
 Live Postgres tests are marked `live` and deselected by default. Run them
 against a real database with `DATABASE_URL` set:
