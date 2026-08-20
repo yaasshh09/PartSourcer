@@ -49,11 +49,71 @@ backend/scripts/__pycache__/
 # ---- Internal docs kept out of the public repo ----
 /CLAUDE.md
 /fable-brain.md
-/partsourcer-spec.md
-/partsourcer-backend-prompts.md
 /docs/superpowers/
 
 # Vendor API spec we keep locally to check the DigiKey adapter against.
 # Nothing in the code reads it, and it is 150 KB of someone else's JSON,
 # so it stays out of the repo.
 /docs/digikey-productsearch-v4.json
+
+# ---- Logs ----
+# The Mouser API key travels as a query parameter, so a stray request log is
+# a credential leak, not just noise. httpx logging is pinned to WARNING for
+# the same reason.
+*.log
+logs/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Anything holding a credential ----
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+secrets.*
+credentials.*
+*-service-account.json
+gha-creds-*.json
+.envrc
+.direnv/
+
+# Captured HTTP traffic. A .har of a distributor call contains the full
+# request, API key and all.
+*.har
+
+# ---- More local database files ----
+*.sqlite
+*.sqlite3
+*.dump
+
+# ---- Build and tool caches not already covered ----
+coverage/
+.eslintcache
+*.pid
+
+# ---- Editor history and other agent tools ----
+# VS Code's Local History keeps snapshots of files you edited, which includes
+# any .env you happened to open.
+.history/
+.cursor/
+.windsurf/
+.continue/
+.aider*
+
+# ---- Scratch and leftovers ----
+tmp/
+scratch/
+*.tmp
+*.bak
+*.orig
+*.rej
+*~
+
+# ---- More internal docs ----
+# Nested too, not just at the root, so a per-folder copy cannot slip out.
+CLAUDE.md
+CLAUDE.local.md
+/partsourcer-spec.md
+/partsourcer-backend-prompts.md
