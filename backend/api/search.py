@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from cache.cached_part_service import CachedPartService
 from models.offer import SearchResponse
 from services.datasource import UPSTREAM_STATUS, UpstreamError
+from api.validation import MAX_PAGE, MAX_QUERY_LEN
 from services.deps import get_cached_service
 
 router = APIRouter(prefix="/api")
@@ -12,8 +13,8 @@ router = APIRouter(prefix="/api")
 
 @router.get("/search", response_model=SearchResponse)
 async def search(
-    q: str = "",
-    page: int = Query(1, ge=1),
+    q: str = Query("", max_length=MAX_QUERY_LEN),
+    page: int = Query(1, ge=1, le=MAX_PAGE),
     refresh: bool = False,
     cached: CachedPartService = Depends(get_cached_service),
 ) -> SearchResponse:

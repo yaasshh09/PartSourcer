@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
 from api.legacy import LEGACY_CODE, canonical_mpn
+from api.validation import check_key_length
 from cache.cached_part_service import CachedPartService
 from models.equivalent import EquivalentResponse, OriginalRef
 from models.offer import Part
@@ -55,6 +56,7 @@ async def get_equivalent(
     lcsc: LcscAdapter = Depends(get_lcsc_adapter),
 ):
     raw = mpn_key.strip()
+    check_key_length(raw)
     try:
         # The part route has always resolved these; this one did not, so every
         # link minted before the move to MPN keys 404'd on the one feature the

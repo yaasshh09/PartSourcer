@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
 from api.legacy import LEGACY_CODE, canonical_mpn
+from api.validation import check_key_length
 from cache.cached_part_service import CachedPartService
 from models.offer import PartResponse
 from services.adapters.lcsc import LcscAdapter
@@ -32,6 +33,7 @@ async def get_part(
     lcsc: LcscAdapter = Depends(get_lcsc_adapter),
 ):
     raw = mpn_key.strip()
+    check_key_length(raw)
 
     # 2SC1815 is widely catalogued as C1815, so a code-shaped string is not
     # proof of a SKU. Resolve first, and fall through to MPN handling when it
