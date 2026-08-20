@@ -8,6 +8,7 @@ import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
 import Landing from '../components/Landing.jsx'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 
@@ -16,6 +17,8 @@ const SKELETON_DELAYS = [0, 0.15, 0.3]
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') || ''
+
+  useDocumentTitle(q || null)
 
   const [query, setQuery] = useState(q)
   const [results, setResults] = useState([])

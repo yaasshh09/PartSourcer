@@ -11,6 +11,7 @@ import OfferTable from '../components/OfferTable.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
 import Price from '../components/Price.jsx'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 export default function DetailPage() {
   const params = useParams()
@@ -26,6 +27,8 @@ export default function DetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState(null)
   const waking = useWaking(loading)
+
+  useDocumentTitle(data?.part?.mpn || key || 'Part')
 
   useEffect(() => {
     let cancelled = false

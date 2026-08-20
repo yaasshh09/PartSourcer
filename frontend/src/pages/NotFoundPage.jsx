@@ -1,7 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { C, ARCHIVO } from '../theme.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 export default function NotFoundPage() {
+  useDocumentTitle('Page not found')
+
   const navigate = useNavigate()
 
   return (

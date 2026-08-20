@@ -1,4 +1,5 @@
 import { C, ARCHIVO } from '../theme.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 const QA = [
   { q: 'Is it really free?', a: "Yes. Free forever on core features, no signup to search. It's MIT open-source, fork it if you like." },
@@ -8,6 +9,8 @@ const QA = [
 ]
 
 export default function FaqPage() {
+  useDocumentTitle('FAQ')
+
   return (
     <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,

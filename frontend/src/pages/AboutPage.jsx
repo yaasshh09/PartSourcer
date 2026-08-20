@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { C, ARCHIVO, MONO } from '../theme.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 const CARDS = [
   { title: 'FREE FOREVER', body: 'No paywall on core features. Any future revenue is optional affiliate links, never gating.' },
@@ -50,6 +51,8 @@ const sectionTitle = {
 const body = { fontSize: 16, color: '#4a4838', lineHeight: 1.7, fontWeight: 500 }
 
 export default function AboutPage() {
+  useDocumentTitle('About')
+
   return (
     <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,

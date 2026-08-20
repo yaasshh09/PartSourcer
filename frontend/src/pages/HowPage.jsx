@@ -1,4 +1,5 @@
 import { C, ARCHIVO } from '../theme.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 const STEPS = [
   { n: '01', title: 'You search', body: 'By MPN, LCSC code, or plain-text spec. PartSourcer queries an open parts database and returns stock, price, package and datasheet, each stamped with the moment it was read.' },
@@ -7,6 +8,8 @@ const STEPS = [
 ]
 
 export default function HowPage() {
+  useDocumentTitle('How it works')
+
   return (
     <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.ink, color: C.yellow, fontWeight: 700,

@@ -1,5 +1,6 @@
 import { C, ARCHIVO, MONO } from '../theme.js'
 import { CONTACT } from '../contact.js'
+import useDocumentTitle from '../useDocumentTitle.js'
 
 const WAYS = [
   {
@@ -26,6 +27,8 @@ const WAYS = [
 ]
 
 export default function ContactPage() {
+  useDocumentTitle('Contact')
+
   return (
     <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 28px 80px' }}>
       <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,
