@@ -21,6 +21,19 @@ test('unknown route shows 404 page', () => {
   expect(screen.getByText('404')).toBeInTheDocument()
 })
 
+test('browse routes resolve', () => {
+  vi.spyOn(api, 'getCategories').mockReturnValue(new Promise(() => {}))
+  renderAt('/browse')
+  expect(screen.getByText('BROWSE BY CATEGORY')).toBeInTheDocument()
+})
+
+test('a category route resolves', () => {
+  vi.spyOn(api, 'getCategories').mockReturnValue(new Promise(() => {}))
+  renderAt('/browse/resistors')
+  expect(screen.getByText('← All categories')).toBeInTheDocument()
+  expect(screen.queryByText('404')).not.toBeInTheDocument()
+})
+
 test('about route resolves', () => {
   renderAt('/about')
   expect(screen.getByText('ABOUT')).toBeInTheDocument()

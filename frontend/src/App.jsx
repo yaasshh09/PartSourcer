@@ -4,6 +4,8 @@ import Footer from './components/Footer.jsx'
 import SearchPage from './pages/SearchPage.jsx'
 import DetailPage from './pages/DetailPage.jsx'
 import AboutPage from './pages/AboutPage.jsx'
+import BrowsePage from './pages/BrowsePage.jsx'
+import CategoryPage from './pages/CategoryPage.jsx'
 import HowPage from './pages/HowPage.jsx'
 import FaqPage from './pages/FaqPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
@@ -19,6 +21,8 @@ export default function App() {
           {/* Splat, not a named param: a named param stops at the first
               slash, and real MPNs contain them (LM358P/NOPB). */}
           <Route path="/part/*" element={<DetailPage />} />
+          <Route path="/browse" element={<BrowsePage />} />
+          <Route path="/browse/:slug" element={<CategoryPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/how" element={<HowPage />} />
           <Route path="/faq" element={<FaqPage />} />
