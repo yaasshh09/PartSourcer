@@ -47,3 +47,14 @@ export function getPart(mpnKey) {
 export function getEquivalent(mpnKey) {
   return getJson(`/equivalent/${encodeKey(mpnKey)}`)
 }
+
+export function getCategories() {
+  return getJson('/browse')
+}
+
+// Values go up exactly as typed ("10k", "100n"). The backend owns unit
+// conversion, because upstream silently reads "10k" as 10 ohms.
+export function browse(slug, params = {}) {
+  const qs = new URLSearchParams(params).toString()
+  return getJson(`/browse/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`)
+}

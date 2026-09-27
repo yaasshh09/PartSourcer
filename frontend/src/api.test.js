@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { search, getPart, getEquivalent, encodeKey, ApiError } from './api.js'
+import { search, getPart, getEquivalent, encodeKey, ApiError, browse, getCategories } from './api.js'
 
 function mockFetchOnce({ ok = true, status = 200, body = {} }) {
   return vi.fn().mockResolvedValue({
@@ -92,5 +92,31 @@ describe('error mapping', () => {
       json: async () => { throw new SyntaxError('Unexpected token <') },
     })
     await expect(search('x')).rejects.toBeInstanceOf(ApiError)
+  })
+})
+
+describe('browse', () => {
+  test('sends filters exactly as typed', async () => {
+    global.fetch = mockFetchOnce({ body: { results: [] } })
+    await browse('resistors', { package: '0603', resistance: '4k7' })
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/browse\/resistors\?package=0603&resistance=4k7$/)
+  })
+
+  test('sends no query string when there are no filters', async () => {
+    global.fetch = mockFetchOnce({ body: { results: [] } })
+    await browse('leds')
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/browse\/leds$/)
+  })
+
+  test('getCategories reads /browse', async () => {
+    global.fetch = mockFetchOnce({ body: { categories: [] } })
+    await getCategories()
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/api\/browse$/)
+  })
+
+  test('a 422 surfaces its message', async () => {
+    global.fetch = mockFetchOnce({ ok: false, status: 422, body: { detail: "'ten' is not a resistance." } })
+    await expect(browse('resistors', { resistance: 'ten' }))
+      .rejects.toMatchObject({ status: 422, detail: "'ten' is not a resistance." })
   })
 })
