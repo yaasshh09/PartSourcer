@@ -17,6 +17,7 @@ from cache.store import CacheStore, SqliteCacheStore
 from config import settings
 from history.store import HistoryStore, PostgresHistoryStore
 from services.adapters.lcsc import LcscAdapter
+from services.browse import BrowseService
 from services.lcsc_matcher_source import LcscMatcherSource
 from services.part_service import PartService, build_part_service
 from services.throttle import RefreshThrottle
@@ -30,6 +31,7 @@ _part_service: PartService | None = None
 _cached_service: CachedPartService | None = None
 _lcsc_adapter: LcscAdapter | None = None
 _matcher_source: LcscMatcherSource | None = None
+_browse_service: BrowseService | None = None
 _distributor_clients: list[httpx.AsyncClient] = []
 
 
@@ -57,6 +59,7 @@ async def _open_cache() -> CacheStore:
 async def startup() -> None:
     global _client, _store, _history_store, _part_service
     global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
+    global _browse_service
     _client = httpx.AsyncClient(
         base_url=settings.jlcsearch_base_url,
         timeout=settings.request_timeout_secs,
@@ -69,6 +72,8 @@ async def startup() -> None:
     _matcher_source = LcscMatcherSource(
         _lcsc_adapter, store=_store,
         offer_ttl_secs=settings.stock_cache_ttl_secs)
+    _browse_service = BrowseService(
+        _lcsc_adapter, store=_store, ttl_secs=settings.stock_cache_ttl_secs)
     _part_service, _distributor_clients = build_part_service(settings, _client)
     # Two independent round trips to a database that may be a continent away,
     # and every cold start pays for both, so they go together rather than one
@@ -94,6 +99,7 @@ async def startup() -> None:
 async def shutdown() -> None:
     global _client, _store, _history_store, _part_service
     global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
+    global _browse_service
     if _history_store is not None and hasattr(_history_store, "close"):
         await _history_store.close()
     if _store is not None:
@@ -107,6 +113,7 @@ async def shutdown() -> None:
     _cached_service = None
     _lcsc_adapter = None
     _matcher_source = None
+    _browse_service = None
     if _client is not None:
         await _client.aclose()
     _client = None
@@ -132,3 +139,8 @@ def get_lcsc_adapter() -> LcscAdapter:
 def get_matcher_source() -> LcscMatcherSource:
     assert _matcher_source is not None, "matcher source not initialized"
     return _matcher_source
+
+
+def get_browse_service() -> BrowseService:
+    assert _browse_service is not None, "browse not initialized (lifespan not run)"
+    return _browse_service
