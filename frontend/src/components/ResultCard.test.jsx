@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { test, expect, afterEach, vi } from 'vitest'
 import ResultCard from './ResultCard.jsx'
+import { CompareProvider } from '../compare.jsx'
 
 function offer(over = {}) {
   return {
@@ -158,4 +159,12 @@ test('shows no manufacturer line at all when there is none', () => {
   const { container } = renderCard(part({ brand: null }))
   expect(screen.queryByTestId('brand')).not.toBeInTheDocument()
   expect(container.textContent).not.toMatch(/unknown|n\/a|\u2014/i)
+})
+
+test('a search card can be pinned for comparison', () => {
+  localStorage.clear()
+  render(<MemoryRouter><CompareProvider><ResultCard part={part()} /></CompareProvider></MemoryRouter>)
+  fireEvent.click(screen.getByRole('button', { name: '+ Compare' }))
+  expect(JSON.parse(localStorage.getItem('ps-compare'))).toEqual([part().mpn_key])
+  localStorage.clear()
 })

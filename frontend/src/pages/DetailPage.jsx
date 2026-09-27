@@ -6,6 +6,7 @@ import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from '../components/StockBadge.jsx'
 import CopyButton from '../components/CopyButton.jsx'
 import DistributorLinks from '../components/DistributorLinks.jsx'
+import PinButton from '../components/PinButton.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import OfferTable from '../components/OfferTable.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
@@ -182,6 +183,7 @@ export default function DetailPage() {
                 padding: '4px 11px' }}>{part.package}</span>
             ) : null}
             {headline ? <StockBadge stock={headline.stock} /> : null}
+            <PinButton mpnKey={part.mpn_key} />
           </div>
           {/* Not hung off the LCSC branch: the datasheet comes from Mouser, so
               the parts most likely to have one are exactly the parts with no

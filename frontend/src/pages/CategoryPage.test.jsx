@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import CategoryPage from './CategoryPage.jsx'
+import { CompareProvider } from '../compare.jsx'
 import * as api from '../api.js'
 
 const SCHEMA = { categories: [
@@ -137,4 +138,18 @@ test('never shows a price or calls the data live', async () => {
   const { container } = renderAt('/browse/resistors')
   await screen.findByText('0603WAF1002T5E')
   expect(container.textContent).not.toMatch(/\$|price|live/i)
+})
+
+test('a browse row can be pinned for comparison', async () => {
+  localStorage.clear()
+  vi.spyOn(api, 'browse').mockResolvedValue(answer())
+  render(
+    <MemoryRouter initialEntries={['/browse/resistors']}>
+      <CompareProvider>
+        <Routes><Route path="/browse/:slug" element={<CategoryPage />} /></Routes>
+      </CompareProvider>
+    </MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: '+ Compare' }))
+  expect(JSON.parse(localStorage.getItem('ps-compare'))).toEqual(['0603WAF1002T5E'])
+  localStorage.clear()
 })

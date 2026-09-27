@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import DetailPage from './DetailPage.jsx'
+import { CompareProvider } from '../compare.jsx'
 import * as api from '../api.js'
 
 function LocationProbe() {
@@ -444,4 +445,20 @@ test('a long part-page wait explains the cold start too', async () => {
   } finally {
     vi.useRealTimers()
   }
+})
+
+test('the part page can be pinned for comparison', async () => {
+  localStorage.clear()
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  render(
+    <MemoryRouter initialEntries={['/part/0402WGJ0103TCE']}>
+      <CompareProvider>
+        <Routes><Route path="/part/*" element={<DetailPage />} /></Routes>
+      </CompareProvider>
+    </MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: '+ Compare' }))
+  expect(JSON.parse(localStorage.getItem('ps-compare'))).toEqual(['0402WGJ0103TCE'])
+  localStorage.clear()
 })

@@ -4,6 +4,7 @@ import { browse, encodeKey, getCategories } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX } from '../theme.js'
 import NoticePanel from '../components/NoticePanel.jsx'
 import StockBadge from '../components/StockBadge.jsx'
+import PinButton from '../components/PinButton.jsx'
 import useDocumentTitle from '../useDocumentTitle.js'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 
@@ -61,6 +62,7 @@ function Row({ row }) {
         ))}
       </dl>
       <StockBadge stock={row.stock} />
+      <PinButton mpnKey={row.mpn_key} />
     </li>
   )
 }

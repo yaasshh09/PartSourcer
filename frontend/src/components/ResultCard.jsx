@@ -5,6 +5,7 @@ import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
 import Price from './Price.jsx'
+import PinButton from './PinButton.jsx'
 
 const BADGE = { padding: '3px 10px', fontSize: 12, fontWeight: 700 }
 
@@ -78,6 +79,7 @@ export default function ResultCard({ part }) {
         ) : null}
         <Link to={to} style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, color: C.orange,
           marginTop: 6, textDecoration: 'none' }}>VIEW DETAIL →</Link>
+        <div style={{ marginTop: 8 }}><PinButton mpnKey={part.mpn_key} /></div>
       </div>
     </div>
   )
