@@ -34,6 +34,13 @@ test('a category route resolves', () => {
   expect(screen.queryByText('404')).not.toBeInTheDocument()
 })
 
+test('the app mounts the compare tray', () => {
+  localStorage.setItem('ps-compare', JSON.stringify(['A', 'B']))
+  renderAt('/about')
+  expect(screen.getByRole('link', { name: 'Compare (2)' })).toBeInTheDocument()
+  localStorage.clear()
+})
+
 test('about route resolves', () => {
   renderAt('/about')
   expect(screen.getByText('ABOUT')).toBeInTheDocument()

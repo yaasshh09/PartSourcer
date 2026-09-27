@@ -10,27 +10,34 @@ import HowPage from './pages/HowPage.jsx'
 import FaqPage from './pages/FaqPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
+import { CompareProvider } from './compare.jsx'
+import CompareTray from './components/CompareTray.jsx'
 
 export default function App() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Nav />
-      <main style={{ flex: 1 }}>
-        <Routes>
-          <Route path="/" element={<SearchPage />} />
-          {/* Splat, not a named param: a named param stops at the first
-              slash, and real MPNs contain them (LM358P/NOPB). */}
-          <Route path="/part/*" element={<DetailPage />} />
-          <Route path="/browse" element={<BrowsePage />} />
-          <Route path="/browse/:slug" element={<CategoryPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/how" element={<HowPage />} />
-          <Route path="/faq" element={<FaqPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <CompareProvider>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Nav />
+        <main style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/" element={<SearchPage />} />
+            {/* Splat, not a named param: a named param stops at the first
+                slash, and real MPNs contain them (LM358P/NOPB). */}
+            <Route path="/part/*" element={<DetailPage />} />
+            <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/browse/:slug" element={<CategoryPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/how" element={<HowPage />} />
+            <Route path="/faq" element={<FaqPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </main>
+        <Footer />
+        {/* Last child on purpose: sticky bottom keeps it on screen while
+            scrolling and lets it settle below the footer at the end. */}
+        <CompareTray />
+      </div>
+    </CompareProvider>
   )
 }
