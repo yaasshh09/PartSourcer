@@ -18,6 +18,7 @@ from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef
 from models.parametric import ParametricPart
 from models.part import PartDetail
 from services.matching import normalize_exact
+from services.units import fmt_farads, fmt_ohms
 
 
 class MatcherSource(Protocol):
@@ -182,22 +183,6 @@ def _find(parts: list[ParametricPart], lcsc: str) -> ParametricPart | None:
     return None
 
 
-def _fmt_ohms(r: float) -> str:
-    if r >= 1e6:
-        return f"{r / 1e6:g} MOhm"
-    if r >= 1e3:
-        return f"{r / 1e3:g} kOhm"
-    return f"{r:g} Ohm"
-
-
-def _fmt_farads(f: float) -> str:
-    if f >= 1e-6:
-        return f"{f * 1e6:g} uF"
-    if f >= 1e-9:
-        return f"{f * 1e9:g} nF"
-    return f"{f * 1e12:g} pF"
-
-
 def _percent_cheaper(orig_price: float, new_price: float) -> int:
     if orig_price <= 0:
         return 0
@@ -205,7 +190,7 @@ def _percent_cheaper(orig_price: float, new_price: float) -> int:
 
 
 def _resistor_reason(orig, best, pkg, pct, stock) -> str:
-    r = _fmt_ohms(orig.specs.get("resistance"))
+    r = fmt_ohms(orig.specs.get("resistance"))
     tol = best.specs.get("tolerance_fraction")
     tol_s = f", ±{tol * 100:g}%" if tol is not None else ""
     pw = best.specs.get("power_watts")
@@ -215,7 +200,7 @@ def _resistor_reason(orig, best, pkg, pct, stock) -> str:
 
 
 def _capacitor_reason(orig, best, pkg, pct, stock) -> str:
-    cap = _fmt_farads(orig.specs.get("capacitance_farads"))
+    cap = fmt_farads(orig.specs.get("capacitance_farads"))
     v = best.specs.get("voltage_rating")
     v_s = f", {v:g} V" if v is not None else ""
     tc = best.specs.get("temperature_coefficient")
