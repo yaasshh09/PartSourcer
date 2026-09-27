@@ -114,3 +114,9 @@ class LcscAdapter(DistributorAdapter):
             params["resistance"] = n
         items = await self._fetch_json(f"/{category}/list.json", params, category)
         return [_to_parametric(raw, category) for raw in items]
+
+    async def list_category(self, path: str, envelope: str,
+                            params: dict) -> list[dict]:
+        """Raw rows from a parametric list, for browse. Prices come through
+        here untouched; browse drops them when it maps each row."""
+        return await self._fetch_json(path, params, envelope)

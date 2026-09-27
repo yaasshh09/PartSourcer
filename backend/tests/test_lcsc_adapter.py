@@ -106,3 +106,27 @@ async def test_search_carries_the_lcsc_flags():
 async def test_adapter_is_parametric_capable():
     async with client_returning({"components": []}) as c:
         assert isinstance(LcscAdapter(c), ParametricCapable)
+
+
+async def test_list_category_returns_raw_rows_and_sends_params():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"leds": [{"lcsc": 1, "mfr": "X"}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                                 base_url="https://jlcsearch.test") as c:
+        rows = await LcscAdapter(c).list_category(
+            "/leds/list.json", "leds", {"color": "red", "limit": 100})
+
+    assert rows == [{"lcsc": 1, "mfr": "X"}]
+    assert seen[0].url.path == "/leds/list.json"
+    assert seen[0].url.params["color"] == "red"
+    assert seen[0].url.params["limit"] == "100"
+
+
+async def test_list_category_raises_on_a_missing_envelope():
+    async with client_returning({"nope": []}) as c:
+        with pytest.raises(UpstreamError):
+            await LcscAdapter(c).list_category("/leds/list.json", "leds", {})
