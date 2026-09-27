@@ -21,6 +21,11 @@ Right now that works for resistors and capacitors, because those are the parts
 the open data upstream carries real specs for. Everything else gets an honest
 "no match found".
 
+Don't know the part number yet? Browse by category instead: pick resistors,
+capacitors, LEDs, diodes, MOSFETs or LDOs, narrow it down by package and value
+(type `10k` or `100n` the way you would say it), then open any part to see its
+price and whether a cheaper swap exists.
+
 ## Some ground rules it sticks to
 
 - No made-up stock or prices. If the data is stale, you get an error, not a

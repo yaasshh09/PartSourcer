@@ -77,6 +77,23 @@ claimed. Every figure in the response, on both sides, comes from that one read,
 so the card agrees with the part's own page. A saving that rounds below 1%
 returns a null rather than a 0% claim.
 
+### `GET /api/browse`
+The six browsable categories (resistors, capacitors, LEDs, diodes, MOSFETs,
+LDOs) and the filters each one takes. Static.
+
+### `GET /api/browse/<category>?<filter>=<value>`
+Parts in a category, most stocked first, from the LCSC snapshot. Values are
+typed the way a person would (`resistance=4k7`, `capacitance=100n`) and the
+server converts them, because upstream reads `10k` as 10 ohms and returns
+nothing for `100nF`. Returns `{category, results: [{mpn, mpn_key, lcsc,
+package, stock, specs}], count, capped, as_of}`.
+
+There is no price in the response on purpose. Parametric prices come from a
+different basis than the part page, so a price here could disagree with the
+one you click through to. `capped` means upstream returned its 100-row
+maximum. An unknown category is 404, and an unknown filter or a bad value is
+422 with a message saying what to type.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`
