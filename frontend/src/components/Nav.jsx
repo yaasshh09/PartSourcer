@@ -31,11 +31,10 @@ export default function Nav() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 20, background: C.yellow, borderBottom: `3px solid ${C.ink}` }}>
-      {/* The wordmark plus six links needs well over 390px of row. A 375px
-          phone does not have it, and wrapping only moved the problem: the links
-          took a second row and left Contact stranded alone on a third. Below
-          640px they collapse behind the toggle instead. Between there and
-          full width they still wrap, which costs a row but hides nothing. */}
+      {/* The wordmark plus six links needs about 725px of row (measured
+          after Browse was added). Any narrower and wrapping strands Contact
+          alone on a second row, so below 760px they collapse behind the
+          toggle instead. The 35px of slack covers font rendering drift. */}
       <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '8px 28px', minHeight: 66,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', rowGap: 4 }}>

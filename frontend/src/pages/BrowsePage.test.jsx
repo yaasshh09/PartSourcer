@@ -21,6 +21,17 @@ test('shows a card per category linking to its page', async () => {
   expect(screen.getByText(/package, resistance/)).toBeInTheDocument()
 })
 
+test('keeps acronyms intact in the filter summary', async () => {
+  vi.spyOn(api, 'getCategories').mockResolvedValue({ categories: [
+    { slug: 'mosfets', label: 'MOSFETs', note: null, filters: [
+      { name: 'package', label: 'Package', kind: 'choice', choices: ['SOT-23'] },
+      { name: 'min_vds', label: 'Min Vds', kind: 'number', example: '30' },
+      { name: 'min_id', label: 'Min Id', kind: 'number', example: '2' }] },
+  ] })
+  wrap()
+  expect(await screen.findByText('Filter by package, min Vds, min Id')).toBeInTheDocument()
+})
+
 test('says so when the categories cannot load', async () => {
   vi.spyOn(api, 'getCategories').mockRejectedValue(new api.ApiError(503, 'jlcsearch unreachable'))
   wrap()

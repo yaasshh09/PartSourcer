@@ -41,7 +41,8 @@ export default function BrowsePage() {
             <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 24 }}>{c.label}</div>
             <div style={{ fontSize: 13.5, color: C.sub, fontWeight: 500, marginTop: 8 }}>
               {c.filters.length
-                ? `Filter by ${c.filters.map((f) => f.label.toLowerCase()).join(', ')}`
+                // Only the first letter drops: "Min Vds" must not become "min vds".
+                ? `Filter by ${c.filters.map((f) => f.label[0].toLowerCase() + f.label.slice(1)).join(', ')}`
                 : 'Most stocked first'}
             </div>
           </Link>
