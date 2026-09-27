@@ -7,7 +7,7 @@ const wrap = () => render(<MemoryRouter><Nav /></MemoryRouter>)
 test('carries the pages a reader can go to', () => {
   wrap()
 
-  for (const label of ['Search', 'About', 'How it works', 'FAQ', 'Contact']) {
+  for (const label of ['Search', 'Browse', 'About', 'How it works', 'FAQ', 'Contact']) {
     expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
   }
 })

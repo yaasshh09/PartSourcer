@@ -10,6 +10,7 @@ const link = ({ isActive }) => ({
 
 const ITEMS = [
   { to: '/', label: 'Search', end: true },
+  { to: '/browse', label: 'Browse' },
   { to: '/about', label: 'About' },
   { to: '/how', label: 'How it works' },
   { to: '/faq', label: 'FAQ' },
@@ -30,8 +31,8 @@ export default function Nav() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 20, background: C.yellow, borderBottom: `3px solid ${C.ink}` }}>
-      {/* The wordmark plus five links needs about 390px of row. A 375px phone
-          does not have it, and wrapping only moved the problem: the links
+      {/* The wordmark plus six links needs well over 390px of row. A 375px
+          phone does not have it, and wrapping only moved the problem: the links
           took a second row and left Contact stranded alone on a third. Below
           640px they collapse behind the toggle instead. Between there and
           full width they still wrap, which costs a row but hides nothing. */}

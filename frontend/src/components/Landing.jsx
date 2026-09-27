@@ -45,7 +45,6 @@ const AUDIENCE = [
 const FUTURE = [
   { title: 'BOM bulk upload', body: 'Paste a whole bill of materials and price the entire board in one pass instead of a line at a time.' },
   { title: 'Price history', body: 'The nightly recorder is already writing the series. The charts that read it are what is still missing.' },
-  { title: 'Browse by category', body: 'Arrive without a part number and narrow down by package and rating instead.' },
   { title: 'Biggest savings this week', body: 'A public list of the swaps currently worth the most, so you can find one without searching first.' },
 ]
 
@@ -79,6 +78,11 @@ function Section({ title, children, lead: leadText }) {
 export default function Landing() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 30 }}>
+      {/* flex-start so the underline hugs the words instead of the column. */}
+      <Link to="/browse" style={{ alignSelf: 'flex-start', fontWeight: 700, fontSize: 15,
+        borderBottom: `3px solid ${C.orange}` }}>
+        Know the spec but not the part? Browse by category →
+      </Link>
       <Section title="WHY PARTSOURCER">
         <p style={lead}>
           Finding a part that&apos;s <b>actually in stock</b>, at a fair price, with a footprint you can drop onto

@@ -39,9 +39,24 @@ test('lists the future plans that were already promised', () => {
   const { container } = wrap()
 
   expect(container.textContent).toMatch(/future plans/i)
-  for (const plan of [/BOM/i, /price history/i, /categor/i, /savings/i]) {
+  for (const plan of [/BOM/i, /price history/i, /savings/i]) {
     expect(container.textContent).toMatch(plan)
   }
+})
+
+test('points spec-first visitors at browse', () => {
+  wrap()
+
+  expect(screen.getByRole('link', { name: /browse by category/i }))
+    .toHaveAttribute('href', '/browse')
+})
+
+// Browse shipped, so listing it under future plans would describe a live
+// feature as unbuilt.
+test('no longer lists browse as a future plan', () => {
+  wrap()
+
+  expect(screen.queryByText('Browse by category')).toBeNull()
 })
 
 test('no longer calls that list coming soon', () => {
