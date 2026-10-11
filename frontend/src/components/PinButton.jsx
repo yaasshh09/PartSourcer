@@ -7,7 +7,7 @@ export default function PinButton({ mpnKey }) {
   const pinned = compare.has(mpnKey)
   const blocked = !pinned && compare.full
   return (
-    <button type="button" aria-pressed={pinned} disabled={blocked}
+    <button type="button" aria-pressed={pinned} disabled={blocked} className="ps-chip"
       onClick={() => (pinned ? compare.remove(mpnKey) : compare.add(mpnKey))}
       style={{ cursor: blocked ? 'not-allowed' : 'pointer', fontFamily: ARCHIVO, fontWeight: 900,
         fontSize: 12, padding: '6px 10px', border: `2px solid ${C.ink}`, whiteSpace: 'nowrap',

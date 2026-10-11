@@ -13,7 +13,7 @@ export default function CompareTray() {
   if (!compare || compare.keys.length === 0 || pathname === '/compare') return null
   const ready = compare.keys.length >= 2
   return (
-    <aside aria-label="Compare tray" style={{ position: 'sticky', bottom: 0, zIndex: 30,
+    <aside aria-label="Compare tray" className="ps-tray" style={{ position: 'sticky', bottom: 0, zIndex: 30,
       background: C.ink, color: '#fff', borderTop: `3px solid ${C.yellow}` }}>
       <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '10px 28px', display: 'flex',
         flexWrap: 'wrap', alignItems: 'center', gap: '8px 12px' }}>
@@ -24,18 +24,18 @@ export default function CompareTray() {
             <li key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '100%',
               border: '2px solid #555', padding: '3px 8px', fontFamily: MONO, fontSize: 12 }}>
               <span style={{ overflowWrap: 'anywhere' }}>{k}</span>
-              <button type="button" aria-label={`Remove ${k} from compare`} onClick={() => compare.remove(k)}
+              <button type="button" aria-label={`Remove ${k} from compare`} onClick={() => compare.remove(k)} className="ps-chip"
                 style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer',
                   fontSize: 13, padding: 0 }}>✕</button>
             </li>
           ))}
         </ul>
-        <button type="button" onClick={compare.clear} style={{ background: 'transparent', color: '#fff',
+        <button type="button" onClick={compare.clear} className="ps-chip" style={{ background: 'transparent', color: '#fff',
           border: '2px solid #777', fontWeight: 700, fontSize: 12, padding: '6px 10px', cursor: 'pointer' }}>
           Clear
         </button>
         {ready ? (
-          <Link to={compareHref(compare.keys)} style={{ background: C.orange, color: '#fff',
+          <Link to={compareHref(compare.keys)} className="ps-press" style={{ background: C.orange, color: '#fff',
             fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, padding: '8px 16px',
             border: `2px solid ${C.yellow}` }}>{`Compare (${compare.keys.length})`}</Link>
         ) : (

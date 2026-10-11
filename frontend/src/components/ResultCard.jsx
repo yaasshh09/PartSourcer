@@ -25,7 +25,7 @@ export default function ResultCard({ part }) {
   // its longest word, so a long MPN used to carry the price column off the
   // side of a phone. The price drops under the part instead.
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20,
+    <div className="ps-enter" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20,
       padding: '20px 22px', border: `3px solid ${C.ink}`, boxShadow: `5px 5px 0 ${C.ink}`, background: C.paper }}>
       <div style={{ flex: '1 1 240px', minWidth: 0 }}>
         {/* Only Mouser carries a manufacturer, so this is present on most of a
@@ -40,7 +40,7 @@ export default function ResultCard({ part }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Part numbers have no spaces to break at, so the long ones need
               explicit permission to wrap or they overflow the card. */}
-          <Link to={to} style={{ fontFamily: MONO, fontWeight: 600, fontSize: 19,
+          <Link className="ps-link" to={to} style={{ fontFamily: MONO, fontWeight: 600, fontSize: 19,
             color: C.ink, textDecoration: 'none', overflowWrap: 'anywhere' }}>{part.mpn}</Link>
           <CopyButton value={part.mpn} label={`Copy ${part.mpn}`} />
         </div>
@@ -77,7 +77,7 @@ export default function ResultCard({ part }) {
             <Price value={headline.price_usd} size={14} />
           </div>
         ) : null}
-        <Link to={to} style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, color: C.orange,
+        <Link className="ps-link" to={to} style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, color: C.orange,
           marginTop: 6, textDecoration: 'none' }}>VIEW DETAIL →</Link>
         <div style={{ marginTop: 8 }}><PinButton mpnKey={part.mpn_key} /></div>
       </div>

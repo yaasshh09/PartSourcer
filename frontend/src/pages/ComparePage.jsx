@@ -146,7 +146,7 @@ export default function ComparePage() {
                       ) : (
                         <span style={{ fontFamily: MONO, fontSize: 15, overflowWrap: 'anywhere' }}>{k}</span>
                       )}
-                      <button type="button" aria-label={`Remove ${k}`} onClick={() => removeColumn(k)}
+                      <button type="button" aria-label={`Remove ${k}`} onClick={() => removeColumn(k)} className="ps-chip"
                         style={{ background: 'transparent', border: `2px solid ${C.ink}`, cursor: 'pointer',
                           fontSize: 12, padding: '1px 6px' }}>✕</button>
                     </div>

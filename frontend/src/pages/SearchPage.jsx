@@ -158,14 +158,14 @@ export default function SearchPage() {
             placeholder="Search by MPN, LCSC #, or spec…"
             style={{ flex: 1, minWidth: 0, border: 'none', padding: '20px 16px', fontSize: 17,
               fontWeight: 500, background: 'transparent' }} />
-          <button type="submit" style={{ background: C.orange, color: '#fff', fontFamily: ARCHIVO,
+          <button type="submit" className="ps-press" style={{ background: C.orange, color: '#fff', fontFamily: ARCHIVO,
             fontWeight: 900, fontSize: 16, padding: '0 34px', border: 'none',
             borderLeft: `3px solid ${C.ink}`, alignSelf: 'stretch' }}>SEARCH</button>
         </form>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 18, maxWidth: 720 }}>
           <span style={{ color: C.muted, fontWeight: 600, fontSize: 13 }}>Try:</span>
           {EXAMPLES.map((ex) => (
-            <button key={ex} type="button" onClick={() => runSearch(ex)}
+            <button key={ex} type="button" className="ps-chip" onClick={() => runSearch(ex)}
               style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 13, background: C.paper,
                 border: `2px solid ${C.ink}`, padding: '5px 11px' }}>{ex}</button>
           ))}

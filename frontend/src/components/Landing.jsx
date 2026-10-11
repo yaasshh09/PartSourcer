@@ -17,31 +17,6 @@ const STEPS = [
   { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
 ]
 
-const PRINCIPLES = [
-  {
-    title: 'Never fake stock or price',
-    body: 'Every figure carries the moment it was read and the page prints it. If the upstream is down and the cache has gone stale, you get an error instead of yesterday’s number wearing today’s date.',
-  },
-  {
-    title: 'Never overstate a match',
-    body: 'Package and core specs have to genuinely line up before anything is called an equivalent. Where that cannot be verified you get a plain no and the reason for it.',
-  },
-  {
-    title: 'Never compare prices fetched differently',
-    body: 'Distributors answer with different numbers depending how you ask. Both halves of a saving are re-read on one single path first, so the percentage means something.',
-  },
-  {
-    title: 'Never invent a price',
-    body: 'A distributor that published nothing hands back nothing, not zero. A zero would read as free and would win the cheapest comparison outright, so it is left out and labelled.',
-  },
-]
-
-const AUDIENCE = [
-  { title: 'Hobbyists', body: 'One-off boards, no contract pricing, and a real need for the stock figure to be true.' },
-  { title: 'Students', body: 'A few cents a part decides whether you build one prototype or three.' },
-  { title: 'A dead BOM line', body: 'Something went out of stock mid-project and you need a swap you can justify.' },
-]
-
 const FUTURE = [
   { title: 'BOM bulk upload', body: 'Paste a whole bill of materials and price the entire board in one pass instead of a line at a time.' },
   { title: 'Price history', body: 'The nightly recorder is already writing the series. The charts that read it are what is still missing.' },
@@ -123,23 +98,13 @@ export default function Landing() {
             </div>
           </div>
         </div>
+        {/* The rules themselves live on About. Spelled out here as well, the
+            same four promises appeared twice a click apart. */}
+        <Link to="/about" className="ps-link" style={{ display: 'inline-block', marginTop: 18,
+          color: C.yellow, fontWeight: 700, fontSize: 14 }}>
+          The four rules behind every number →
+        </Link>
       </div>
-
-      <Section
-        title="THE RULES THIS RUNS ON"
-        lead="Four promises that cost the product something. Each one means fewer results, more blank fields, or more honest refusals than a tool that simply guessed.">
-        {/* Four of them, so ps-grid-4 steps straight from four across to two
-            to one. A fluid floor put three on the first row and left the
-            fourth alone on the second. */}
-        <div className="ps-grid-4" style={{ marginTop: 18 }}>
-          {PRINCIPLES.map((p) => (
-            <div key={p.title} style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{p.title}</div>
-              <div style={{ fontSize: 13.5, color: C.sub, fontWeight: 500, marginTop: 8, lineHeight: 1.6 }}>{p.body}</div>
-            </div>
-          ))}
-        </div>
-      </Section>
 
       <Section
         title="WHAT AN ANSWER LOOKS LIKE"
@@ -182,20 +147,6 @@ export default function Landing() {
       </Section>
 
       <Section
-        title="WHO IT'S FOR"
-        lead="Built for people buying in ones and tens, not for anyone with a procurement team and a contract price.">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16, marginTop: 18 }}>
-          {AUDIENCE.map((a) => (
-            <div key={a.title} style={{ borderLeft: `3px solid ${C.orange}`, paddingLeft: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{a.title}</div>
-              <div style={{ fontSize: 13.5, color: C.sub, fontWeight: 500, marginTop: 6, lineHeight: 1.6 }}>{a.body}</div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section
         title="FUTURE PLANS"
         lead="What is being built next. None of it is on the site yet, so none of it is described as though it were.">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -221,7 +172,7 @@ export default function Landing() {
             project and every message gets read.
           </div>
         </div>
-        <Link to="/contact" style={{ background: C.ink, color: C.yellow, fontFamily: ARCHIVO,
+        <Link to="/contact" className="ps-press" style={{ background: C.ink, color: C.yellow, fontFamily: ARCHIVO,
           fontWeight: 900, fontSize: 15, padding: '14px 24px', whiteSpace: 'nowrap' }}>
           GET IN TOUCH
         </Link>

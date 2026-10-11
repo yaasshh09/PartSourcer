@@ -16,7 +16,7 @@ export default function NotFoundPage() {
       <p style={{ fontSize: 16, color: C.sub, fontWeight: 500, marginTop: 12 }}>
         The page you&apos;re after doesn&apos;t exist. Head back to searching.
       </p>
-      <button type="button" onClick={() => navigate('/')} style={{ display: 'inline-block', marginTop: 22,
+      <button type="button" onClick={() => navigate('/')} className="ps-press" style={{ display: 'inline-block', marginTop: 22,
         cursor: 'pointer', background: C.ink, color: C.yellow, fontFamily: ARCHIVO, fontWeight: 900, fontSize: 15,
         padding: '14px 26px', border: `3px solid ${C.ink}`, boxShadow: `6px 6px 0 ${C.orange}` }}>
         ← BACK TO SEARCH

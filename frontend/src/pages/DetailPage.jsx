@@ -88,7 +88,7 @@ export default function DetailPage() {
         <p style={{ fontSize: 16, color: C.sub, fontWeight: 500, marginTop: 12 }}>
           {"That part number didn't match anything. Try another search."}
         </p>
-        <Link to="/" style={{ display: 'inline-block', marginTop: 22, background: C.ink, color: C.yellow,
+        <Link className="ps-press" to="/" style={{ display: 'inline-block', marginTop: 22, background: C.ink, color: C.yellow,
           fontFamily: ARCHIVO, fontWeight: 900, fontSize: 15, padding: '14px 26px',
           border: `3px solid ${C.ink}`, boxShadow: `6px 6px 0 ${C.orange}`, textDecoration: 'none' }}>
           ← BACK TO SEARCH
@@ -151,7 +151,7 @@ export default function DetailPage() {
 
   return (
     <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '34px 28px 70px' }}>
-      <Link to="/" style={{ display: 'inline-block', fontWeight: 700, fontSize: 14, color: C.ink,
+      <Link className="ps-link" to="/" style={{ display: 'inline-block', fontWeight: 700, fontSize: 14, color: C.ink,
         textDecoration: 'none', marginBottom: 22 }}>← Back to results</Link>
 
       <SourceStatusBar sources={data.sources} />
@@ -193,7 +193,7 @@ export default function DetailPage() {
               flexWrap: 'wrap', marginTop: 16 }}>
               {lcsc ? <DistributorLinks code={lcsc.sku} /> : null}
               {part.datasheet_url ? (
-                <a href={part.datasheet_url} target="_blank" rel="noopener noreferrer"
+                <a className="ps-link" href={part.datasheet_url} target="_blank" rel="noopener noreferrer"
                   style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12,
                     textDecoration: 'none', padding: '7px 12px',
                     border: `2px solid ${C.ink}`, color: C.ink }}>
@@ -261,7 +261,7 @@ export default function DetailPage() {
                 {eq.match_reason}
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-                <Link to={`/part/${encodeKey(eq.mpn_key)}`}
+                <Link className="ps-chip" to={`/part/${encodeKey(eq.mpn_key)}`}
                   aria-label={`View the ${eq.mpn} part page`}
                   style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12, textDecoration: 'none',
                     padding: '7px 12px', border: '2px solid #5a4d1a', color: '#3a3200' }}>

@@ -83,3 +83,57 @@ button { cursor: pointer; }
 @media (max-width: 620px) {
   .ps-grid-4 { grid-template-columns: 1fr; }
 }
+
+/* Micro-interactions. Hover and press states cannot be written as inline
+   styles, so each interactive role gets one class here. Several elements set
+   a border or shadow inline, which beats any class, hence the !important on
+   the hover values only. */
+@keyframes ps-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ps-pop { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes ps-slide-up { from { transform: translateY(100%); } to { transform: none; } }
+
+/* Something you can open: rises onto a hard shadow, like lifting a card. */
+.ps-lift { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.ps-lift:hover { transform: translate(-3px, -3px); box-shadow: 7px 7px 0 #111 !important; }
+.ps-lift:active { transform: translate(0, 0); box-shadow: 2px 2px 0 #111 !important; }
+
+/* A solid button: lifts on hover, sinks flat when pressed. */
+.ps-press { transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease; }
+.ps-press:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 #111 !important; }
+.ps-press:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: none !important; }
+
+/* A small outlined control (copy, remove, pin): fills in on hover. */
+.ps-chip { transition: background-color 0.12s ease, color 0.12s ease, transform 0.12s ease; }
+.ps-chip:hover:not(:disabled) { background-color: #ffe14d !important; color: #111 !important; }
+.ps-chip:active:not(:disabled) { transform: scale(0.94); }
+.ps-chip[aria-pressed='true'] { animation: ps-pop 0.25s ease; }
+
+/* A text link: an underline grows in from the left. */
+.ps-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0 2px;
+  transition: background-size 0.2s ease, color 0.15s ease;
+}
+.ps-link:hover { background-size: 100% 2px; }
+
+/* Header links preview the underline the active page carries. */
+.ps-nav-links a { transition: border-color 0.15s ease; }
+.ps-nav-links a:not(.active):hover { border-bottom-color: rgba(17, 17, 17, 0.35) !important; }
+
+/* Fresh results ease in instead of popping into place. */
+.ps-enter { animation: ps-rise 0.3s ease both; }
+.ps-tray { animation: ps-slide-up 0.25s ease both; }
+
+/* Keyboard users get a visible ring on everything they can reach. */
+:focus-visible { outline: 3px solid #ff5c38; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .ps-lift:hover, .ps-press:hover:not(:disabled) { transform: none; }
+}

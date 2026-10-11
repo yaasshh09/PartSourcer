@@ -20,11 +20,11 @@ export default function DistributorLinks({ code, variant = 'default', context = 
   const label = (dist) => `View ${context ? `${context} ` : ''}on ${dist}`
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      <a href={lcscUrl(code)} target="_blank" rel="noopener noreferrer"
+      <a className="ps-chip" href={lcscUrl(code)} target="_blank" rel="noopener noreferrer"
         aria-label={label('LCSC')} style={style}>
         View on LCSC ↗
       </a>
-      <a href={jlcpcbUrl(code)} target="_blank" rel="noopener noreferrer"
+      <a className="ps-chip" href={jlcpcbUrl(code)} target="_blank" rel="noopener noreferrer"
         aria-label={label('JLCPCB')} style={style}>
         View on JLCPCB ↗
       </a>

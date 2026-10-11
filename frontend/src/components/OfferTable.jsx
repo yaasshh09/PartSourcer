@@ -79,7 +79,7 @@ function OfferRow({ offer, cheapest, showNote }) {
         {/* Null for LCSC over jlcsearch, real for Mouser and DigiKey, so this
             cell is conditional per row rather than per table. */}
         {offer.product_url ? (
-          <a href={offer.product_url} target="_blank" rel="noopener noreferrer"
+          <a className="ps-link" href={offer.product_url} target="_blank" rel="noopener noreferrer"
             aria-label={`View ${offer.sku} on ${DISTRIBUTOR_LABEL[offer.distributor] || offer.distributor}`}
             style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12, color: C.ink }}>
             View ↗

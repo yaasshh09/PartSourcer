@@ -4,7 +4,6 @@ import useDocumentTitle from '../useDocumentTitle.js'
 
 const CARDS = [
   { title: 'FREE FOREVER', body: 'No paywall on core features. Any future revenue is optional affiliate links, never gating.' },
-  { title: 'HONEST', body: "Every figure carries the moment it was read, and stock and price are never faked. If there's no valid equivalent, the page says so." },
   { title: 'FAST', body: 'Aggressive caching means search feels instant. Specs cache long; stock & price refresh often.' },
   { title: 'OPEN-SOURCE', body: 'MIT licensed. Fork it, self-host it, send a PR. Built for students, by a student.', accent: true },
 ]
@@ -121,9 +120,9 @@ export default function AboutPage() {
         placeholder.
       </p>
 
-      {/* Four of them, so ps-grid-4 steps four to two to one and never
-          leaves OPEN-SOURCE stranded underneath on its own. */}
-      <div className="ps-grid-4" style={{ marginTop: 30 }}>
+      {/* Three, so ps-grid-3 goes straight from a row to a column. An
+          HONEST card used to sit here too, repeating the promises above. */}
+      <div className="ps-grid-3" style={{ marginTop: 30 }}>
         {CARDS.map((card) => (
           <div key={card.title} style={{ border: `3px solid ${C.ink}`, padding: 22,
             background: card.accent ? C.yellow : C.paper }}>
@@ -154,7 +153,7 @@ export default function AboutPage() {
 
       <div style={{ marginTop: 34, fontSize: 15, fontWeight: 500, color: C.sub }}>
         Something looks wrong, or you want to help?{' '}
-        <Link to="/contact" style={{ color: C.orange, fontWeight: 700 }}>Get in touch</Link>.
+        <Link to="/contact" className="ps-link" style={{ color: C.orange, fontWeight: 700 }}>Get in touch</Link>.
       </div>
     </section>
   )

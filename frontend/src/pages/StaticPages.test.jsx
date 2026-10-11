@@ -58,3 +58,13 @@ test('how it works no longer carries the data-source panel', () => {
 
   expect(container.textContent).not.toMatch(/where the data comes from/i)
 })
+
+// The landing page now links here instead of repeating these, so this is the
+// one place they have to stay.
+test('about is the one home of the audience and the four rules', () => {
+  const { container } = wrap(<AboutPage />)
+  expect(container.textContent).toMatch(/who it.s for/i)
+  for (const rule of [/never fake/i, /never overstate/i, /measured differently/i, /never invent a price/i]) {
+    expect(container.textContent).toMatch(rule)
+  }
+})

@@ -35,7 +35,7 @@ export default function BrowsePage() {
       <div style={{ display: 'grid', gap: 16,
         gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))' }}>
         {categories.map((c) => (
-          <Link key={c.slug} to={`/browse/${c.slug}`} style={{ display: 'block',
+          <Link key={c.slug} to={`/browse/${c.slug}`} className="ps-lift" style={{ display: 'block',
             border: `3px solid ${C.ink}`, background: C.paper, padding: 22,
             boxShadow: `5px 5px 0 ${C.ink}` }}>
             <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 24 }}>{c.label}</div>

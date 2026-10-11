@@ -130,7 +130,7 @@ export default function CategoryPage() {
     content = (
       <NoticePanel title="NO SUCH CATEGORY">
         There is no category called &quot;<span style={{ fontFamily: MONO }}>{slug}</span>&quot;.{' '}
-        <Link to="/browse" style={{ textDecoration: 'underline' }}>See all categories</Link>.
+        <Link to="/browse" className="ps-link" style={{ textDecoration: 'underline' }}>See all categories</Link>.
       </NoticePanel>
     )
   } else {
@@ -179,7 +179,7 @@ export default function CategoryPage() {
             <FilterField key={f.name} filter={f} value={draft[f.name] || ''}
               onChange={(v) => setDraft((d) => ({ ...d, [f.name]: v }))} />
           ))}
-          <button type="submit" style={{ background: C.orange, color: '#fff', fontFamily: ARCHIVO,
+          <button type="submit" className="ps-press" style={{ background: C.orange, color: '#fff', fontFamily: ARCHIVO,
             fontWeight: 900, fontSize: 15, padding: '10px 26px', border: `3px solid ${C.ink}` }}>APPLY</button>
         </form>
         {results}
@@ -189,7 +189,7 @@ export default function CategoryPage() {
 
   return (
     <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '40px 28px 70px' }}>
-      <Link to="/browse" style={{ fontWeight: 600, fontSize: 14, color: C.sub }}>← All categories</Link>
+      <Link to="/browse" className="ps-link" style={{ fontWeight: 600, fontSize: 14, color: C.sub }}>← All categories</Link>
       {content}
     </section>
   )

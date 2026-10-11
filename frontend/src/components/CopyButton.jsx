@@ -19,7 +19,7 @@ export default function CopyButton({ value, label = 'Copy', variant = 'default' 
 
   const onYellow = variant === 'onYellow'
   return (
-    <button type="button" onClick={copy} aria-label={label}
+    <button type="button" onClick={copy} aria-label={label} className="ps-chip"
       style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 12, lineHeight: 1,
         background: 'transparent', border: `2px solid ${onYellow ? '#5a4d1a' : '#d8d4c4'}`,
         color: onYellow ? '#5a4d1a' : C.sub, padding: '3px 7px' }}>

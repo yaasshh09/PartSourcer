@@ -74,7 +74,7 @@ export default function ContactPage() {
         </div>
         <p style={{ fontSize: 14, color: '#e6e2d4', fontWeight: 500, lineHeight: 1.6, margin: '10px 0 0' }}>
           Open a{' '}
-          <a href={CONTACT.issuesUrl} target="_blank" rel="noreferrer"
+          <a className="ps-link" href={CONTACT.issuesUrl} target="_blank" rel="noreferrer"
             style={{ color: C.yellow, fontWeight: 700 }}>GitHub issue</a>{' '}
           rather than sending it here. It stays visible, anyone else hitting the same thing can
           find it, and the fix ends up attached to it. Paste the part number and what you expected

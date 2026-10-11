@@ -10,12 +10,14 @@ test('keeps the pitch the search page has always opened with', () => {
   expect(screen.getByText('WHY PARTSOURCER')).toBeInTheDocument()
 })
 
-test('walks through the honesty rules, not just the headline one', () => {
+// The rules and the audience live on About. Spelled out here too, the same
+// copy sat twice a click apart, so the landing points there instead.
+test('points to the rules on About instead of repeating them', () => {
   const { container } = wrap()
 
-  for (const rule of [/never fake/i, /never invent a price/i, /fetched differently|measured differently/i]) {
-    expect(container.textContent).toMatch(rule)
-  }
+  const link = screen.getByRole('link', { name: /four rules/i })
+  expect(link.getAttribute('href')).toBe('/about')
+  expect(container.textContent).not.toMatch(/never invent a price/i)
 })
 
 // The worked example carries figures that are not being re-read on page load.
@@ -29,10 +31,10 @@ test('marks the worked example as an illustration rather than a reading', () => 
   expect(container.textContent).toMatch(/not live|not a live|illustration/i)
 })
 
-test('says who it is for', () => {
+test('leaves who it is for to the About page', () => {
   const { container } = wrap()
 
-  expect(container.textContent).toMatch(/who it.s for/i)
+  expect(container.textContent).not.toMatch(/who it.s for/i)
 })
 
 test('lists the future plans that were already promised', () => {

@@ -65,20 +65,20 @@ export default function Footer() {
 
           <Column title="PRODUCT">
             {PRODUCT.map((item) => (
-              <Link key={item.label} to={item.to} style={linkStyle}>{item.label}</Link>
+              <Link className="ps-link" key={item.label} to={item.to} style={linkStyle}>{item.label}</Link>
             ))}
           </Column>
 
           <Column title="PROJECT">
             {PROJECT.map((item) => (
-              <a key={item.label} href={item.href} target="_blank" rel="noreferrer"
+              <a className="ps-link" key={item.label} href={item.href} target="_blank" rel="noreferrer"
                 style={linkStyle}>{item.label}</a>
             ))}
           </Column>
 
           <Column title="CONTACT">
             {REACH.map((item) => (
-              <a key={item.label} href={item.href}
+              <a className="ps-link" key={item.label} href={item.href}
                 {...(item.external ? { target: '_blank', rel: 'noreferrer' } : {})}
                 style={{ ...linkStyle, wordBreak: 'break-word' }}>{item.label}</a>
             ))}
@@ -93,7 +93,7 @@ export default function Footer() {
           <div style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>
             {/* Read at render, so it never needs remembering in January. */}
             &copy; {new Date().getFullYear()} PartSourcer. MIT licensed. Built by{' '}
-            <a href={CONTACT.githubUrl} target="_blank" rel="noreferrer"
+            <a className="ps-link" href={CONTACT.githubUrl} target="_blank" rel="noreferrer"
               style={{ color: '#bdb9aa' }}>{CONTACT.github}</a>.
           </div>
         </div>
