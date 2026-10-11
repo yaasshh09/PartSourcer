@@ -26,6 +26,10 @@ capacitors, LEDs, diodes, MOSFETs or LDOs, narrow it down by package and value
 (type `10k` or `100n` the way you would say it), then open any part to see its
 price and whether a cheaper swap exists.
 
+Weighing up a few candidates? Hit **+ Compare** on up to four parts from search,
+browse or a part page, then open the tray at the bottom to see price, stock and
+package side by side. Each part is read fresh when the comparison opens.
+
 ## Some ground rules it sticks to
 
 - No made-up stock or prices. If the data is stale, you get an error, not a
