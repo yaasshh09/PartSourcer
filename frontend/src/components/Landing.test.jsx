@@ -41,7 +41,7 @@ test('lists the future plans that were already promised', () => {
   const { container } = wrap()
 
   expect(container.textContent).toMatch(/future plans/i)
-  for (const plan of [/BOM/i, /price history/i, /savings/i]) {
+  for (const plan of [/price history/i, /savings/i]) {
     expect(container.textContent).toMatch(plan)
   }
 })
@@ -59,6 +59,14 @@ test('no longer lists browse as a future plan', () => {
   wrap()
 
   expect(screen.queryByText('Browse by category')).toBeNull()
+})
+
+// The BOM check shipped too, and the landing points at it instead.
+test('sends a whole parts list to the BOM check, not to future plans', () => {
+  wrap()
+
+  expect(screen.queryByText('BOM bulk upload')).toBeNull()
+  expect(screen.getByRole('link', { name: /bom check/i })).toHaveAttribute('href', '/bom')
 })
 
 test('no longer calls that list coming soon', () => {

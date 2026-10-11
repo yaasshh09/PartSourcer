@@ -11,6 +11,7 @@ const link = ({ isActive }) => ({
 const ITEMS = [
   { to: '/', label: 'Search', end: true },
   { to: '/browse', label: 'Browse' },
+  { to: '/bom', label: 'BOM check' },
   { to: '/about', label: 'About' },
   { to: '/how', label: 'How it works' },
   { to: '/faq', label: 'FAQ' },
@@ -31,9 +32,9 @@ export default function Nav() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 20, background: C.yellow, borderBottom: `3px solid ${C.ink}` }}>
-      {/* The wordmark plus six links needs about 725px of row (measured
-          after Browse was added). Any narrower and wrapping strands Contact
-          alone on a second row, so below 760px they collapse behind the
+      {/* The wordmark plus seven links needs about 825px of row (measured
+          after BOM check was added). Any narrower and wrapping strands the
+          last links on a second row, so below 860px they collapse behind the
           toggle instead. The 35px of slack covers font rendering drift. */}
       <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '8px 28px', minHeight: 66,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

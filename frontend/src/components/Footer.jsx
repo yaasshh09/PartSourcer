@@ -4,6 +4,8 @@ import { CONTACT } from '../contact.js'
 
 const PRODUCT = [
   { label: 'Search', to: '/' },
+  { label: 'Browse', to: '/browse' },
+  { label: 'BOM check', to: '/bom' },
   { label: 'About', to: '/about' },
   { label: 'How it works', to: '/how' },
   { label: 'FAQ', to: '/faq' },

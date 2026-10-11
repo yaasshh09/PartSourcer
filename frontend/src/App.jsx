@@ -11,6 +11,7 @@ import FaqPage from './pages/FaqPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import ComparePage from './pages/ComparePage.jsx'
+import BomPage from './pages/BomPage.jsx'
 import { CompareProvider } from './compare.jsx'
 import CompareTray from './components/CompareTray.jsx'
 
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/browse/:slug" element={<CategoryPage />} />
             <Route path="/compare" element={<ComparePage />} />
+            <Route path="/bom" element={<BomPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/how" element={<HowPage />} />
             <Route path="/faq" element={<FaqPage />} />

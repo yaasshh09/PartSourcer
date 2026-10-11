@@ -32,7 +32,7 @@ button { cursor: pointer; }
   row-gap: 4px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .ps-nav-toggle { display: inline-flex; }
 
   .ps-nav-links {

@@ -30,6 +30,12 @@ Weighing up a few candidates? Hit **+ Compare** on up to four parts from search,
 browse or a part page, then open the tray at the bottom to see price, stock and
 package side by side. Each part is read fresh when the comparison opens.
 
+Pricing a whole board? Paste your parts list into **BOM check**, one part number
+and quantity per line, up to 40 parts. Each line is priced at its quantity using
+the distributor's own price breaks, and only lines that can actually be ordered
+count toward the total. Download the result as a CSV. Prices leave out shipping,
+tax and duties, which each distributor adds at checkout.
+
 ## Some ground rules it sticks to
 
 - No made-up stock or prices. If the data is stale, you get an error, not a
