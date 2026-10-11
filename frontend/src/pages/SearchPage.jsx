@@ -143,7 +143,7 @@ export default function SearchPage() {
           {sortButton(byPrice, 'Price, low to high', () => setSort(true))}
           <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 'auto' }}>{SHIPPING_NOTE}</span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="ps-results">
           {shown.map((p) => <ResultCard key={p.mpn_key} part={p} />)}
         </div>
       </div>
