@@ -56,8 +56,16 @@ still `200`. Only a total failure of every callable distributor is a `502`.
 
 ### `GET /api/part/<mpn_key>?refresh=false`
 `{"part": {...}, "sources": [...]}`, the same `Part` shape as a search result.
-`404` if unknown. A legacy `C<digits>` LCSC code redirects `302` to the
+`404` only when every distributor we asked answered and none has the part. If
+one of them timed out or was down, it is `504` or `502` naming which, since we
+cannot know it is missing. A legacy `C<digits>` LCSC code redirects `302` to the
 canonical MPN, and so does a key that folds into another part (`X-TR` to `X`).
+
+Upstream does not always find a part by its own MPN, even one it just returned
+for a search, so a cold detail read also serves the fresh offer rows search
+already stored under that key. That keeps every card openable for as long as
+its row is fresh, at the price the card showed. A deep link to such a part
+with nothing cached still comes back `404`, because then nothing has been read.
 
 ### `GET /api/equivalent/<mpn_key>`
 Returns `original` + one cheaper in-stock drop-in `equivalent`, or
