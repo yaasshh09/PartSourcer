@@ -162,3 +162,36 @@ v1 deliberately trades live-to-the-second data for a free, open, no-approval, pa
    - **Mouser API**: free key, real-time search/stock/price.
    - **Octopart / Nexar API (Altium)**: aggregates many distributors' live data in one call; free tier limited by monthly queries.
 3. **Scraping LCSC directly: do not.** Forbidden by spec §15; LCSC already bot-blocks (403).
+
+---
+
+## 2026-10-11: `/api/search` returns unrelated parts
+
+Measured, not guessed. Every fresh (`x-cache: MISS`) answer from `/api/search`
+was wrong: 9 of 9 queries. A search for `STM32F103CBT6` came back as two
+capacitors, `NE555DR` as connectors and inductors. The only correct answers
+left were old Cloudflare cache entries from before the break, which is why the
+same query looked right at one `limit` and wrong at another.
+
+Cause, from upstream's own source (`cf-proxy/src/search.ts` and
+`cf-proxy/scripts/rebuild-search-index-from-component-catalog.sql`): search
+joins `search_index_fts` to `search_index` on `rowid`, and the rebuild script
+does `DROP TABLE search_index; CREATE TABLE search_index AS SELECT ...`, which
+hands out new rowids. Unless the FTS table is rebuilt after, every text match
+lands on whatever row now holds that rowid. Code lookups (`q=C8734`) skip the
+join but also came back empty for most parts, so the table itself looks short
+of rows. Upstream changed its nightly sync on 2026-10-09 and 10.
+
+The parametric endpoints (`/resistors/list.json` and friends) were fine, so
+browse and the matcher's candidate pool are unaffected.
+
+What we do about it: `LcscAdapter.search` drops a row that names none of the
+query's words in its MPN, package or description, and reports LCSC as
+`unavailable` when every row was unrelated, so the UI says so rather than
+showing junk or an empty "no results". The check is deliberately loose (one
+word is enough) because upstream also matches category, manufacturer and
+attribute text we never receive. `lookup_mpn` is not filtered.
+
+What it still costs while upstream is broken: LCSC drops out of most searches,
+a cold part page for an LCSC-only part 404s, and the equivalent matcher's
+canonical re-read mostly finds nothing, so it answers with an honest null.
