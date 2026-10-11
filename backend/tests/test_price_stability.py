@@ -250,3 +250,66 @@ async def test_held_offers_do_not_outlive_the_ttl_by_being_looked_at(store):
     result = await after.search("second", 1)
 
     assert price(result.results[0]) == 0.0009, "served numbers past the TTL"
+
+
+class SearchOnlyAdapter(VaryingAdapter):
+    """Finds PART-A for the user's words but not for its own MPN, which is
+    what jlcsearch does for about two thirds of the hits on a common query."""
+
+    async def lookup_mpn(self, mpn, limit=20):
+        self.queries.append(mpn)
+        return []
+
+
+def search_only(store_, now=lambda: T0):   # noqa: F811
+    adapter = SearchOnlyAdapter({"1k resistor": 0.0039}, ["PART-A"])
+    return adapter, build(store_, {"lcsc": adapter}, now=now)
+
+
+async def test_a_part_search_showed_still_opens_when_its_mpn_finds_nothing(store):
+    adapter, cached = search_only(store)
+    await cached.search("1k resistor", 1)
+
+    part, _, canonical = await cached.lookup("PART-A")
+
+    assert part is not None, "a card the user just saw led to Part not found"
+    assert canonical and price(part) == 0.0039
+    assert "PART-A" in adapter.queries, "the detail read still happened"
+
+
+async def test_the_held_part_is_served_again_from_the_cache(store):
+    adapter, cached = search_only(store)
+    await cached.search("1k resistor", 1)
+    await cached.lookup("PART-A")
+    asked = len(adapter.queries)
+
+    part, _, _ = await cached.lookup("PART-A")
+
+    assert part is not None and price(part) == 0.0039
+    assert len(adapter.queries) == asked, "a fresh answer was asked for again"
+
+
+async def test_an_expired_row_is_not_served_to_keep_a_page_alive(store):
+    _adapter, at_t0 = search_only(store)
+    await at_t0.search("1k resistor", 1)
+
+    past = T0 + timedelta(seconds=TTL + 1)
+    _later_adapter, later = search_only(store, now=lambda: past)
+    part, _, _ = await later.lookup("PART-A")
+
+    assert part is None, "served a price past its TTL"
+
+
+async def test_opening_a_held_part_late_does_not_extend_its_life(store):
+    """The status row must age from the held read, or a hit would serve that
+    row behind a status that looks fresh well past the row's own TTL."""
+    _adapter, at_t0 = search_only(store)
+    await at_t0.search("1k resistor", 1)
+
+    late = T0 + timedelta(seconds=int(TTL * 0.9))
+    await search_only(store, now=lambda: late)[1].lookup("PART-A")
+
+    past = T0 + timedelta(seconds=int(TTL * 1.5))
+    part, _, _ = await search_only(store, now=lambda: past)[1].lookup("PART-A")
+
+    assert part is None, "served a price past its TTL"

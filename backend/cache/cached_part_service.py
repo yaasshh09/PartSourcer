@@ -338,7 +338,7 @@ class CachedPartService:
                                           statuses)
         effective = await self._commit_lookup(mpn_key, result.listings,
                                               provisional, statuses,
-                                              force=refresh)
+                                              force=refresh, served=served)
         parts = self._service.merge(cached_listings + effective, statuses)
         part, canonical = select_part(parts, mpn_key)
         return part, statuses, canonical
@@ -346,15 +346,42 @@ class CachedPartService:
     async def _commit_lookup(self, mpn_key: str, listings: list[RawListing],
                              parts: list[Part],
                              statuses: list[DistributorStatus],
-                             force: bool = False) -> list[RawListing]:
+                             force: bool = False,
+                             served: set[str] = frozenset()) -> list[RawListing]:
         # Offers for every listing, including parts the keyword lookup dragged
         # in: that is free cache warming. A status row only for the key we
         # actually asked about, because that is the only question we asked.
         effective = await self._write_offers(listings, parts, force=force)
+        effective += await self._held_for(mpn_key, effective, statuses, served)
         await self._store.put_part_status(
             mpn_key, [s.model_dump(mode="json") for s in statuses],
             self._stamp(effective))
         return effective
+
+    async def _held_for(self, mpn_key: str, effective: list[RawListing],
+                        statuses: list[DistributorStatus],
+                        served: set[str]) -> list[RawListing]:
+        """Fresh rows already filed under this key that this read missed.
+
+        Upstream does not always find a part by its own MPN, even one it just
+        returned for the user's words: on a common query about two thirds of
+        the cards came back empty that way, so the card a user had just seen
+        opened onto Part not found. The row search stored is still one answer
+        until it expires, so it is served here as it already is on a cache
+        hit. Only from a distributor that answered this time, and never one
+        the caller already serves from the cache, which would double it.
+        """
+        answered = {s.distributor for s in statuses if s.state == "ok"} - served
+        have = {(x.distributor, x.sku, normalize_exact(x.mpn)) for x in effective}
+        out = []
+        for row in await self._store.get_offers([mpn_key]):
+            if row.distributor not in answered or not self._fresh(row.as_of):
+                continue
+            listing = listing_from_dict(row.listing)
+            if (listing.distributor, listing.sku,
+                    normalize_exact(listing.mpn)) not in have:
+                out.append(listing)
+        return out
 
     async def resolve_sku(self, distributor: str, sku: str) -> str | None:
         """A distributor SKU to its part key, for the legacy redirect."""
