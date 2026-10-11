@@ -136,3 +136,48 @@ test('a long wait explains itself instead of just spinning', async () => {
     vi.useRealTimers()
   }
 })
+
+function priced(key, price) {
+  return part({ mpn_key: key, mpn: key, offers: [offer({ sku: key, mpn_as_listed: key, price_usd: price })] })
+}
+
+const SORTABLE = { page: 1, query: 'r', sources: OK_SOURCES,
+  results: [priced('MID', 0.5), priced('NONE', null), priced('LOW', 0.1), priced('HIGH', 2)] }
+
+function shownOrder() {
+  return screen.getAllByRole('link', { name: /^(MID|NONE|LOW|HIGH)$/ }).map((a) => a.textContent)
+}
+
+test('keeps the best match order until asked to sort', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue(SORTABLE)
+  renderAt('/?q=r')
+  await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
+  expect(shownOrder()).toEqual(['MID', 'NONE', 'LOW', 'HIGH'])
+  expect(screen.getByRole('button', { name: /best match/i })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('sorts by price low to high, unpriced last, without searching again', async () => {
+  const spy = vi.spyOn(api, 'search').mockResolvedValue(SORTABLE)
+  renderAt('/?q=r')
+  await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /price, low to high/i }))
+  expect(shownOrder()).toEqual(['LOW', 'MID', 'HIGH', 'NONE'])
+  expect(spy).toHaveBeenCalledTimes(1)
+})
+
+test('a shared sorted link opens sorted', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue(SORTABLE)
+  renderAt('/?q=r&sort=price')
+  await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
+  expect(shownOrder()).toEqual(['LOW', 'MID', 'HIGH', 'NONE'])
+})
+
+test('a new search keeps the price sort', async () => {
+  const spy = vi.spyOn(api, 'search').mockResolvedValue(SORTABLE)
+  renderAt('/?q=r&sort=price')
+  await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: 'AMS1117' }))
+  await waitFor(() => expect(spy).toHaveBeenLastCalledWith('AMS1117'))
+  await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
+  expect(shownOrder()).toEqual(['LOW', 'MID', 'HIGH', 'NONE'])
+})

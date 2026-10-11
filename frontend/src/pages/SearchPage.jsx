@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX } from '../theme.js'
-import { oldestAsOf } from '../offers.js'
+import { oldestAsOf, sortByPrice } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
@@ -17,6 +17,7 @@ const SKELETON_DELAYS = [0, 0.15, 0.3]
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') || ''
+  const byPrice = params.get('sort') === 'price'
 
   useDocumentTitle(q || null)
 
@@ -74,8 +75,27 @@ export default function SearchPage() {
     const t = text.trim()
     if (!t) return
     setQuery(t)
-    setParams({ q: t })
+    setParams(byPrice ? { q: t, sort: 'price' } : { q: t })
   }
+
+  // Sorting reorders what is already on screen. It is a view of the same
+  // read, so it never searches again, and it lives in the URL so a sorted
+  // link opens sorted.
+  function setSort(price) {
+    const next = new URLSearchParams(params)
+    if (price) next.set('sort', 'price')
+    else next.delete('sort')
+    setParams(next, { replace: true })
+  }
+
+  const shown = byPrice ? sortByPrice(results) : results
+  const sortButton = (active, label, onClick) => (
+    <button type="button" className="ps-chip" aria-pressed={active} onClick={onClick}
+      style={{ fontWeight: 700, fontSize: 12, padding: '5px 10px', border: `2px solid ${C.ink}`,
+        background: active ? C.ink : 'transparent', color: active ? C.yellow : C.ink }}>
+      {label}
+    </button>
+  )
 
   let body
   if (loading) {
@@ -116,8 +136,14 @@ export default function SearchPage() {
             {`stock & price as of ${fmtAsOf(asOf)}`}
           </div>
         </div>
+        <div role="group" aria-label="Sort results" style={{ display: 'flex', flexWrap: 'wrap',
+          alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>SORT</span>
+          {sortButton(!byPrice, 'Best match', () => setSort(false))}
+          {sortButton(byPrice, 'Price, low to high', () => setSort(true))}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {results.map((p) => <ResultCard key={p.mpn_key} part={p} />)}
+          {shown.map((p) => <ResultCard key={p.mpn_key} part={p} />)}
         </div>
       </div>
     )

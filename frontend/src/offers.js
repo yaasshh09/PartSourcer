@@ -124,3 +124,19 @@ export function oldestAsOf(parts) {
   }
   return oldest
 }
+
+/**
+ * Parts ordered by the price each card shows, lowest first. Reads
+ * headlineOffer so the order always matches the number on screen, and an
+ * unpriced part goes last rather than reading as free. Stable, so ties and
+ * the unpriced tail keep the best match order.
+ */
+export function sortByPrice(parts) {
+  const price = (part) => {
+    const h = headlineOffer(part)
+    return h && h.price_usd != null ? h.price_usd : Number.POSITIVE_INFINITY
+  }
+  return (parts || []).map((part) => [price(part), part])
+    .sort((a, b) => (a[0] === b[0] ? 0 : a[0] - b[0]))
+    .map(([, part]) => part)
+}

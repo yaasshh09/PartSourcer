@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  headlineOffer, degradedSources, groupOffersByTier, lcscOffer, oldestAsOf,
+  headlineOffer, degradedSources, groupOffersByTier, lcscOffer, oldestAsOf, sortByPrice,
   DISTRIBUTOR_LABEL, SOURCE_STATE_COPY,
 } from './offers.js'
 
@@ -190,5 +190,26 @@ describe('label maps', () => {
     expect(SOURCE_STATE_COPY.timeout).toBe('timed out')
     expect(SOURCE_STATE_COPY.unavailable).toBe('unavailable')
     expect(SOURCE_STATE_COPY.quota_exhausted).toBe('daily quota used up')
+  })
+})
+
+describe('sortByPrice', () => {
+  const p = (key, price) => ({ mpn_key: key, offers: [offer({ price_usd: price })], cheapest: null })
+
+  test('orders by the price each card shows, lowest first', () => {
+    const parts = [p('A', 0.9), p('B', 0.1), p('C', 0.5)]
+    expect(sortByPrice(parts).map((x) => x.mpn_key)).toEqual(['B', 'C', 'A'])
+  })
+
+  // An unpriced part read as zero would jump to the top as if it were free.
+  test('puts parts with no price last, keeping their order', () => {
+    const parts = [p('N1', null), p('A', 0.9), { mpn_key: 'N2', offers: [], cheapest: null }, p('B', 0.1)]
+    expect(sortByPrice(parts).map((x) => x.mpn_key)).toEqual(['B', 'A', 'N1', 'N2'])
+  })
+
+  test('leaves the input untouched', () => {
+    const parts = [p('A', 0.9), p('B', 0.1)]
+    sortByPrice(parts)
+    expect(parts.map((x) => x.mpn_key)).toEqual(['A', 'B'])
   })
 })
