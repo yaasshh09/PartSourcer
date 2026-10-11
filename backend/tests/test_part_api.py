@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 import services.deps as deps
 from main import app
 from services.adapters.base import RawListing
-from tests.stub_cached import StubCached, StubLcsc, offer, part
+from tests.stub_cached import StubCached, StubLcsc, offer, part, status
 
 AS_OF = datetime(2026, 8, 14, 9, 0, tzinfo=timezone.utc)
 
@@ -114,3 +114,26 @@ def test_a_part_with_no_lcsc_offer_still_answers():
     body = c.get("/api/part/STM32F103C8T6").json()
 
     assert body["part"]["offers"][0]["distributor"] == "mouser"
+
+
+def test_a_part_no_answering_source_holds_is_still_a_404():
+    """disabled was never contacted, so it cannot make the answer unknown."""
+    sources = [status("lcsc"), status("mouser"), status("digikey", "disabled")]
+    resp = client_over(StubCached(found=None, sources=sources)).get(
+        "/api/part/NOTHING")
+
+    assert resp.status_code == 404
+
+
+@pytest.mark.parametrize("state,code", [("timeout", 504),
+                                        ("unavailable", 502),
+                                        ("quota_exhausted", 502)])
+def test_not_found_is_never_claimed_over_a_source_we_could_not_ask(state, code):
+    sources = [status("lcsc"), status("mouser", state, detail="secret-ish")]
+    resp = client_over(StubCached(found=None, sources=sources)).get(
+        "/api/part/NOTHING")
+
+    assert resp.status_code == code
+    assert "not found" not in resp.json()["detail"].lower()
+    assert "mouser" in resp.json()["detail"]
+    assert "secret-ish" not in resp.json()["detail"]

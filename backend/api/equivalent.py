@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
+from api.part import missing_part
 from api.legacy import LEGACY_CODE, canonical_mpn
 from api.validation import check_key_length
 from cache.cached_part_service import CachedPartService
@@ -69,12 +70,12 @@ async def get_equivalent(
                                         status_code=302)
 
         key = normalize_exact(raw)
-        part, _sources, canonical = await cached.lookup(key)
+        part, sources, canonical = await cached.lookup(key)
     except UpstreamError as exc:
         raise HTTPException(status_code=UPSTREAM_STATUS[exc.kind],
                             detail=str(exc)) from exc
     if part is None or not part.offers:
-        raise HTTPException(status_code=404, detail=f"Part {mpn_key} not found")
+        raise missing_part(mpn_key, sources)
     if not canonical:
         return RedirectResponse(f"/api/equivalent/{part.mpn_key}",
                                 status_code=302)

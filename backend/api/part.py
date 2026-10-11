@@ -25,6 +25,24 @@ router = APIRouter(prefix="/api")
 _LEGACY_EQUIVALENT = re.compile(r"(C\d+)/equivalent")
 
 
+def missing_part(raw: str, sources) -> HTTPException:
+    """Why no part came back, told honestly.
+
+    Not found is a claim that every distributor was asked and none has it.
+    With one of them timed out or down we only know that the others do not,
+    so that is an upstream failure, not a 404. disabled never counts: it was
+    never asked and never will be. Only names and states go in the detail,
+    never a source's own message.
+    """
+    unasked = [s for s in sources if s.state not in ("ok", "disabled")]
+    if not unasked:
+        return HTTPException(status_code=404, detail=f"Part {raw} not found")
+    code = 504 if any(s.state == "timeout" for s in unasked) else 502
+    names = ", ".join(f"{s.distributor} {s.state}" for s in unasked)
+    return HTTPException(status_code=code,
+                         detail=f"Could not check every distributor for {raw} ({names})")
+
+
 @router.get("/part/{mpn_key:path}", response_model=PartResponse)
 async def get_part(
     mpn_key: str,
@@ -58,7 +76,7 @@ async def get_part(
         raise HTTPException(status_code=UPSTREAM_STATUS[exc.kind],
                             detail=str(exc)) from exc
     if part is None:
-        raise HTTPException(status_code=404, detail=f"Part {raw} not found")
+        raise missing_part(raw, sources)
     if not canonical_key:
         # The request named a key that folds into another part. Redirect so
         # the address bar carries the name the merge actually uses.

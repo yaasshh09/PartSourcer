@@ -255,3 +255,15 @@ def test_a_legacy_code_reports_an_upstream_failure_honestly_not_as_a_500():
     c = client_with(handler, found=resistor_part())
 
     assert c.get("/api/equivalent/C100").status_code == 504
+
+
+def test_an_unknown_part_behind_a_timed_out_source_is_not_called_missing():
+    from tests.stub_cached import StubCached, status
+    c = client_with(route, found=None)
+    app.dependency_overrides[deps.get_cached_service] = lambda: StubCached(
+        found=None, sources=[status("lcsc", "timeout"), status("mouser")])
+
+    resp = c.get("/api/equivalent/NOTHING")
+
+    assert resp.status_code == 504
+    assert "not found" not in resp.json()["detail"].lower()
