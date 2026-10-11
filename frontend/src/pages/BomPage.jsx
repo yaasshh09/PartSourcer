@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { encodeKey, getPart } from '../api.js'
 import { MAX_LINES, STATE_LABEL, checkLine, parseBom, summarize, toCsv } from '../bom.js'
 import { DISTRIBUTOR_LABEL } from '../offers.js'
@@ -27,11 +27,25 @@ const chip = { background: 'transparent', border: `2px solid ${C.ink}`, fontWeig
 
 export default function BomPage() {
   useDocumentTitle('BOM check')
-  const [text, setText] = useState(load)
+  const [params, setParams] = useSearchParams()
+  const shared = params.get('list')
+  const [text, setText] = useState(() => shared ?? load())
   const [rows, setRows] = useState([])
   const [notice, setNotice] = useState(null)
+  const [linked, setLinked] = useState(false)
   const run = useRef(0)
   const fileRef = useRef(null)
+  const opened = useRef(false)
+
+  // A shared link checks on arrival, then leaves the address bar, so a
+  // refresh after editing does not put the sender's list back.
+  useEffect(() => {
+    if (!shared || opened.current) return
+    opened.current = true
+    save(shared)
+    check(shared)
+    setParams({}, { replace: true })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function edit(v) { setText(v); save(v) }
 
@@ -72,7 +86,11 @@ export default function BomPage() {
 
   function onCheck(e) {
     e.preventDefault()
-    const { lines, count, tooMany, missingMpn } = parseBom(text)
+    check(text)
+  }
+
+  function check(src) {
+    const { lines, count, tooMany, missingMpn } = parseBom(src)
     if (missingMpn) {
       setNotice('That header row has no part number column. Name it MPN, or paste just part numbers and quantities.')
       setRows([])
@@ -94,6 +112,18 @@ export default function BomPage() {
   function retry() {
     read(rows.map(({ mpn, qty }) => ({ mpn, qty })),
       rows.map((r, i) => (r.state === 'error' ? i : -1)).filter((i) => i >= 0))
+  }
+
+  // Rebuilt from the checked lines rather than the raw paste, so designators
+  // and extra columns stay behind. The header keeps an all-digit part number
+  // from reading as a quantity when the link is opened.
+  function copyLink() {
+    const list = ['MPN,Qty', ...rows.map((r) => `${r.mpn},${r.qty}`)].join('\n')
+    const url = `${window.location.origin}/bom?list=${encodeURIComponent(list)}`
+    navigator.clipboard.writeText(url).then(() => {
+      setLinked(true)
+      setTimeout(() => setLinked(false), 1600)
+    }).catch(() => {})
   }
 
   function download() {
@@ -187,6 +217,11 @@ export default function BomPage() {
                 <button type="button" className="ps-chip" onClick={retry} style={chip}>Retry failed lines</button>
               ) : null}
               <button type="button" className="ps-chip" onClick={download} style={chip}>Download CSV</button>
+              {navigator.clipboard && navigator.clipboard.writeText ? (
+                <button type="button" className="ps-chip" onClick={copyLink} style={chip}>
+                  {linked ? 'Link copied' : 'Copy link'}
+                </button>
+              ) : null}
             </div>
           ) : null}
 

@@ -29,7 +29,7 @@ function mockParts(failing = {}) {
   })
 }
 
-const renderPage = () => render(<MemoryRouter><BomPage /></MemoryRouter>)
+const renderPage = (path = '/bom') => render(<MemoryRouter initialEntries={[path]}><BomPage /></MemoryRouter>)
 
 function check(text) {
   fireEvent.change(screen.getByLabelText(/parts list/i), { target: { value: text } })
@@ -122,4 +122,35 @@ test('loads a CSV file into the list', async () => {
   file.text = () => Promise.resolve('MPN,Qty\nNE555P,4\n')
   fireEvent.change(screen.getByLabelText(/load a csv/i), { target: { files: [file] } })
   await waitFor(() => expect(screen.getByLabelText(/parts list/i)).toHaveValue('MPN,Qty\nNE555P,4\n'))
+})
+
+// A shared link has to show the prices, not a box the receiver must submit.
+test('a shared link fills the list and checks it straight away', async () => {
+  const spy = mockParts()
+  renderPage(`/bom?list=${encodeURIComponent('MPN,Qty\nNE555P,5')}`)
+  expect(screen.getByLabelText(/parts list/i)).toHaveValue('MPN,Qty\nNE555P,5')
+  await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
+  expect(spy).toHaveBeenCalledWith('NE555P')
+})
+
+test('copies a link that carries the checked lines', async () => {
+  mockParts()
+  const orig = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  const writeText = vi.fn(() => Promise.resolve())
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  try {
+    renderPage()
+    check('Ref,MPN,Qty\nU1,NE555P,5\nJ1,0039012040,2')
+    await waitFor(() => expect(screen.getByRole('button', { name: /copy link/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /copy link/i }))
+    const url = new URL(writeText.mock.calls[0][0])
+    expect(url.pathname).toBe('/bom')
+    // Designators are gone, and the header keeps an all-digit part number
+    // from reading as a quantity when the link is opened.
+    expect(url.searchParams.get('list')).toBe('MPN,Qty\nNE555P,5\n0039012040,2')
+    await waitFor(() => expect(screen.getByRole('button', { name: /link copied/i })).toBeInTheDocument())
+  } finally {
+    if (orig) Object.defineProperty(navigator, 'clipboard', orig)
+    else delete navigator.clipboard
+  }
 })
