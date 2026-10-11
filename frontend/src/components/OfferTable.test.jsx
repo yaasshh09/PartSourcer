@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { test, expect, afterEach } from 'vitest'
 import OfferTable from './OfferTable.jsx'
 
@@ -152,4 +152,29 @@ test('no ladder line when there is nothing beyond the unit price', () => {
   render(<OfferTable offers={[offer(), offer({ distributor: 'mouser', sku: 'M-1',
     price_breaks: [{ qty: 1, price_usd: 0.5 }] })]} />)
   expect(screen.queryByText(/price breaks/)).not.toBeInTheDocument()
+})
+
+// Same rules as the BOM check, so a quantity costs the same on both pages.
+test('prices every offer at the quantity typed in', () => {
+  noClipboard()
+  const ladder = [{ qty: 1, price_usd: 0.5 }, { qty: 10, price_usd: 0.3 }, { qty: 100, price_usd: 0.1 }]
+  render(<OfferTable offers={[
+    offer({ distributor: 'mouser', sku: 'M-1', stock: 5000, price_breaks: ladder }),
+    offer({ distributor: 'digikey', sku: 'D-1', stock: 5000, price_breaks: [{ qty: 500, price_usd: 0.02 }] }),
+    offer({ sku: 'C1', stock: 100, price_usd: 0.05 }),
+  ]} />)
+  fireEvent.change(screen.getByLabelText(/price for how many/i), { target: { value: '250' } })
+  expect(screen.getByText('250 for $25.00')).toBeInTheDocument()
+  expect(screen.getByText('500 for $10.00')).toBeInTheDocument()
+  expect(screen.getByText('minimum order 500')).toBeInTheDocument()
+  expect(screen.getByText('250 for $12.50')).toBeInTheDocument()
+  expect(screen.getByText('only 100 in stock')).toBeInTheDocument()
+})
+
+test('shows no quantity line until a quantity is typed', () => {
+  noClipboard()
+  render(<OfferTable offers={[offer()]} />)
+  expect(screen.queryByText(/ for \$/)).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText(/price for how many/i), { target: { value: '0' } })
+  expect(screen.queryByText(/ for \$/)).not.toBeInTheDocument()
 })

@@ -1,5 +1,7 @@
-import { C, ARCHIVO, MONO, fmtAsOf, fmtUnit, SHIPPING_NOTE } from '../theme.js'
+import { useState } from 'react'
+import { C, ARCHIVO, MONO, fmtAsOf, fmtPrice, fmtUnit, SHIPPING_NOTE } from '../theme.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
+import { priceAt } from '../bom.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
 import Price from './Price.jsx'
@@ -58,7 +60,25 @@ function Breaks({ breaks }) {
   )
 }
 
-function OfferRow({ offer, cheapest, showNote }) {
+// What this listing costs for the quantity typed in, by the same rules the
+// BOM check uses, so one quantity never costs two amounts on two pages.
+function AtQty({ offer, qty }) {
+  if (!qty) return null
+  const p = priceAt(offer, qty)
+  if (!p) return null
+  const short = (offer.stock || 0) < p.orderQty
+  return (
+    <div style={{ marginTop: 4, fontFamily: ARCHIVO, fontWeight: 700, fontSize: 12 }}>
+      <div>{`${p.orderQty.toLocaleString('en-US')} for ${fmtPrice(p.total)}`}</div>
+      {p.note ? <div style={{ color: C.sub, fontWeight: 600 }}>{p.note}</div> : null}
+      {short ? (
+        <div style={{ color: C.orange }}>{`only ${(offer.stock || 0).toLocaleString('en-US')} in stock`}</div>
+      ) : null}
+    </div>
+  )
+}
+
+function OfferRow({ offer, cheapest, showNote, qty }) {
   const claimed = isClaimed(offer, cheapest)
   return (
     <tr>
@@ -96,6 +116,7 @@ function OfferRow({ offer, cheapest, showNote }) {
       <td style={{ ...TD, fontFamily: ARCHIVO, fontWeight: 900, fontSize: 17 }}>
         <Price value={offer.price_usd} />
         <Breaks breaks={offer.price_breaks} />
+        <AtQty offer={offer} qty={qty} />
       </td>
       <td style={{ ...TD, fontSize: 12, color: C.muted, fontWeight: 600 }}>
         {fmtAsOf(offer.as_of)}
@@ -115,7 +136,7 @@ function OfferRow({ offer, cheapest, showNote }) {
   )
 }
 
-function Block({ title, offers, cheapest, showNote, caption }) {
+function Block({ title, offers, cheapest, showNote, caption, qty }) {
   if (!offers.length) return null
   return (
     <div style={{ marginTop: 18 }}>
@@ -144,7 +165,7 @@ function Block({ title, offers, cheapest, showNote, caption }) {
           <tbody>
             {offers.map((o) => (
               <OfferRow key={`${o.distributor}:${o.sku}`} offer={o}
-                cheapest={cheapest} showNote={showNote} />
+                cheapest={cheapest} showNote={showNote} qty={qty} />
             ))}
           </tbody>
         </table>
@@ -159,13 +180,24 @@ function Block({ title, offers, cheapest, showNote, caption }) {
  * the tube the user searched for.
  */
 export default function OfferTable({ offers, cheapest = null, unavailableReason = null }) {
+  const [qtyText, setQtyText] = useState('')
   const { exact, packaging } = groupOffersByTier(offers)
   if (!exact.length && !packaging.length) return null
+  const n = Number(qtyText)
+  const qty = Number.isInteger(n) && n > 0 ? n : 0
 
   return (
     <div style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 22, marginTop: 20 }}>
-      <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} />
-      <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote
+      <label style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
+        fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13 }}>
+        PRICE FOR HOW MANY?
+        <input type="number" min="1" step="1" inputMode="numeric" value={qtyText}
+          onChange={(e) => setQtyText(e.target.value)} placeholder="e.g. 250"
+          style={{ width: 120, fontFamily: MONO, fontSize: 14, padding: '6px 8px',
+            border: `2px solid ${C.ink}`, background: C.bg }} />
+      </label>
+      <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} qty={qty} />
+      <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote qty={qty}
         caption="Same part number, different packaging. These are not the same physical part, so check the reel or tube before you swap." />
       <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 14 }}>{SHIPPING_NOTE}</div>
       {!cheapest && unavailableReason ? (
