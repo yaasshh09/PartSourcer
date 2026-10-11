@@ -7,7 +7,7 @@ import * as api from '../api.js'
 
 function LocationProbe() {
   const loc = useLocation()
-  return <div data-testid="loc">{loc.pathname}</div>
+  return <div data-testid="loc">{loc.pathname + loc.search}</div>
 }
 
 function renderPart(path) {
@@ -96,6 +96,15 @@ test('self-corrects the URL when the backend returns a different canonical key',
   vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
   renderPart('/part/C25531')
   await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE'))
+})
+
+// A BOM line can link to a legacy code; the quantity must survive the hop.
+test('keeps the quantity when the URL corrects', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/C25531?qty=250')
+  await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/part/0402WGJ0103TCE?qty=250'))
 })
 
 test('leaves the URL alone when the key already matches', async () => {

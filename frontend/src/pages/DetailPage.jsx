@@ -71,13 +71,15 @@ export default function DetailPage() {
   // The backend 302s a legacy LCSC code or a non-canonical key to the real
   // one and fetch follows it, so the body is right while the address bar is
   // stale. replace: true because a pushed entry would make Back land on the
-  // old URL, which would immediately re-correct and trap the user.
+  // old URL, which would immediately re-correct and trap the user. The query
+  // rides along so a ?qty= from a BOM link is not lost in the hop.
   const canonical = data && data.part ? data.part.mpn_key : null
+  const query = searchParams.toString()
   useEffect(() => {
     if (canonical && canonical !== key) {
-      navigate(`/part/${encodeKey(canonical)}`, { replace: true })
+      navigate(`/part/${encodeKey(canonical)}${query ? `?${query}` : ''}`, { replace: true })
     }
-  }, [canonical, key, navigate])
+  }, [canonical, key, navigate, query])
 
   if (notFound) {
     return (
