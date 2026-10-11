@@ -1,4 +1,4 @@
-import { C, ARCHIVO, MONO, fmtAsOf, SHIPPING_NOTE } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf, fmtUnit, SHIPPING_NOTE } from '../theme.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
@@ -32,6 +32,30 @@ function isClaimed(offer, cheapest) {
   return !!cheapest
     && cheapest.distributor === offer.distributor
     && cheapest.sku === offer.sku
+}
+
+// The quantity ladder a distributor published, folded away under the unit
+// price. LCSC over jlcsearch sends none, and a single step says nothing the
+// unit price does not, so both show no line at all.
+function Breaks({ breaks }) {
+  const steps = (breaks || []).filter((b) => b && b.qty > 0 && b.price_usd != null)
+    .sort((a, b) => a.qty - b.qty)
+  if (steps.length < 2) return null
+  return (
+    <details style={{ marginTop: 4, fontFamily: ARCHIVO, fontWeight: 600, fontSize: 12 }}>
+      <summary style={{ cursor: 'pointer', color: C.sub }}>{`${steps.length} price breaks`}</summary>
+      <table style={{ borderCollapse: 'collapse', marginTop: 4 }}>
+        <tbody>
+          {steps.map((b) => (
+            <tr key={b.qty}>
+              <td style={{ padding: '2px 12px 2px 0', color: C.sub }}>{`${b.qty.toLocaleString('en-US')}+`}</td>
+              <td style={{ padding: '2px 0', fontFamily: MONO }}>{fmtUnit(b.price_usd)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  )
 }
 
 function OfferRow({ offer, cheapest, showNote }) {
@@ -71,6 +95,7 @@ function OfferRow({ offer, cheapest, showNote }) {
       <td style={TD}><StockBadge stock={offer.stock} /></td>
       <td style={{ ...TD, fontFamily: ARCHIVO, fontWeight: 900, fontSize: 17 }}>
         <Price value={offer.price_usd} />
+        <Breaks breaks={offer.price_breaks} />
       </td>
       <td style={{ ...TD, fontSize: 12, color: C.muted, fontWeight: 600 }}>
         {fmtAsOf(offer.as_of)}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { encodeKey, getPart } from '../api.js'
 import { MAX_LINES, STATE_LABEL, checkLine, parseBom, summarize, toCsv } from '../bom.js'
 import { DISTRIBUTOR_LABEL } from '../offers.js'
-import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice } from '../theme.js'
+import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice, fmtUnit } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
 const STORE_KEY = 'ps-bom'
@@ -21,9 +21,6 @@ const head = { ...cell, borderTop: 'none', color: C.sub, fontSize: 12, whiteSpac
 const muted = { color: C.muted, fontWeight: 500 }
 const STATE_COLOR = { ok: '#1d7a45', short: C.orange, unpriced: C.muted, missing: C.orange,
   error: C.orange, loading: C.muted }
-// Four places under a dollar. Rounded to cents, $0.014 shows as $0.01 and
-// fifty of them then add up to $0.70, which reads as a wrong sum.
-const fmtUnit = (p) => `$${p < 1 ? p.toFixed(4) : p.toFixed(2)}`
 
 const chip = { background: 'transparent', border: `2px solid ${C.ink}`, fontWeight: 700,
   fontSize: 13, padding: '7px 13px' }

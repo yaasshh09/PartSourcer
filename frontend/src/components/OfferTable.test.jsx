@@ -133,3 +133,23 @@ test('says the prices leave out shipping and tax', () => {
   render(<OfferTable offers={[offer()]} />)
   expect(screen.getByText(/shipping, tax and import duties/i)).toBeInTheDocument()
 })
+
+// Mouser and DigiKey publish a ladder. Showing only the single-unit price
+// hides what a builder ordering a hundred would actually pay.
+test('lists the quantity price breaks a distributor published', () => {
+  noClipboard()
+  const breaks = [{ qty: 100, price_usd: 0.014 }, { qty: 1, price_usd: 0.5 }, { qty: 10, price_usd: 0.3 }]
+  render(<OfferTable offers={[offer({ distributor: 'mouser', sku: 'M-1', price_breaks: breaks })]} />)
+  expect(screen.getByText('3 price breaks')).toBeInTheDocument()
+  expect(screen.getByText('100+')).toBeInTheDocument()
+  expect(screen.getByText('$0.0140')).toBeInTheDocument()
+  const qtys = screen.getAllByText(/^\d+\+$/).map((n) => n.textContent)
+  expect(qtys).toEqual(['1+', '10+', '100+'])
+})
+
+test('no ladder line when there is nothing beyond the unit price', () => {
+  noClipboard()
+  render(<OfferTable offers={[offer(), offer({ distributor: 'mouser', sku: 'M-1',
+    price_breaks: [{ qty: 1, price_usd: 0.5 }] })]} />)
+  expect(screen.queryByText(/price breaks/)).not.toBeInTheDocument()
+})

@@ -26,6 +26,10 @@ export function fmtPrice(p) {
   return '$' + (p < 0.01 ? p.toFixed(4) : p.toFixed(2))
 }
 
+// Four places under a dollar. Rounded to cents, $0.014 shows as $0.01 and
+// fifty of them then add up to $0.70, which reads as a wrong sum.
+export const fmtUnit = (p) => `$${p < 1 ? p.toFixed(4) : p.toFixed(2)}`
+
 export function stockInfo(stock) {
   const n = Number(stock) || 0
   if (n >= 3000) return { bg: '#38d17a', color: '#062c16', label: n.toLocaleString() + ' IN STOCK' }
