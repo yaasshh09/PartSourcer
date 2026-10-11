@@ -118,3 +118,9 @@ test('removing the last column lands on the empty state', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Remove A' }))
   expect(await screen.findByText('NOTHING TO COMPARE YET')).toBeInTheDocument()
 })
+
+test('the comparison says the prices leave out shipping', async () => {
+  vi.spyOn(api, 'getPart').mockImplementation((k) => Promise.resolve({ part: PARTS[k], sources: [] }))
+  renderAt('/compare?k=A&k=B')
+  await waitFor(() => expect(screen.getAllByText(/excludes shipping/i).length).toBe(1))
+})

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
-import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
 import { oldestAsOf, sortByPrice } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
@@ -141,6 +141,7 @@ export default function SearchPage() {
           <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>SORT</span>
           {sortButton(!byPrice, 'Best match', () => setSort(false))}
           {sortButton(byPrice, 'Price, low to high', () => setSort(true))}
+          <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 'auto' }}>{SHIPPING_NOTE}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {shown.map((p) => <ResultCard key={p.mpn_key} part={p} />)}

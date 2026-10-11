@@ -5,6 +5,7 @@ const QA = [
   { q: 'Is it really free?', a: "Yes. Free forever on core features, no signup to search. It's MIT open-source, fork it if you like." },
   { q: 'How fresh is the stock data?', a: 'Specs and footprints are cached long, they don\'t change. Stock and price get re-read every few hours, but the LCSC numbers come from an open database that itself syncs about once a day, and that is the real limit, not the cache. Mouser and DigiKey are live when they answer. Every result shows the time it was read.' },
   { q: 'Are you affiliated with LCSC or JLCPCB?', a: 'No. PartSourcer is an independent, community tool built on open data. Not affiliated with or endorsed by LCSC / JLCPCB.' },
+  { q: 'Do the prices include shipping?', a: "No. They are unit prices with shipping, tax and import duties left out. Those depend on where the order goes and how big it is, and no distributor publishes them through an API, so any figure here would be a guess. Each distributor works out the real number at checkout, and every offer links straight to its page." },
   { q: 'How do I trust the "equivalent"?', a: 'Something is only called an equivalent when the package and the core specs match, and both prices are re-read before a saving is claimed. If a match cannot be verified the answer is that none was found, rather than a guess. Today that means resistors and capacitors, the parts the open database carries real specs for.' },
 ]
 

@@ -68,3 +68,8 @@ test('about is the one home of the audience and the four rules', () => {
     expect(container.textContent).toMatch(rule)
   }
 })
+
+test('the faq says plainly that shipping is not included', () => {
+  const { container } = wrap(<FaqPage />)
+  expect(container.textContent).toMatch(/include shipping\?/i)
+})

@@ -181,3 +181,10 @@ test('a new search keeps the price sort', async () => {
   await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
   expect(shownOrder()).toEqual(['LOW', 'MID', 'HIGH', 'NONE'])
 })
+
+test('results say the prices leave out shipping', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue(SORTABLE)
+  renderAt('/?q=r')
+  await waitFor(() => expect(screen.getByText('MID')).toBeInTheDocument())
+  expect(screen.getByText(/excludes shipping/i)).toBeInTheDocument()
+})

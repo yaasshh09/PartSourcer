@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { encodeKey, getPart } from '../api.js'
 import { cleanKeys, compareHref, rowLeaders, useCompare } from '../compare.jsx'
 import { DISTRIBUTOR_LABEL, headlineOffer } from '../offers.js'
-import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
 import NoticePanel from '../components/NoticePanel.jsx'
 import Price from '../components/Price.jsx'
 import useDocumentTitle from '../useDocumentTitle.js'
@@ -123,7 +123,7 @@ export default function ComparePage() {
       {heading}
       <p style={{ fontSize: 15, color: C.sub, fontWeight: 500, maxWidth: 620, margin: '12px 0 24px' }}>
         Different parts, not equivalents. Check package and specs before swapping one for another.
-        Prices and stock are read fresh when this page opens.
+        Prices and stock are read fresh when this page opens. {SHIPPING_NOTE}
       </p>
       {keys.length < 2 ? (
         <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 16px' }}>Pin at least one more part to compare.</p>

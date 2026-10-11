@@ -1,4 +1,4 @@
-import { C, ARCHIVO, MONO, fmtAsOf } from '../theme.js'
+import { C, ARCHIVO, MONO, fmtAsOf, SHIPPING_NOTE } from '../theme.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
@@ -142,6 +142,7 @@ export default function OfferTable({ offers, cheapest = null, unavailableReason 
       <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} />
       <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote
         caption="Same part number, different packaging. These are not the same physical part, so check the reel or tube before you swap." />
+      <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 14 }}>{SHIPPING_NOTE}</div>
       {!cheapest && unavailableReason ? (
         <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 14 }}>
           {`No cheapest claim: ${unavailableReason}.`}

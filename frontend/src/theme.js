@@ -17,6 +17,10 @@ export const MONO = "'IBM Plex Mono',monospace"
 // that failed and $0.0000 reads as free, so the gap gets a name.
 export const NO_PRICE = 'no price'
 
+// No distributor API quotes shipping or tax, and both depend on where the
+// order goes, so every surface that shows a price says what it leaves out.
+export const SHIPPING_NOTE = 'Excludes shipping, tax and import duties, which each distributor adds at checkout.'
+
 export function fmtPrice(p) {
   if (p == null) return ''
   return '$' + (p < 0.01 ? p.toFixed(4) : p.toFixed(2))

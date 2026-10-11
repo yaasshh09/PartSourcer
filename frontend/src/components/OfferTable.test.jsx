@@ -126,3 +126,10 @@ test('shows a per-row as_of, because distributors cache on different clocks', ()
   expect(screen.getByText(/Aug 15, 2026/)).toBeInTheDocument()
   expect(screen.getByText(/Aug 14, 2026/)).toBeInTheDocument()
 })
+
+// The real cost of an order includes shipping and tax, which no distributor
+// API quotes. Say so next to the prices rather than let them read as final.
+test('says the prices leave out shipping and tax', () => {
+  render(<OfferTable offers={[offer()]} />)
+  expect(screen.getByText(/shipping, tax and import duties/i)).toBeInTheDocument()
+})
