@@ -164,3 +164,11 @@ test('says which lines were skipped and still checks the rest', async () => {
   await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
   expect(spy).toHaveBeenCalledTimes(1)
 })
+
+test('a checked part links to its page at the line quantity', async () => {
+  mockParts()
+  renderPage()
+  check('NE555P 5')
+  await waitFor(() => expect(screen.getByRole('link', { name: 'NE555P' }))
+    .toHaveAttribute('href', '/part/NE555P?qty=5'))
+})

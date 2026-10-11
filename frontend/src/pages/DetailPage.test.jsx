@@ -462,3 +462,13 @@ test('the part page can be pinned for comparison', async () => {
   expect(JSON.parse(localStorage.getItem('ps-compare'))).toEqual(['0402WGJ0103TCE'])
   localStorage.clear()
 })
+
+// The BOM check links here with the line's quantity already filled in.
+test('a qty in the link fills the quantity box', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE?qty=250')
+  await waitFor(() => expect(screen.getByLabelText(/price for how many/i)).toHaveValue(250))
+  expect(screen.getByText('250 for $0.10')).toBeInTheDocument()
+})

@@ -251,7 +251,7 @@ export default function BomPage() {
                 {rows.map((r) => (
                   <tr key={r.mpn}>
                     <td style={{ ...cell, fontFamily: MONO, whiteSpace: 'nowrap' }}>
-                      {r.key ? <Link className="ps-link" to={`/part/${encodeKey(r.key)}`}>{r.mpn}</Link> : r.mpn}
+                      {r.key ? <Link className="ps-link" to={`/part/${encodeKey(r.key)}?qty=${r.qty}`}>{r.mpn}</Link> : r.mpn}
                     </td>
                     <td style={cell}>{r.qty.toLocaleString('en-US')}</td>
                     <td style={{ ...cell, color: STATE_COLOR[r.state], whiteSpace: 'nowrap' }}>

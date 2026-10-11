@@ -179,8 +179,8 @@ function Block({ title, offers, cheapest, showNote, caption, qty }) {
  * variants kept in separate blocks so a cheaper reel cannot silently undercut
  * the tube the user searched for.
  */
-export default function OfferTable({ offers, cheapest = null, unavailableReason = null }) {
-  const [qtyText, setQtyText] = useState('')
+export default function OfferTable({ offers, cheapest = null, unavailableReason = null, initialQty = null }) {
+  const [qtyText, setQtyText] = useState(initialQty || '')
   const { exact, packaging } = groupOffersByTier(offers)
   if (!exact.length && !packaging.length) return null
   const n = Number(qtyText)

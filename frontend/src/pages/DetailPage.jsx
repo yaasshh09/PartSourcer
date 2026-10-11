@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
 import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf, NO_PRICE, PROSE_MAX, SHELL_MAX } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
@@ -16,6 +16,7 @@ import useDocumentTitle from '../useDocumentTitle.js'
 
 export default function DetailPage() {
   const params = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   // React Router already percent-decodes params, splat included. Decoding
   // again would mangle an MPN containing a literal %.
@@ -231,7 +232,7 @@ export default function DetailPage() {
       </div>
 
       <OfferTable offers={part.offers} cheapest={part.cheapest}
-        unavailableReason={part.cheapest_unavailable_reason} />
+        unavailableReason={part.cheapest_unavailable_reason} initialQty={searchParams.get('qty')} />
 
       {eq ? (
         <div style={{ marginTop: 24, border: `3px solid ${C.ink}`, boxShadow: `10px 10px 0 ${C.orange}`,
