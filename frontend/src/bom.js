@@ -47,6 +47,7 @@ export function parseBom(text) {
   const byKey = new Map()
   let cols = null
   let missingMpn = false
+  const skipped = []
   for (const raw of (text || '').split(/\r?\n/)) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
@@ -62,14 +63,14 @@ export function parseBom(text) {
     }
     const toks = row.filter(Boolean)
     const mpn = cols && sep ? row[cols.mpn] : toks.find((t) => !isQty(t))
-    if (!mpn) continue
+    if (!mpn) { skipped.push(line); continue }
     const q = cols && sep ? (isQty(row[cols.qty] || '') ? row[cols.qty] : null) : toks.find(isQty)
     const key = mpn.toUpperCase()
     const prev = byKey.get(key)
     byKey.set(key, { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) })
   }
   const lines = [...byKey.values()]
-  return { lines, count: lines.length, tooMany: lines.length > MAX_LINES, missingMpn }
+  return { lines, count: lines.length, tooMany: lines.length > MAX_LINES, missingMpn, skipped }
 }
 
 /**

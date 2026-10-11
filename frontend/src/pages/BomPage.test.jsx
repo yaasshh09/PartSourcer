@@ -154,3 +154,13 @@ test('copies a link that carries the checked lines', async () => {
     else delete navigator.clipboard
   }
 })
+
+test('says which lines were skipped and still checks the rest', async () => {
+  const spy = mockParts()
+  renderPage()
+  check('0039012040 2\nNE555P 1')
+  expect(screen.getByRole('status')).toHaveTextContent(/skipped 1 line/i)
+  expect(screen.getByRole('status')).toHaveTextContent('0039012040 2')
+  await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
+  expect(spy).toHaveBeenCalledTimes(1)
+})

@@ -32,6 +32,7 @@ export default function BomPage() {
   const [text, setText] = useState(() => shared ?? load())
   const [rows, setRows] = useState([])
   const [notice, setNotice] = useState(null)
+  const [skipped, setSkipped] = useState([])
   const [linked, setLinked] = useState(false)
   const run = useRef(0)
   const fileRef = useRef(null)
@@ -90,7 +91,8 @@ export default function BomPage() {
   }
 
   function check(src) {
-    const { lines, count, tooMany, missingMpn } = parseBom(src)
+    const { lines, count, tooMany, missingMpn, skipped: dropped } = parseBom(src)
+    setSkipped(missingMpn ? [] : dropped)
     if (missingMpn) {
       setNotice('That header row has no part number column. Name it MPN, or paste just part numbers and quantities.')
       setRows([])
@@ -177,13 +179,23 @@ export default function BomPage() {
             aria-label="Load a CSV file" onChange={loadFile} style={{ display: 'none' }} />
           {text ? (
             <button type="button" className="ps-chip" style={chip}
-              onClick={() => { edit(''); setRows([]); setNotice(null) }}>Clear</button>
+              onClick={() => { edit(''); setRows([]); setNotice(null); setSkipped([]) }}>Clear</button>
           ) : null}
         </div>
       </form>
 
       {notice ? (
         <p role="alert" style={{ fontSize: 14, fontWeight: 700, color: C.orange, margin: '18px 0 0' }}>{notice}</p>
+      ) : null}
+
+      {/* A line dropped without a word would make the total look more
+          complete than it is, so every skipped line is named. */}
+      {skipped.length ? (
+        <p role="status" style={{ fontSize: 13, fontWeight: 600, color: C.sub, margin: '14px 0 0' }}>
+          {`Skipped ${skipped.length} line${skipped.length === 1 ? '' : 's'} with no part number we could pick out: `
+            + `${skipped.slice(0, 3).map((l) => `"${l}"`).join(', ')}${skipped.length > 3 ? ' and more' : ''}. `
+            + 'If a part number is all digits, start the list with a header row, MPN,Qty.'}
+        </p>
       ) : null}
 
       {rows.length ? (

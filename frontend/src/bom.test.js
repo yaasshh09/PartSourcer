@@ -68,6 +68,13 @@ describe('parseBom', () => {
     expect(parseBom('Ref,MPN,Qty\nJ1,,1\nU1,NE555P,1').lines).toEqual([{ mpn: 'NE555P', qty: 1 }])
   })
 
+  // Two plain numbers could be a part and a quantity either way round.
+  test('reports lines it could not read instead of dropping them quietly', () => {
+    const out = parseBom('0039012040 2\nNE555P 1\nRef,MPN,Qty')
+    expect(out.lines).toEqual([{ mpn: 'NE555P', qty: 1 }])
+    expect(out.skipped).toEqual(['0039012040 2'])
+  })
+
   // Cut silently, a long BOM would look fully checked when it was not.
   test('refuses rather than trims a list over the cap', () => {
     const text = Array.from({ length: MAX_LINES + 1 }, (_, i) => `PART${i} 1`).join('\n')
