@@ -5,6 +5,7 @@ stay null here: jlcsearch carries no brand, no datasheet, and no price
 ladder. Mouser and DigiKey fill those in on their own offers.
 """
 
+import re
 from datetime import datetime, timezone
 
 import httpx
@@ -13,6 +14,24 @@ from models.parametric import ParametricPart
 from services.adapters.base import (DistributorAdapter, RawListing,
                                     UpstreamError, priced)
 from services.datasource import _to_parametric
+
+
+def _mentions_any(raw: dict, query: str) -> bool:
+    """Whether a search row names at least one word of the query.
+
+    Upstream promises every word appears in its search text, but on
+    2026-10-11 it had rebuilt its table without its text index, so a search
+    for an MCU came back as capacitors with a 200. Its search text also covers
+    category, manufacturer and attributes, which a row does not carry, so
+    demanding every word here would drop real matches once it is fixed. One
+    word in the MPN, package or description is the loosest check that still
+    catches rows that were never about the query.
+    """
+    words = re.findall(r"[a-z0-9]+", query.lower())
+    words = [w for w in words if len(w) > 1] or words
+    text = " ".join(str(raw.get(f) or "")
+                    for f in ("mfr", "package", "description")).lower()
+    return any(w in text for w in words)
 
 
 class LcscAdapter(DistributorAdapter):
@@ -68,18 +87,30 @@ class LcscAdapter(DistributorAdapter):
             rank=rank,
         )
 
-    async def search(self, query: str, limit: int) -> list[RawListing]:
-        query = query.strip()
-        if not query:
-            return []
-        items = await self._fetch_json("/api/search",
-                                       {"q": query, "limit": limit}, "components")
+    async def _query(self, query: str, limit: int) -> list[dict]:
+        return await self._fetch_json("/api/search",
+                                      {"q": query, "limit": limit}, "components")
+
+    def _listings(self, items: list[dict]) -> list[RawListing]:
         as_of = datetime.now(timezone.utc)
         return [self._to_listing(raw, as_of, rank=i)
                 for i, raw in enumerate(items)]
 
+    async def search(self, query: str, limit: int) -> list[RawListing]:
+        query = query.strip()
+        if not query:
+            return []
+        items = await self._query(query, limit)
+        related = [raw for raw in items if _mentions_any(raw, query)]
+        if items and not related:
+            raise UpstreamError("unavailable",
+                                "jlcsearch returned parts unrelated to the search")
+        return self._listings(related)
+
     async def lookup_mpn(self, mpn: str, limit: int = 20) -> list[RawListing]:
-        return await self.search(mpn, limit)
+        # Unfiltered: select_part takes the exact key and ignores the rest.
+        mpn = mpn.strip()
+        return self._listings(await self._query(mpn, limit)) if mpn else []
 
     async def lookup_sku(self, sku: str) -> RawListing | None:
         """Resolve an LCSC code to its listing. LCSC-only, and deliberately

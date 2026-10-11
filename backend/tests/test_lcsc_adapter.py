@@ -130,3 +130,49 @@ async def test_list_category_raises_on_a_missing_envelope():
     async with client_returning({"nope": []}) as c:
         with pytest.raises(UpstreamError):
             await LcscAdapter(c).list_category("/leds/list.json", "leds", {})
+
+
+JUNK = {"lcsc": 45359915, "mfr": "CGA0402C0G9R0B500GT", "package": "0402",
+        "description": "9pF 50V C0G Multilayer Ceramic Capacitors", "stock": 5,
+        "price": 0.01, "is_basic": False, "is_preferred": False}
+
+
+async def test_search_drops_rows_that_share_nothing_with_the_query():
+    """jlcsearch rebuilt its table without its text index, so a search for an
+    MCU came back as capacitors. A row naming none of the query's words in
+    its MPN, package or description is not a result for that query."""
+    async with client_returning({"components": [JUNK, ROW]}) as c:
+        out = await LcscAdapter(c).search("STM32F103C8T6", limit=20)
+    assert [r.mpn for r in out] == ["STM32F103C8T6"]
+
+
+async def test_one_matching_word_is_enough_to_keep_a_row():
+    """Upstream also matches category and manufacturer text we never see, so
+    the check stays loose: any one word, case and punctuation ignored."""
+    row = dict(ROW, mfr="RC0805FR-0710KL", package="0805",
+               description="10kOhm 1% 125mW Thick Film Resistor")
+    async with client_returning({"components": [row]}) as c:
+        out = await LcscAdapter(c).search("yageo 10k", limit=20)
+    assert len(out) == 1
+
+
+async def test_a_search_answered_only_with_unrelated_parts_is_unavailable():
+    """Reporting ok with nothing would hide the outage behind no results."""
+    async with client_returning({"components": [JUNK]}) as c:
+        with pytest.raises(UpstreamError) as exc:
+            await LcscAdapter(c).search("STM32F103C8T6", limit=20)
+    assert exc.value.kind == "unavailable"
+    assert "unrelated" in str(exc.value)
+
+
+async def test_an_honestly_empty_search_is_still_just_empty():
+    async with client_returning({"components": []}) as c:
+        assert await LcscAdapter(c).search("NOTAPART", limit=20) == []
+
+
+async def test_lookup_mpn_is_not_filtered():
+    """The detail path picks the exact part itself, and failing it here would
+    turn a held row the user just saw into an error page."""
+    async with client_returning({"components": [JUNK]}) as c:
+        out = await LcscAdapter(c).lookup_mpn("STM32F103C8T6")
+    assert [r.mpn for r in out] == ["CGA0402C0G9R0B500GT"]
