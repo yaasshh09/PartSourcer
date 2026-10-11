@@ -9,38 +9,67 @@ import { DISTRIBUTOR_LABEL, precedence } from './offers.js'
 // leaves room for the extra hop a folded part number costs.
 export const MAX_LINES = 40
 
-const HEADER_WORDS = new Set(['mpn', 'qty', 'quantity', 'part', 'part number', 'part no',
-  'manufacturer part number', 'mfr part number', 'mfr', 'value', 'reference'])
+const MPN_HEADERS = new Set(['mpn', 'part number', 'part no', 'part #', 'manufacturer part number',
+  'manufacturer part', 'mfr part number', 'mfr. part number', 'mfr part #', 'mfr. #', 'mfg part number'])
+const QTY_HEADERS = new Set(['qty', 'qty.', 'quantity'])
+const HEADER_WORDS = new Set([...MPN_HEADERS, ...QTY_HEADERS, 'part', 'mfr', 'value',
+  'reference', 'ref', 'designator', 'footprint', 'description'])
 
 const isQty = (t) => /^\d+$/.test(t) && Number(t) > 0
 
-function tokens(line) {
-  const parts = /[,\t;]/.test(line) ? line.split(/[,\t;]/) : line.split(/\s+/)
-  return parts.map((t) => t.trim().replace(/^"+|"+$/g, '').trim()).filter(Boolean)
+// Splits on the line's own separator, keeping a quoted cell whole, so a
+// designator cell like "R1,R2" stays one cell instead of shifting the rest.
+function cells(line) {
+  const sep = ['\t', ',', ';'].find((s) => line.includes(s))
+  if (!sep) return { sep: null, cells: line.split(/\s+/) }
+  const out = []
+  let cur = ''
+  let quoted = false
+  for (const ch of line) {
+    if (ch === '"') quoted = !quoted
+    else if (ch === sep && !quoted) { out.push(cur); cur = '' }
+    else cur += ch
+  }
+  out.push(cur)
+  return { sep, cells: out.map((t) => t.trim()) }
 }
 
 /**
  * One part per line: a part number and an optional whole-number quantity, in
- * either order, split by comma, tab, semicolon or spaces. Extra columns are
- * ignored, a header row and # comments are skipped, and a part listed twice
- * adds up. Over the cap is reported, never trimmed.
+ * either order, split by tab, comma, semicolon or spaces. A header row naming
+ * an MPN column fixes which cells are read from then on, since real exports
+ * lead with designators. Without one, the first cell that is not a quantity
+ * is the part. A header with no part number column is flagged rather than
+ * read by guesswork. # comments are skipped, and a part listed twice adds up. Over
+ * the cap is reported, never trimmed.
  */
 export function parseBom(text) {
   const byKey = new Map()
+  let cols = null
+  let missingMpn = false
   for (const raw of (text || '').split(/\r?\n/)) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
-    const toks = tokens(line)
-    if (toks.some((t) => HEADER_WORDS.has(t.toLowerCase()))) continue
-    const mpn = toks.find((t) => !isQty(t))
+    const { sep, cells: row } = cells(line)
+    const lower = row.map((t) => t.toLowerCase())
+    if (lower.some((t) => HEADER_WORDS.has(t))) {
+      // A bare "Part" is the part number only when nothing more specific is.
+      let mpnCol = lower.findIndex((t) => MPN_HEADERS.has(t))
+      if (mpnCol < 0) mpnCol = lower.indexOf('part')
+      cols = sep && mpnCol >= 0 ? { mpn: mpnCol, qty: lower.findIndex((t) => QTY_HEADERS.has(t)) } : null
+      if (sep && mpnCol < 0) missingMpn = true
+      continue
+    }
+    const toks = row.filter(Boolean)
+    const mpn = cols && sep ? row[cols.mpn] : toks.find((t) => !isQty(t))
     if (!mpn) continue
-    const q = toks.find(isQty)
+    const q = cols && sep ? (isQty(row[cols.qty] || '') ? row[cols.qty] : null) : toks.find(isQty)
     const key = mpn.toUpperCase()
     const prev = byKey.get(key)
     byKey.set(key, { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) })
   }
   const lines = [...byKey.values()]
-  return { lines, count: lines.length, tooMany: lines.length > MAX_LINES }
+  return { lines, count: lines.length, tooMany: lines.length > MAX_LINES, missingMpn }
 }
 
 /**

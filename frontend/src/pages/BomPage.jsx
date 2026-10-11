@@ -31,8 +31,20 @@ export default function BomPage() {
   const [rows, setRows] = useState([])
   const [notice, setNotice] = useState(null)
   const run = useRef(0)
+  const fileRef = useRef(null)
 
   function edit(v) { setText(v); save(v) }
+
+  // Read in the browser and dropped into the box, so what gets checked is
+  // always what is on screen. A BOM is a few kilobytes; a megabyte is not one.
+  async function loadFile(e) {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 1_000_000) { setNotice('That file is over 1 MB, which is too big to be a parts list.'); return }
+    setNotice(null)
+    edit(await file.text())
+  }
 
   // Four reads at a time, so a long list neither trips the rate limit in one
   // burst nor waits on each line in turn. A newer check drops older answers.
@@ -60,7 +72,12 @@ export default function BomPage() {
 
   function onCheck(e) {
     e.preventDefault()
-    const { lines, count, tooMany } = parseBom(text)
+    const { lines, count, tooMany, missingMpn } = parseBom(text)
+    if (missingMpn) {
+      setNotice('That header row has no part number column. Name it MPN, or paste just part numbers and quantities.')
+      setRows([])
+      return
+    }
     if (!count) { setNotice('Add at least one part number, one per line.'); setRows([]); return }
     if (tooMany) {
       setNotice(`That is ${count} parts. The check takes up to ${MAX_LINES} at a time, so split the list.`)
@@ -114,7 +131,7 @@ export default function BomPage() {
           style={{ width: '100%', fontFamily: MONO, fontSize: 14, padding: 12, resize: 'vertical',
             border: `2px solid ${C.ink}`, background: C.bg }} />
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 6 }}>
-          {`Part number and quantity, split by a comma, tab or space. Up to ${MAX_LINES} parts. A header row and extra columns are skipped.`}
+          {`Part number and quantity, split by a comma, tab or space. Up to ${MAX_LINES} parts. Pasting a spreadsheet with a header row? The MPN and Qty columns are found by name.`}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
           <button type="submit" className="ps-press" style={{ background: C.orange, color: '#fff',
@@ -123,6 +140,11 @@ export default function BomPage() {
           <button type="button" className="ps-chip" onClick={() => edit(EXAMPLE)} style={chip}>
             Try an example
           </button>
+          <button type="button" className="ps-chip" onClick={() => fileRef.current.click()} style={chip}>
+            Load a CSV
+          </button>
+          <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv,text/plain"
+            aria-label="Load a CSV file" onChange={loadFile} style={{ display: 'none' }} />
           {text ? (
             <button type="button" className="ps-chip" style={chip}
               onClick={() => { edit(''); setRows([]); setNotice(null) }}>Clear</button>

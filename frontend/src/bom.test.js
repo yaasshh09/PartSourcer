@@ -42,6 +42,32 @@ describe('parseBom', () => {
     expect(parseBom('"NE555P","7"').lines).toEqual([{ mpn: 'NE555P', qty: 7 }])
   })
 
+  // A real export leads with designators, so the first column is not the part.
+  test('a header row picks the part number and quantity columns by name', () => {
+    const csv = 'Reference,Value,Footprint,Qty,MPN\n"R1,R2",10k,R_0603,2,RC0603FR-0710KL\nU1,NE555,DIP-8,1,NE555P'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2 }, { mpn: 'NE555P', qty: 1 }])
+  })
+
+  test('works the same for a tab separated paste from a spreadsheet', () => {
+    const tsv = 'Designator\tManufacturer Part Number\tQuantity\nC1 C2 C3\tCL10B104KB8NNNC\t3'
+    expect(parseBom(tsv).lines).toEqual([{ mpn: 'CL10B104KB8NNNC', qty: 3 }])
+  })
+
+  // KiCad's default export has no MPN column. Reading R1 as a part is a guess.
+  test('flags a header with no part number column instead of guessing', () => {
+    const out = parseBom('Reference,Value,Footprint,Qty\nR1,10k,R_0603,1')
+    expect(out.missingMpn).toBe(true)
+    expect(parseBom('NE555P 2').missingMpn).toBe(false)
+  })
+
+  test('a plain Part column counts when nothing more specific is named', () => {
+    expect(parseBom('Part,Qty\nNE555P,2').lines).toEqual([{ mpn: 'NE555P', qty: 2 }])
+  })
+
+  test('a row with an empty part number cell is skipped, not guessed', () => {
+    expect(parseBom('Ref,MPN,Qty\nJ1,,1\nU1,NE555P,1').lines).toEqual([{ mpn: 'NE555P', qty: 1 }])
+  })
+
   // Cut silently, a long BOM would look fully checked when it was not.
   test('refuses rather than trims a list over the cap', () => {
     const text = Array.from({ length: MAX_LINES + 1 }, (_, i) => `PART${i} 1`).join('\n')

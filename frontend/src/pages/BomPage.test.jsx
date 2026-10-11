@@ -106,3 +106,20 @@ test('shows unit prices precisely enough to multiply out', async () => {
   await waitFor(() => expect(screen.getByText('$0.0140')).toBeInTheDocument())
   expect(screen.getByTestId('bom-total')).toHaveTextContent('$0.70')
 })
+
+test('says so when a pasted header has no part number column', () => {
+  const spy = mockParts()
+  renderPage()
+  check('Reference,Value,Footprint,Qty\nR1,10k,R_0603,1')
+  expect(screen.getByRole('alert')).toHaveTextContent(/no part number column/i)
+  expect(spy).not.toHaveBeenCalled()
+})
+
+test('loads a CSV file into the list', async () => {
+  renderPage()
+  const file = new File(['MPN,Qty\nNE555P,4\n'], 'bom.csv', { type: 'text/csv' })
+  // Every current browser has File.text(); jsdom does not.
+  file.text = () => Promise.resolve('MPN,Qty\nNE555P,4\n')
+  fireEvent.change(screen.getByLabelText(/load a csv/i), { target: { files: [file] } })
+  await waitFor(() => expect(screen.getByLabelText(/parts list/i)).toHaveValue('MPN,Qty\nNE555P,4\n'))
+})
