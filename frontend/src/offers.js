@@ -19,7 +19,7 @@ export const SOURCE_STATE_COPY = {
 // Matches backend/services/cheapest.py, so a tie breaks the same way here.
 const PRECEDENCE = ['lcsc', 'mouser', 'digikey']
 
-function precedence(distributor) {
+export function precedence(distributor) {
   const i = PRECEDENCE.indexOf(distributor)
   return i === -1 ? PRECEDENCE.length : i
 }

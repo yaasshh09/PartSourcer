@@ -1,0 +1,124 @@
+/**
+ * Pure rules for the BOM check: reading a pasted list, pricing a line at its
+ * quantity, and adding up only what can actually be bought. No React and no
+ * fetch, so every rule here is cheap to test.
+ */
+import { DISTRIBUTOR_LABEL, precedence } from './offers.js'
+
+// Each line is one part read, and the API allows 60 a minute per visitor. 40
+// leaves room for the extra hop a folded part number costs.
+export const MAX_LINES = 40
+
+const HEADER_WORDS = new Set(['mpn', 'qty', 'quantity', 'part', 'part number', 'part no',
+  'manufacturer part number', 'mfr part number', 'mfr', 'value', 'reference'])
+
+const isQty = (t) => /^\d+$/.test(t) && Number(t) > 0
+
+function tokens(line) {
+  const parts = /[,\t;]/.test(line) ? line.split(/[,\t;]/) : line.split(/\s+/)
+  return parts.map((t) => t.trim().replace(/^"+|"+$/g, '').trim()).filter(Boolean)
+}
+
+/**
+ * One part per line: a part number and an optional whole-number quantity, in
+ * either order, split by comma, tab, semicolon or spaces. Extra columns are
+ * ignored, a header row and # comments are skipped, and a part listed twice
+ * adds up. Over the cap is reported, never trimmed.
+ */
+export function parseBom(text) {
+  const byKey = new Map()
+  for (const raw of (text || '').split(/\r?\n/)) {
+    const line = raw.trim()
+    if (!line || line.startsWith('#')) continue
+    const toks = tokens(line)
+    if (toks.some((t) => HEADER_WORDS.has(t.toLowerCase()))) continue
+    const mpn = toks.find((t) => !isQty(t))
+    if (!mpn) continue
+    const q = toks.find(isQty)
+    const key = mpn.toUpperCase()
+    const prev = byKey.get(key)
+    byKey.set(key, { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) })
+  }
+  const lines = [...byKey.values()]
+  return { lines, count: lines.length, tooMany: lines.length > MAX_LINES }
+}
+
+/**
+ * What one offer costs for a quantity. A published break ladder is used as
+ * published; below its first step you are buying the minimum order, and the
+ * note says so. With no ladder the listed price is multiplied out, and the
+ * note says that too. No price published means null, never zero.
+ */
+export function priceAt(offer, qty) {
+  const breaks = (offer.price_breaks || []).filter((b) => b && b.price_usd != null && b.qty > 0)
+    .sort((a, b) => a.qty - b.qty)
+  if (breaks.length) {
+    if (qty < breaks[0].qty) {
+      const b = breaks[0]
+      return { unit: b.price_usd, orderQty: b.qty, total: b.price_usd * b.qty, note: `minimum order ${b.qty}` }
+    }
+    const b = breaks.filter((x) => x.qty <= qty).pop()
+    return { unit: b.price_usd, orderQty: qty, total: b.price_usd * qty, note: null }
+  }
+  if (offer.price_usd == null) return null
+  return { unit: offer.price_usd, orderQty: qty, total: offer.price_usd * qty,
+    note: 'no quantity breaks published' }
+}
+
+/**
+ * The offer that fills a line for the least: exact match, USD, priced, and
+ * holding at least what you would order. Packaging variants never fill a
+ * line, because a reel is not the tube that was asked for.
+ */
+export function checkLine(part, qty) {
+  const usable = ((part && part.offers) || [])
+    .filter((o) => o.match_tier === 'exact' && o.currency === 'USD')
+  const priced = usable.map((o) => ({ offer: o, ...priceAt(o, qty) })).filter((p) => p.unit != null)
+  if (!priced.length) return { state: 'unpriced' }
+  const fits = priced.filter((p) => p.offer.in_stock && p.offer.stock >= p.orderQty)
+  if (!fits.length) {
+    return { state: 'short', bestStock: Math.max(...usable.map((o) => o.stock || 0)) }
+  }
+  fits.sort((a, b) => (a.total - b.total) || (precedence(a.offer.distributor) - precedence(b.offer.distributor)))
+  const best = fits[0]
+  return { state: 'ok', offer: best.offer, unit: best.unit, orderQty: best.orderQty,
+    total: best.total, note: best.note, as_of: best.offer.as_of }
+}
+
+/** The total of the lines that can be bought, and a count of every state. */
+export function summarize(rows) {
+  const counts = {}
+  let total = 0
+  let asOf = null
+  for (const r of rows) {
+    counts[r.state] = (counts[r.state] || 0) + 1
+    if (r.state !== 'ok') continue
+    total += r.total
+    // Oldest, not newest: the total is only as fresh as its stalest line.
+    if (r.as_of && (!asOf || Date.parse(r.as_of) < Date.parse(asOf))) asOf = r.as_of
+  }
+  return { total, counts, asOf }
+}
+
+export const STATE_LABEL = {
+  ok: 'ok', short: 'not enough stock', unpriced: 'no price', missing: 'not found',
+  error: 'could not check', loading: 'checking',
+}
+
+const cell = (v) => {
+  const s = v == null ? '' : String(v)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+export function toCsv(rows) {
+  const head = ['MPN', 'Qty', 'Status', 'Distributor', 'SKU', 'Unit price USD', 'Order qty',
+    'Line total USD', 'Note']
+  const body = rows.map((r) => {
+    const ok = r.state === 'ok'
+    return [r.mpn, r.qty, STATE_LABEL[r.state] || r.state,
+      ok ? DISTRIBUTOR_LABEL[r.offer.distributor] || r.offer.distributor : '', ok ? r.offer.sku : '',
+      ok ? r.unit : '', ok ? r.orderQty : '', ok ? Math.round(r.total * 10000) / 10000 : '',
+      ok ? r.note : ''].map(cell).join(',')
+  })
+  return [head.join(','), ...body].join('\n') + '\n'
+}
