@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  headlineOffer, degradedSources, groupOffersByTier, lcscOffer, oldestAsOf, sortByPrice,
+  headlineOffer, degradedSources, groupOffersByTier, lcscOffer, oldestAsOf, sortByPrice, stockBySource,
   DISTRIBUTOR_LABEL, SOURCE_STATE_COPY,
 } from './offers.js'
 
@@ -211,5 +211,23 @@ describe('sortByPrice', () => {
     const parts = [p('A', 0.9), p('B', 0.1)]
     sortByPrice(parts)
     expect(parts.map((x) => x.mpn_key)).toEqual(['A', 'B'])
+  })
+})
+
+describe('stockBySource', () => {
+  test('adds up in-stock exact offers per distributor, in site order', () => {
+    const out = stockBySource([
+      offer({ distributor: 'mouser', sku: 'M-1', stock: 1000 }),
+      offer({ stock: 9000 }),
+      offer({ distributor: 'mouser', sku: 'M-2', stock: 500 }),
+      offer({ distributor: 'digikey', sku: 'D-1', stock: 70, in_stock: false }),
+      offer({ distributor: 'digikey', sku: 'D-2', stock: 4000, match_tier: 'packaging' }),
+    ])
+    expect(out).toEqual({ total: 10500, rows: [{ distributor: 'lcsc', stock: 9000 }, { distributor: 'mouser', stock: 1500 }] })
+  })
+
+  test('empty when nothing is in stock', () => {
+    expect(stockBySource([offer({ stock: 0, in_stock: false })])).toEqual({ total: 0, rows: [] })
+    expect(stockBySource(null)).toEqual({ total: 0, rows: [] })
   })
 })

@@ -95,6 +95,21 @@ export function groupOffersByTier(offers) {
   }
 }
 
+/**
+ * Units on the shelf per distributor, exact matches only: a reel listed under
+ * a variant part number is a different thing to order, so it does not count.
+ */
+export function stockBySource(offers) {
+  const by = new Map()
+  for (const o of offers || []) {
+    if (o.match_tier !== 'exact' || !o.in_stock || !(o.stock > 0)) continue
+    by.set(o.distributor, (by.get(o.distributor) || 0) + o.stock)
+  }
+  const rows = [...by].map(([distributor, stock]) => ({ distributor, stock }))
+    .sort((a, b) => precedence(a.distributor) - precedence(b.distributor))
+  return { total: rows.reduce((s, r) => s + r.stock, 0), rows }
+}
+
 /** The exact-tier LCSC listing, which is the only one that carries an LCSC code. */
 export function lcscOffer(part) {
   const offers = (part && part.offers) || []

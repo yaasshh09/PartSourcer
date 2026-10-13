@@ -481,3 +481,23 @@ test('a qty in the link fills the quantity box', async () => {
   await waitFor(() => expect(screen.getByLabelText(/price for how many/i)).toHaveValue(250))
   expect(screen.getByText('250 for $0.10')).toBeInTheDocument()
 })
+
+test('totals stock across distributors when more than one holds it', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    offers: [offer(), offer({ distributor: 'mouser', sku: 'M-1', stock: 1000, is_basic: null })],
+  }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('Stock, all sources')).toBeInTheDocument())
+  expect(screen.getByText('10,360 (LCSC 9,360, Mouser 1,000)')).toBeInTheDocument()
+})
+
+test('no stock total for a single distributor', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
+  expect(screen.queryByText('Stock, all sources')).toBeNull()
+})

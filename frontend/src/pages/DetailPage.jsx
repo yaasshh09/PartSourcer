@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
 import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf, NO_PRICE, PROSE_MAX, SHELL_MAX } from '../theme.js'
-import { headlineOffer, lcscOffer } from '../offers.js'
+import { DISTRIBUTOR_LABEL, headlineOffer, lcscOffer, stockBySource } from '../offers.js'
 import StockBadge from '../components/StockBadge.jsx'
 import CopyButton from '../components/CopyButton.jsx'
 import DistributorLinks from '../components/DistributorLinks.jsx'
@@ -143,6 +143,12 @@ export default function DetailPage() {
   if (part.brand) specRows.push(['Brand', part.brand])
   if (part.package) specRows.push(['Package', part.package])
   specRows.push(['Offers', String((part.offers || []).length)])
+  // Only worth a row when it adds something the headline badge does not say.
+  const shelf = stockBySource(part.offers)
+  if (shelf.rows.length > 1) {
+    const each = shelf.rows.map((r) => `${DISTRIBUTOR_LABEL[r.distributor] || r.distributor} ${r.stock.toLocaleString('en-US')}`)
+    specRows.push(['Stock, all sources', `${shelf.total.toLocaleString('en-US')} (${each.join(', ')})`])
+  }
   if (headline) {
     specRows.push(['Unit price', fmtPrice(headline.price_usd) || NO_PRICE])
   }
