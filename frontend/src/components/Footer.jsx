@@ -9,6 +9,7 @@ const PRODUCT = [
   { label: 'About', to: '/about' },
   { label: 'How it works', to: '/how' },
   { label: 'FAQ', to: '/faq' },
+  { label: 'Changelog', to: '/changelog' },
   { label: 'Contact', to: '/contact' },
 ]
 

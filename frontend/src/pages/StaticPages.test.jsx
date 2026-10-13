@@ -5,6 +5,7 @@ import HowPage from './HowPage.jsx'
 import FaqPage from './FaqPage.jsx'
 import ContactPage from './ContactPage.jsx'
 import NotFoundPage from './NotFoundPage.jsx'
+import ChangelogPage, { RELEASES } from './ChangelogPage.jsx'
 
 const wrap = (el) => render(<MemoryRouter>{el}</MemoryRouter>)
 
@@ -72,4 +73,12 @@ test('about is the one home of the audience and the four rules', () => {
 test('the faq says plainly that shipping is not included', () => {
   const { container } = wrap(<FaqPage />)
   expect(container.textContent).toMatch(/include shipping\?/i)
+})
+
+test('changelog lists releases newest first', () => {
+  wrap(<ChangelogPage />)
+  expect(screen.getByText('WHAT CHANGED.')).toBeInTheDocument()
+  const dates = RELEASES.map((r) => r.date)
+  expect([...dates].sort().reverse()).toEqual(dates)
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(dates)
 })
