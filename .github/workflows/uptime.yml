@@ -1,0 +1,45 @@
+name: Uptime check
+
+# Fails when the live site or its API stops answering, and GitHub emails the
+# repo owner about a failed scheduled run. That email is the alert.
+#
+# Only routes that never call a distributor are probed (/health and the
+# browse schema), so a check every 30 minutes costs no upstream quota. An
+# upstream outage is already shown to users by the source status bar.
+#
+# GitHub pauses scheduled workflows in a repo with no commits for 60 days.
+# If the alerts go quiet after a long break, re-enable this in the Actions tab.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+env:
+  SITE_URL: ${{ vars.BACKEND_URL || 'https://part-sourcer.vercel.app' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe the site and API
+        run: |
+          set -u
+          # One retry a minute later, so a cold start or a blip is not a page.
+          probe() {
+            local name="$1" url="$2" expect="$3"
+            for attempt in 1 2; do
+              code=$(curl -sS -o /tmp/body -w "%{http_code}" --max-time 60 "$url" || echo 000)
+              if [ "$code" = "200" ] && grep -q "$expect" /tmp/body; then
+                echo "ok    $name"; return 0
+              fi
+              echo "retry $name (HTTP $code)"; sleep 60
+            done
+            echo "DOWN  $name: $url answered HTTP $code"; head -c 300 /tmp/body || true; echo
+            return 1
+          }
+          failed=0
+          probe "frontend" "${SITE_URL}/" 'id="root"' || failed=1
+          probe "backend health" "${SITE_URL}/health" '"status":"ok"' || failed=1
+          probe "api routing" "${SITE_URL}/api/browse" '"categories"' || failed=1
+          exit $failed
