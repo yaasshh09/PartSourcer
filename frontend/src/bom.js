@@ -9,11 +9,21 @@ import { DISTRIBUTOR_LABEL, precedence } from './offers.js'
 // leaves room for the extra hop a folded part number costs.
 export const MAX_LINES = 40
 
+// Names as KiCad, Altium and JLCPCB exports write them, after header() folds
+// case, underscores and a trailing "(optional)". LCSC codes read like part
+// numbers, since a C-number finds its part the same way.
 const MPN_HEADERS = new Set(['mpn', 'part number', 'part no', 'part #', 'manufacturer part number',
-  'manufacturer part', 'mfr part number', 'mfr. part number', 'mfr part #', 'mfr. #', 'mfg part number'])
-const QTY_HEADERS = new Set(['qty', 'qty.', 'quantity'])
-const HEADER_WORDS = new Set([...MPN_HEADERS, ...QTY_HEADERS, 'part', 'mfr', 'value',
-  'reference', 'ref', 'designator', 'footprint', 'description'])
+  'manufacturer part', 'mfr part number', 'mfr. part number', 'mfr part #', 'mfr. #', 'mfg part number',
+  'mfr pn', 'manufacturer part number 1', 'lcsc', 'lcsc part', 'lcsc part #',
+  'lcsc part number', 'jlcpcb part #', 'jlcpcb part'])
+const QTY_HEADERS = new Set(['qty', 'qty.', 'quantity', 'quantity per pcb', 'qty per board'])
+const REF_HEADERS = new Set(['reference', 'references', 'ref', 'designator', 'designators'])
+const HEADER_WORDS = new Set([...MPN_HEADERS, ...QTY_HEADERS, ...REF_HEADERS, 'part', 'mfr', 'value',
+  'footprint', 'description', 'comment'])
+
+const header = (t) => t.toLowerCase().replace(/[(（][^)）]*[)）]/g, '').replace(/_/g, ' ').trim()
+// ponytail: counts "R1-R4" as one; exports that compress ranges also write a Qty column.
+const refCount = (t) => (t || '').split(/[\s,;]+/).filter(Boolean).length
 
 const isQty = (t) => /^\d+$/.test(t) && Number(t) > 0
 
@@ -52,19 +62,23 @@ export function parseBom(text) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
     const { sep, cells: row } = cells(line)
-    const lower = row.map((t) => t.toLowerCase())
+    const lower = row.map(header)
     if (lower.some((t) => HEADER_WORDS.has(t))) {
       // A bare "Part" is the part number only when nothing more specific is.
       let mpnCol = lower.findIndex((t) => MPN_HEADERS.has(t))
       if (mpnCol < 0) mpnCol = lower.indexOf('part')
-      cols = sep && mpnCol >= 0 ? { mpn: mpnCol, qty: lower.findIndex((t) => QTY_HEADERS.has(t)) } : null
+      cols = sep && mpnCol >= 0 ? { mpn: mpnCol, qty: lower.findIndex((t) => QTY_HEADERS.has(t)),
+        ref: lower.findIndex((t) => REF_HEADERS.has(t)) } : null
       if (sep && mpnCol < 0) missingMpn = true
       continue
     }
     const toks = row.filter(Boolean)
     const mpn = cols && sep ? row[cols.mpn] : toks.find((t) => !isQty(t))
     if (!mpn) { skipped.push(line); continue }
-    const q = cols && sep ? (isQty(row[cols.qty] || '') ? row[cols.qty] : null) : toks.find(isQty)
+    // With no quantity column, one part per designator is the count.
+    const q = !(cols && sep) ? toks.find(isQty)
+      : isQty(row[cols.qty] || '') ? row[cols.qty]
+        : cols.qty < 0 && cols.ref >= 0 && refCount(row[cols.ref]) ? refCount(row[cols.ref]) : null
     const key = mpn.toUpperCase()
     const prev = byKey.get(key)
     byKey.set(key, { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) })

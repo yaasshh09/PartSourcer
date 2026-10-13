@@ -198,3 +198,31 @@ describe('lineNote', () => {
     expect(lineNote({ ...r, thin: false, note: null })).toBe('')
   })
 })
+
+describe('parseBom reads EDA exports', () => {
+  // JLCPCB's assembly BOM has no quantity column, so the designators count it.
+  test('JLCPCB format, counted by designators', () => {
+    const csv = 'Comment,Designator,Footprint,JLCPCB Part #（optional）\n10k,"R1,R2,R3",0603,C25804\n100n,C1,0402,C1525'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'C25804', qty: 3 }, { mpn: 'C1525', qty: 1 }])
+  })
+
+  test('KiCad with an added part number field', () => {
+    const csv = 'Reference,Value,Footprint,Qty,Manufacturer_Part_Number\n"R1, R2",10k,R_0603,2,RC0603FR-0710KL'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2 }])
+  })
+
+  test('KiCad with an LCSC field and no quantity', () => {
+    const csv = 'Reference\tValue\tLCSC Part #\nC1 C2\t100n\tC1525'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'C1525', qty: 2 }])
+  })
+
+  test('Altium default export', () => {
+    const csv = '"Comment","Description","Designator","Footprint","LibRef","Quantity","Manufacturer Part Number 1"\n'
+      + '"NE555","Timer","U1, U2","DIP8","NE555","2","NE555P"'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'NE555P', qty: 2 }])
+  })
+
+  test('a header names no part number column, LCSC or otherwise', () => {
+    expect(parseBom('Comment,Designator,Footprint\n10k,R1,0603').missingMpn).toBe(true)
+  })
+})

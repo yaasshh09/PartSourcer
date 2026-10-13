@@ -176,7 +176,7 @@ export default function BomPage() {
           style={{ width: '100%', fontFamily: MONO, fontSize: 14, padding: 12, resize: 'vertical',
             border: `2px solid ${C.ink}`, background: C.bg }} />
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 6 }}>
-          {`Part number and quantity, split by a comma, tab or space. Up to ${MAX_LINES} parts. Pasting a spreadsheet with a header row? The MPN and Qty columns are found by name.`}
+          {`Part number and quantity, split by a comma, tab or space. Up to ${MAX_LINES} parts. Pasting a spreadsheet with a header row? The MPN and Qty columns are found by name, so KiCad, Altium and JLCPCB exports load as they are.`}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: ARCHIVO,
