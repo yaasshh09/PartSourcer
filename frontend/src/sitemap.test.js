@@ -13,3 +13,10 @@ test('the sitemap lists every page a visitor can land on cold', () => {
   const robots = readFileSync(resolve('public/robots.txt'), 'utf8')
   expect(robots).toContain('Sitemap: https://part-sourcer.vercel.app/sitemap.xml')
 })
+
+test('the install manifest parses and every icon it names exists', () => {
+  const m = JSON.parse(readFileSync(resolve('public/manifest.webmanifest'), 'utf8'))
+  expect(m.start_url).toBe('/')
+  for (const icon of m.icons) expect(() => readFileSync(resolve(`public${icon.src}`))).not.toThrow()
+  expect(readFileSync(resolve('index.html'), 'utf8')).toContain('href="/manifest.webmanifest"')
+})
