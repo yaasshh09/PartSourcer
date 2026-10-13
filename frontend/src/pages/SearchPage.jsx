@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
-import { oldestAsOf, sortByPrice } from '../offers.js'
+import { lcscOffer, oldestAsOf, sortByPrice } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
@@ -13,6 +13,14 @@ import useDocumentTitle from '../useDocumentTitle.js'
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 
 const SKELETON_DELAYS = [0, 0.15, 0.3]
+
+// JLCPCB assembly charges a setup fee per Extended part, not per Basic or
+// Preferred one. Only LCSC carries the flag, so a part with no LCSC listing
+// cannot be shown to qualify and is hidden too.
+const isJlcBasic = (p) => {
+  const l = lcscOffer(p)
+  return !!(l && (l.is_basic || l.is_preferred))
+}
 
 // Recent searches live in this browser only. Storage can throw (private
 // windows, blocked site data), and losing the list is fine.
@@ -30,6 +38,7 @@ export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') || ''
   const byPrice = params.get('sort') === 'price'
+  const basicOnly = params.get('basic') === '1'
 
   useDocumentTitle(q || null)
 
@@ -99,7 +108,10 @@ export default function SearchPage() {
     const t = text.trim()
     if (!t) return
     setQuery(t)
-    setParams(byPrice ? { q: t, sort: 'price' } : { q: t })
+    const next = { q: t }
+    if (byPrice) next.sort = 'price'
+    if (basicOnly) next.basic = '1'
+    setParams(next)
   }
 
   // Sorting reorders what is already on screen. It is a view of the same
@@ -112,7 +124,16 @@ export default function SearchPage() {
     setParams(next, { replace: true })
   }
 
-  const shown = byPrice ? sortByPrice(results) : results
+  function setBasic(on) {
+    const next = new URLSearchParams(params)
+    if (on) next.set('basic', '1')
+    else next.delete('basic')
+    setParams(next, { replace: true })
+  }
+
+  const kept = basicOnly ? results.filter(isJlcBasic) : results
+  const hidden = results.length - kept.length
+  const shown = byPrice ? sortByPrice(kept) : kept
   const sortButton = (active, label, onClick) => (
     <button type="button" className="ps-chip" aria-pressed={active} onClick={onClick}
       style={{ fontWeight: 700, fontSize: 12, padding: '5px 10px', border: `2px solid ${C.ink}`,
@@ -160,13 +181,19 @@ export default function SearchPage() {
             {`stock & price as of ${fmtAsOf(asOf)}`}
           </div>
         </div>
-        <div role="group" aria-label="Sort results" style={{ display: 'flex', flexWrap: 'wrap',
+        <div role="group" aria-label="Sort and filter results" style={{ display: 'flex', flexWrap: 'wrap',
           alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>SORT</span>
           {sortButton(!byPrice, 'Best match', () => setSort(false))}
           {sortButton(byPrice, 'Price, low to high', () => setSort(true))}
+          {sortButton(basicOnly, 'JLC Basic only', () => setBasic(!basicOnly))}
           <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 'auto' }}>{SHIPPING_NOTE}</span>
         </div>
+        {basicOnly && hidden ? (
+          <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, marginBottom: 14 }}>
+            {`${hidden} of ${results.length} results hidden: Extended at JLCPCB, or not listed on LCSC.`}
+          </div>
+        ) : null}
         <div className="ps-results">
           {shown.map((p) => <ResultCard key={p.mpn_key} part={p} />)}
         </div>

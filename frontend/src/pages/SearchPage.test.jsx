@@ -223,3 +223,28 @@ test('an empty result offers a shorter search and the category pages', async () 
   fireEvent.click(screen.getByRole('button', { name: /search "NE555"/i }))
   await waitFor(() => expect(spy).toHaveBeenLastCalledWith('NE555'))
 })
+
+const tiered = (key, basic, preferred = false) => part({ mpn_key: key, mpn: key,
+  offers: [offer({ sku: `C-${key}`, is_basic: basic, is_preferred: preferred })] })
+
+// JLCPCB charges a setup fee per Extended part, so Basic is worth filtering on.
+test('can show only JLC Basic and Preferred parts, and says how many it hid', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue({ page: 1, query: 'r', sources: OK_SOURCES,
+    results: [tiered('BASIC', true), tiered('EXT', false), tiered('PREF', false, true),
+      part({ mpn_key: 'MOUSER', mpn: 'MOUSER', offers: [offer({ distributor: 'mouser', sku: 'M-1' })] })] })
+  renderAt('/?q=r')
+  await waitFor(() => expect(screen.getByText('BASIC')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /jlc basic only/i }))
+  expect(screen.getAllByRole('link', { name: /^(BASIC|EXT|PREF|MOUSER)$/ }).map((a) => a.textContent))
+    .toEqual(['BASIC', 'PREF'])
+  expect(screen.getByText(/2 of 4 results hidden/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /jlc basic only/i })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('a shared Basic only link opens filtered', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue({ page: 1, query: 'r', sources: OK_SOURCES,
+    results: [tiered('BASIC', true), tiered('EXT', false)] })
+  renderAt('/?q=r&basic=1')
+  await waitFor(() => expect(screen.getByText('BASIC')).toBeInTheDocument())
+  expect(screen.queryByText('EXT')).toBeNull()
+})
