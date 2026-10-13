@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { encodeKey, getPart } from '../api.js'
-import { MAX_LINES, STATE_LABEL, checkLine, parseBom, summarize, toCsv } from '../bom.js'
+import { MAX_LINES, STATE_LABEL, checkLine, lineNote, parseBom, summarize, toCsv } from '../bom.js'
 import { DISTRIBUTOR_LABEL } from '../offers.js'
 import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice, fmtUnit } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
@@ -305,7 +305,16 @@ export default function BomPage() {
                       {r.state === 'ok' ? fmtPrice(Math.round(r.total * 10000) / 10000) : <span style={muted}>-</span>}
                     </td>
                     <td style={{ ...cell, ...muted, fontSize: 13 }}>
-                      {r.state === 'ok' ? (r.note || '')
+                      {r.state === 'ok' ? (
+                        <>
+                          {r.note || ''}
+                          {r.thin ? (
+                            <div style={{ color: C.orange, fontWeight: 700 }}>
+                              {lineNote({ ...r, note: null })}
+                            </div>
+                          ) : null}
+                        </>
+                      )
                         : r.state === 'short' ? `only ${r.bestStock.toLocaleString('en-US')} in stock`
                           : r.state === 'error' ? r.detail : ''}
                     </td>

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { parseBom, priceAt, checkLine, summarize, toCsv, MAX_LINES } from './bom.js'
+import { parseBom, priceAt, checkLine, summarize, toCsv, lineNote, MAX_LINES } from './bom.js'
 
 function offer(over = {}) {
   return {
@@ -142,6 +142,13 @@ describe('checkLine', () => {
     expect(checkLine(part([reel, eur]), 1).state).toBe('unpriced')
   })
 
+  // An order that takes most of a shelf can lose the race to someone else's.
+  test('flags a line whose order takes over half the stock', () => {
+    expect(checkLine(part([offer({ stock: 150 })]), 100).thin).toBe(true)
+    expect(checkLine(part([offer({ stock: 200 })]), 100).thin).toBe(false)
+    expect(checkLine(part([offer({ stock: 1000 })]), 100).thin).toBe(false)
+  })
+
   test('ties go to the same distributor order the rest of the site uses', () => {
     const m = offer({ distributor: 'mouser', price_usd: 0.1 })
     const l = offer({ distributor: 'lcsc', sku: 'C1', price_usd: 0.1 })
@@ -174,5 +181,20 @@ describe('toCsv', () => {
     expect(rows[0]).toBe('MPN,Qty,Status,Distributor,SKU,Unit price USD,Order qty,Line total USD,Note')
     expect(rows[1]).toBe('NE555P,2,ok,LCSC,C1,0.1,2,0.2,')
     expect(rows[2]).toBe('"A,B",1,not found,,,,,,')
+  })
+
+  test('the note says when an order takes most of the stock', () => {
+    const csv = toCsv([{ mpn: 'X', qty: 100, state: 'ok', offer: { distributor: 'lcsc', sku: 'C1', stock: 150 },
+      unit: 0.1, orderQty: 100, total: 10, note: null, thin: true }])
+    expect(csv.trim().split('\n')[1]).toBe('X,100,ok,LCSC,C1,0.1,100,10,takes 67% of the 150 in stock')
+  })
+})
+
+describe('lineNote', () => {
+  test('joins the price note and the stock warning', () => {
+    const r = { state: 'ok', offer: { stock: 150 }, orderQty: 100, note: 'minimum order 100', thin: true }
+    expect(lineNote(r)).toBe('minimum order 100; takes 67% of the 150 in stock')
+    expect(lineNote({ ...r, thin: false })).toBe('minimum order 100')
+    expect(lineNote({ ...r, thin: false, note: null })).toBe('')
   })
 })

@@ -212,3 +212,11 @@ test('opening a shared link with a board count prices at that count', async () =
   expect(screen.getByLabelText(/boards/i)).toHaveValue(2)
   await waitFor(() => expect(screen.getByTestId('bom-total')).toHaveTextContent('$1.00'))
 })
+
+test('warns when an order takes most of what is in stock', async () => {
+  PARTS.THIN = part('THIN', [offer({ sku: 'C7', stock: 150 })])
+  mockParts()
+  renderPage()
+  check('THIN 100')
+  await waitFor(() => expect(screen.getByText(/takes 67% of the 150 in stock/i)).toBeInTheDocument())
+})

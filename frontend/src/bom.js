@@ -112,7 +112,20 @@ export function checkLine(part, qty) {
   fits.sort((a, b) => (a.total - b.total) || (precedence(a.offer.distributor) - precedence(b.offer.distributor)))
   const best = fits[0]
   return { state: 'ok', offer: best.offer, unit: best.unit, orderQty: best.orderQty,
-    total: best.total, note: best.note, as_of: best.offer.as_of }
+    total: best.total, note: best.note, as_of: best.offer.as_of,
+    thin: best.offer.stock < THIN_STOCK_RATIO * best.orderQty }
+}
+
+// Taking over half a shelf is flagged: another buyer's order between the read
+// and yours could leave too few. The pick stays the cheapest that fits.
+export const THIN_STOCK_RATIO = 2
+
+/** The price note and, when stock is thin, how much of the shelf the order takes. */
+export function lineNote(r) {
+  const thin = r.thin
+    ? `takes ${Math.round((100 * r.orderQty) / r.offer.stock)}% of the ${r.offer.stock.toLocaleString('en-US')} in stock`
+    : null
+  return [r.note, thin].filter(Boolean).join('; ')
 }
 
 /** The total of the lines that can be bought, and a count of every state. */
@@ -148,7 +161,7 @@ export function toCsv(rows) {
     return [r.mpn, r.qty, STATE_LABEL[r.state] || r.state,
       ok ? DISTRIBUTOR_LABEL[r.offer.distributor] || r.offer.distributor : '', ok ? r.offer.sku : '',
       ok ? r.unit : '', ok ? r.orderQty : '', ok ? Math.round(r.total * 10000) / 10000 : '',
-      ok ? r.note : ''].map(cell).join(',')
+      ok ? lineNote(r) : ''].map(cell).join(',')
   })
   return [head.join(','), ...body].join('\n') + '\n'
 }
