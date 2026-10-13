@@ -214,3 +214,12 @@ test('does not remember a search that found nothing', async () => {
   renderAt('/')
   expect(screen.queryByRole('group', { name: /recent searches/i })).toBeNull()
 })
+
+test('an empty result offers a shorter search and the category pages', async () => {
+  const spy = vi.spyOn(api, 'search').mockResolvedValue({ page: 1, query: 'x', results: [], sources: OK_SOURCES })
+  renderAt('/?q=NE555 timer DIP8')
+  await waitFor(() => expect(screen.getByText('NO PARTS FOUND')).toBeInTheDocument())
+  expect(screen.getByRole('link', { name: /browse by category/i })).toHaveAttribute('href', '/browse')
+  fireEvent.click(screen.getByRole('button', { name: /search "NE555"/i }))
+  await waitFor(() => expect(spy).toHaveBeenLastCalledWith('NE555'))
+})

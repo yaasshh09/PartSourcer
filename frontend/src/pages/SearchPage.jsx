@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { search } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
 import { oldestAsOf, sortByPrice } from '../offers.js'
@@ -173,9 +173,23 @@ export default function SearchPage() {
       </div>
     )
   } else if (q) {
+    // Extra words narrow a search, so the first word alone is the obvious
+    // retry. Browsing needs no exact spelling at all.
+    const first = submitted.trim().split(/\s+/)[0]
+    const shorter = first && first !== submitted.trim() ? first : null
     body = (
       <NoticePanel title="NO PARTS FOUND">
         Nothing matched &quot;<span style={{ fontFamily: MONO }}>{submitted}</span>&quot;. Check the MPN, or try a broader spec.
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 14 }}>
+          {shorter ? (
+            <button type="button" className="ps-chip" onClick={() => runSearch(shorter)}
+              style={{ cursor: 'pointer', fontWeight: 700, fontSize: 13, background: C.paper,
+                border: `2px solid ${C.ink}`, padding: '6px 12px' }}>{`Search "${shorter}"`}</button>
+          ) : null}
+          <Link className="ps-link" to="/browse" style={{ fontWeight: 700, fontSize: 14 }}>
+            Browse by category
+          </Link>
+        </div>
       </NoticePanel>
     )
   } else {
