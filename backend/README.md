@@ -102,6 +102,14 @@ one you click through to. `capped` means upstream returned its 100-row
 maximum. An unknown category is 404, and an unknown filter or a bad value is
 422 with a message saying what to type.
 
+### `GET /api/badge/<mpn_key>`
+An SVG stock badge for a project README: total in-stock units across exact
+offers, the date they were read, and a "from" price only when the part has a
+gated cheapest claim. It reads the same cached part as `/api/part`. Every
+state is a 200 SVG (`not found`, `unavailable`, `out of stock`), because a
+README shows a broken image for anything else. `Cache-Control` is one hour
+for a real answer, the stock TTL, and five minutes for an error.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`

@@ -211,6 +211,12 @@ export default function DetailPage() {
               ) : null}
             </div>
           ) : null}
+          {/* Markdown for a project README: the image is the live badge, the
+              link is this page, so a reader can check what it says. */}
+          <div style={{ marginTop: 12 }}>
+            <CopyButton label="Copy README badge" text="Copy README badge"
+              value={`[![PartSourcer stock](${window.location.origin}/api/badge/${encodeKey(part.mpn_key)})](${window.location.origin}/part/${encodeKey(part.mpn_key)})`} />
+          </div>
         </div>
         <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
           {headline ? (

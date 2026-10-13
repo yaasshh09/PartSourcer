@@ -12,6 +12,7 @@ from config import settings
 from security import (BodySizeLimitMiddleware, RateLimitMiddleware,
                       SecurityHeadersMiddleware)
 
+from api.badge import router as badge_router
 from api.browse import router as browse_router
 from api.equivalent import router as equivalent_router
 from api.internal import router as internal_router
@@ -109,6 +110,7 @@ app.include_router(browse_router)
 app.include_router(equivalent_router)
 app.include_router(part_router)
 app.include_router(internal_router)
+app.include_router(badge_router)
 
 
 @app.get("/health")

@@ -526,3 +526,16 @@ test('the equivalent card shows each spec the matcher checked', async () => {
     '○Power-62.5 mWnot checked, the original lists none',
   ])
 })
+
+test('copies a README badge for the part', async () => {
+  const writeText = vi.fn(() => Promise.resolve())
+  setClipboard(writeText)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  fireEvent.click(await screen.findByRole('button', { name: /copy readme badge/i }))
+  const origin = window.location.origin
+  expect(writeText).toHaveBeenCalledWith(
+    `[![PartSourcer stock](${origin}/api/badge/0402WGJ0103TCE)](${origin}/part/0402WGJ0103TCE)`)
+  await screen.findByText(/copied/i)
+})
