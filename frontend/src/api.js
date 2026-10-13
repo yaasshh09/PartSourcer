@@ -1,11 +1,12 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
 export class ApiError extends Error {
-  constructor(status, detail) {
+  constructor(status, detail, retryAfter = null) {
     super(detail || `HTTP ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail || `HTTP ${status}`
+    this.retryAfter = retryAfter
   }
 }
 
@@ -20,7 +21,10 @@ async function getJson(path) {
   try { body = await resp.json() } catch { body = null }
   if (!resp.ok) {
     const detail = body && typeof body.detail === 'string' ? body.detail : `Request failed (HTTP ${resp.status})`
-    throw new ApiError(resp.status, detail)
+    // Seconds. Cross-origin the header is hidden unless exposed, so callers
+    // need their own default. parseFloat, because Number(null) is 0.
+    const wait = parseFloat(resp.headers?.get('retry-after'))
+    throw new ApiError(resp.status, detail, Number.isFinite(wait) ? wait : null)
   }
   if (body === null) throw new ApiError(resp.status, 'Malformed response from backend')
   return body

@@ -80,6 +80,17 @@ describe('getEquivalent', () => {
 })
 
 describe('error mapping', () => {
+  test('a 429 keeps how long the server asked us to wait', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ detail: 'slow down' }),
+      headers: new Headers({ 'retry-after': '12' }) })
+    await expect(search('x')).rejects.toMatchObject({ status: 429, retryAfter: 12 })
+  })
+
+  test('no retry-after header means null, not zero', async () => {
+    global.fetch = mockFetchOnce({ ok: false, status: 429, body: { detail: 'slow down' } })
+    await expect(search('x')).rejects.toMatchObject({ retryAfter: null })
+  })
+
   test('5xx throws ApiError carrying detail', async () => {
     global.fetch = mockFetchOnce({ ok: false, status: 502, body: { detail: 'jlcsearch unreachable' } })
     await expect(search('x')).rejects.toBeInstanceOf(ApiError)
