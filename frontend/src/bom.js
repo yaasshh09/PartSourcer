@@ -167,15 +167,64 @@ const cell = (v) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-export function toCsv(rows) {
+/**
+ * With swaps, a line that has one is written as the drop-in, so the file can
+ * be ordered from as it is. The note names the part it replaces.
+ */
+export function toCsv(rows, { swaps = false } = {}) {
   const head = ['MPN', 'Qty', 'Status', 'Distributor', 'SKU', 'Unit price USD', 'Order qty',
     'Line total USD', 'Note']
   const body = rows.map((r) => {
-    const ok = r.state === 'ok'
-    return [r.mpn, r.qty, STATE_LABEL[r.state] || r.state,
-      ok ? DISTRIBUTOR_LABEL[r.offer.distributor] || r.offer.distributor : '', ok ? r.offer.sku : '',
-      ok ? r.unit : '', ok ? r.orderQty : '', ok ? Math.round(r.total * 10000) / 10000 : '',
-      ok ? lineNote(r) : ''].map(cell).join(',')
+    const s = swaps && r.swapResult
+    const l = s ? s.swap : r
+    const ok = l.state === 'ok'
+    const note = [s ? `swap for ${r.mpn}` : null, ok ? lineNote(l) : null].filter(Boolean).join('; ')
+    return [s ? s.mpn : r.mpn, r.qty, STATE_LABEL[l.state] || l.state,
+      ok ? DISTRIBUTOR_LABEL[l.offer.distributor] || l.offer.distributor : '', ok ? l.offer.sku : '',
+      ok ? l.unit : '', ok ? l.orderQty : '', ok ? Math.round(l.total * 10000) / 10000 : '',
+      note].map(cell).join(',')
   })
   return [head.join(','), ...body].join('\n') + '\n'
+}
+
+/**
+ * The list a share link carries. The header keeps an all-digit part number
+ * from reading as a quantity, and quantities stay per board.
+ */
+export function shareList(rows, { swaps = false } = {}) {
+  return ['MPN,Qty', ...rows.map((r) => `${swaps && r.swapResult ? r.swapResult.mpn : r.mpn},${r.per}`)]
+    .join('\n')
+}
+
+// The same 1% bar the equivalent matcher uses, so a rounding wobble is never
+// sold as a saving.
+const MIN_SAVING = 0.01
+
+/**
+ * Prices a drop-in the same way its line was priced: read through /api/part
+ * and run through checkLine at the line's quantity. The equivalent endpoint's
+ * own saving is at quantity 1, so it is never used here. A short line that
+ * the drop-in can fill gets no saving, since the original cannot be bought.
+ */
+export function compareSwap(row, swapPart) {
+  const swap = checkLine(swapPart, row.qty)
+  if (swap.state !== 'ok') return null
+  const id = { swap, mpn: swapPart.mpn, key: swapPart.mpn_key }
+  if (row.state === 'short') return { kind: 'fills', ...id }
+  if (row.state !== 'ok') return null
+  const saving = row.total - swap.total
+  if (saving <= 0 || saving < MIN_SAVING * row.total) return null
+  return { kind: 'saves', ...id, saving, pct: Math.round((100 * saving) / row.total) }
+}
+
+/** Swap savings and fill costs, kept apart, and the oldest swap read. */
+export function summarizeSwaps(rows) {
+  const out = { saves: 0, saving: 0, fills: 0, fillCost: 0, asOf: null }
+  for (const { swapResult: s } of rows) {
+    if (!s) continue
+    if (s.kind === 'saves') { out.saves += 1; out.saving += s.saving } else { out.fills += 1; out.fillCost += s.swap.total }
+    const at = s.swap.as_of
+    if (at && (!out.asOf || Date.parse(at) < Date.parse(out.asOf))) out.asOf = at
+  }
+  return out
 }

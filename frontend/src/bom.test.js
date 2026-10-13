@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { parseBom, priceAt, checkLine, summarize, toCsv, lineNote, MAX_LINES } from './bom.js'
+import { parseBom, priceAt, checkLine, summarize, toCsv, lineNote, compareSwap, summarizeSwaps, shareList, MAX_LINES } from './bom.js'
 
 function offer(over = {}) {
   return {
@@ -224,5 +224,80 @@ describe('parseBom reads EDA exports', () => {
 
   test('a header names no part number column, LCSC or otherwise', () => {
     expect(parseBom('Comment,Designator,Footprint\n10k,R1,0603').missingMpn).toBe(true)
+  })
+})
+
+// A row as the BOM page holds it once its line has been read.
+const row = (offers, qty, over = {}) => ({ mpn: 'ORIG', qty, per: qty, ...checkLine(part(offers), qty), ...over })
+const swapPart = (offers) => part(offers, { mpn: 'SWAP', mpn_key: 'SWAP-KEY' })
+
+describe('compareSwap', () => {
+  test('a drop-in that is cheaper at the line quantity saves the difference', () => {
+    const out = compareSwap(row([offer({ price_usd: 0.1 })], 100), swapPart([offer({ price_usd: 0.05 })]))
+    expect(out).toMatchObject({ kind: 'saves', mpn: 'SWAP', key: 'SWAP-KEY', pct: 50 })
+    expect(out.saving).toBeCloseTo(5)
+    expect(out.swap.total).toBeCloseTo(5)
+  })
+
+  // The equivalent endpoint compares at quantity 1. The line is bought at 200.
+  test('cheaper at one piece but not at the line quantity is no swap', () => {
+    const orig = offer({ price_breaks: [{ qty: 1, price_usd: 0.1 }, { qty: 100, price_usd: 0.02 }] })
+    const swap = offer({ price_breaks: [{ qty: 1, price_usd: 0.05 }, { qty: 100, price_usd: 0.03 }] })
+    expect(compareSwap(row([orig], 200), swapPart([swap]))).toBeNull()
+  })
+
+  test('a saving under 1% is not claimed', () => {
+    expect(compareSwap(row([offer({ price_usd: 0.1 })], 100), swapPart([offer({ price_usd: 0.0995 })]))).toBeNull()
+  })
+
+  test('a drop-in that cannot fill the line is no swap', () => {
+    expect(compareSwap(row([offer({ price_usd: 0.1 })], 100),
+      swapPart([offer({ price_usd: 0.01, stock: 3 })]))).toBeNull()
+  })
+
+  // The original cannot be bought, so there is nothing to subtract from.
+  test('a short line that the drop-in fills says so with no saving', () => {
+    const out = compareSwap(row([offer({ stock: 3 })], 10), swapPart([offer({ price_usd: 0.2 })]))
+    expect(out).toMatchObject({ kind: 'fills', mpn: 'SWAP' })
+    expect(out.saving).toBeUndefined()
+    expect(out.swap.total).toBeCloseTo(2)
+  })
+
+  test('an unpriced original gets nothing', () => {
+    expect(compareSwap(row([offer({ price_usd: null })], 10), swapPart([offer()]))).toBeNull()
+  })
+})
+
+describe('summarizeSwaps', () => {
+  test('adds savings and fill costs apart, and keeps the oldest read', () => {
+    const rows = [
+      { swapResult: { kind: 'saves', saving: 2, swap: { total: 3, as_of: '2026-10-13T09:00:00Z' } } },
+      { swapResult: { kind: 'saves', saving: 0.5, swap: { total: 1, as_of: '2026-10-13T08:00:00Z' } } },
+      { swapResult: { kind: 'fills', swap: { total: 4, as_of: '2026-10-13T10:00:00Z' } } },
+      { swapResult: null }, {},
+    ]
+    expect(summarizeSwaps(rows)).toEqual({ saves: 2, saving: 2.5, fills: 1, fillCost: 4,
+      asOf: '2026-10-13T08:00:00Z' })
+  })
+})
+
+describe('swap exports', () => {
+  const swapped = { ...row([offer({ price_usd: 0.1 })], 100), swapResult:
+    compareSwap(row([offer({ price_usd: 0.1 })], 100), swapPart([offer({ distributor: 'lcsc', sku: 'C9', price_usd: 0.05 })])) }
+  const plain = { mpn: 'NE555P', qty: 2, per: 1, state: 'missing' }
+
+  test('the CSV with swaps writes the drop-in in place of the original', () => {
+    const lines = toCsv([swapped, plain], { swaps: true }).trim().split('\n')
+    expect(lines[1]).toBe('SWAP,100,ok,LCSC,C9,0.05,100,5,swap for ORIG; no quantity breaks published')
+    expect(lines[2]).toBe('NE555P,2,not found,,,,,,')
+  })
+
+  test('the plain CSV ignores swaps', () => {
+    expect(toCsv([swapped]).trim().split('\n')[1]).toMatch(/^ORIG,100,ok,Mouser/)
+  })
+
+  test('the share list keeps per board quantities, with or without swaps', () => {
+    expect(shareList([swapped, plain])).toBe('MPN,Qty\nORIG,100\nNE555P,1')
+    expect(shareList([swapped, plain], { swaps: true })).toBe('MPN,Qty\nSWAP,100\nNE555P,1')
   })
 })
