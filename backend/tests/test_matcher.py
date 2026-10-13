@@ -550,3 +550,49 @@ async def test_every_candidate_failing_is_an_honest_null_not_an_error():
 
     assert resp.equivalent is None
     assert "did not confirm" in resp.reason
+
+
+# The card shows these rows as ticks, so each row must be a gate the matcher
+# actually ran, and nothing it skipped.
+@pytest.mark.anyio
+async def test_resistor_match_lists_every_spec_it_checked():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000, tol=0.005, power=125)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C100")
+    rows = [c.model_dump() for c in resp.equivalent.checks]
+    assert rows == [
+        {"spec": "Package", "original": "0603", "candidate": "0603", "rule": "same"},
+        {"spec": "Resistance", "original": "10 kOhm", "candidate": "10 kOhm", "rule": "same"},
+        {"spec": "Tolerance", "original": "±1%", "candidate": "±0.5%", "rule": "same or tighter"},
+        {"spec": "Power", "original": "100 mW", "candidate": "125 mW", "rule": "same or higher"},
+    ]
+
+
+@pytest.mark.anyio
+async def test_capacitor_match_lists_only_what_it_checked():
+    orig_row = cp("C200", price=0.0030, stock=1000)
+    cheaper = cp("C1", price=0.0012, stock=500000, volt=25, tc="C0G", tol=0.2)
+    ds = FakeDS(detail("C200", "0402", 0.0030, 1000, mpn="C-orig"),
+                {("capacitors", "0402"): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C200")
+    rows = [c.model_dump() for c in resp.equivalent.checks]
+    assert rows == [
+        {"spec": "Package", "original": "0402", "candidate": "0402", "rule": "same"},
+        {"spec": "Capacitance", "original": "100 nF", "candidate": "100 nF", "rule": "same"},
+        {"spec": "Voltage", "original": "16 V", "candidate": "25 V", "rule": "same or higher"},
+        {"spec": "Dielectric", "original": "X7R", "candidate": "C0G", "rule": "same or better"},
+    ]
+    # Tolerance is not a capacitor gate, so it gets no tick.
+    assert "Tolerance" not in [r["spec"] for r in rows]
+
+
+# find_equivalent refuses an original with a blank key spec before it gets
+# here, so this guards a future type with optional specs: no gate, no tick.
+def test_a_spec_the_original_leaves_blank_is_shown_as_unchecked():
+    from services.matcher import _capacitor_checks
+    rows = _capacitor_checks(cp("C200", 0.003, 1000, volt=None), cp("C1", 0.001, 500000), "0402")
+    volt = next(c for c in rows if c.spec == "Voltage")
+    assert volt.model_dump() == {"spec": "Voltage", "original": None, "candidate": "16 V",
+                                 "rule": "not checked, the original lists none"}

@@ -14,7 +14,7 @@ import math
 from datetime import datetime, timezone
 from typing import Protocol
 
-from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef
+from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef, SpecCheck
 from models.parametric import ParametricPart
 from models.part import PartDetail
 from services.matching import normalize_exact
@@ -209,6 +209,50 @@ def _capacitor_reason(orig, best, pkg, pct, stock) -> str:
             f"{stock:,} in stock, {pct}% cheaper")
 
 
+_UNCHECKED = "not checked, the original lists none"
+
+
+def _check(spec, orig, cand, rule, fmt=str) -> SpecCheck:
+    # The candidate gates above skip a spec the original leaves blank, so a
+    # blank original means no gate ran and the row must not read as a pass.
+    return SpecCheck(spec=spec,
+                     original=None if orig is None else fmt(orig),
+                     candidate=None if cand is None else fmt(cand),
+                     rule=_UNCHECKED if orig is None else rule)
+
+
+def _pct(t) -> str:
+    return f"±{t * 100:g}%"
+
+
+def _resistor_checks(orig, cand, pkg) -> list[SpecCheck]:
+    o, c = orig.specs, cand.specs
+    return [
+        _check("Package", pkg, cand.package, "same"),
+        _check("Resistance", o.get("resistance"), c.get("resistance"), "same", fmt_ohms),
+        _check("Tolerance", o.get("tolerance_fraction"), c.get("tolerance_fraction"),
+               "same or tighter", _pct),
+        # The field is milliwatts despite its name (see the reason above).
+        _check("Power", o.get("power_watts"), c.get("power_watts"), "same or higher",
+               lambda p: f"{p:g} mW"),
+    ]
+
+
+def _capacitor_checks(orig, cand, pkg) -> list[SpecCheck]:
+    o, c = orig.specs, cand.specs
+    tc = o.get("temperature_coefficient")
+    # Ranked dielectrics may step up; an unranked one must match exactly (D7).
+    tc_rule = "same or better" if dielectric_rank(tc) is not None else "same"
+    return [
+        _check("Package", pkg, cand.package, "same"),
+        _check("Capacitance", o.get("capacitance_farads"), c.get("capacitance_farads"),
+               "same", fmt_farads),
+        _check("Voltage", o.get("voltage_rating"), c.get("voltage_rating"), "same or higher",
+               lambda v: f"{v:g} V"),
+        _check("Dielectric", tc or None, c.get("temperature_coefficient"), tc_rule),
+    ]
+
+
 async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
                   orig_price: float) -> tuple[ParametricPart, float, int] | None:
     """Re-price the leading candidates on the published basis.
@@ -286,7 +330,7 @@ async def find_equivalent(ds: MatcherSource,
                                   reason=reason, as_of=now)
 
     async def _publish(cands: list[ParametricPart], orig_row: ParametricPart,
-                       reason_fn) -> EquivalentResponse:
+                       reason_fn, checks_fn) -> EquivalentResponse:
         ranked = rank_candidates(cands)
         if not ranked:
             return _null(_NO_MATCH_REASON)
@@ -308,7 +352,8 @@ async def find_equivalent(ds: MatcherSource,
                 stock=stock, package=cand.package,
                 match_reason=reason_fn(orig_row, cand, original.package,
                                        pct, stock),
-                percent_cheaper=pct),
+                percent_cheaper=pct,
+                checks=checks_fn(orig_row, cand, original.package)),
             reason=None, as_of=now)
 
     if not original.package:
@@ -348,7 +393,7 @@ async def find_equivalent(ds: MatcherSource,
             resistance_ohms=orig_r.specs.get("resistance"))
         return await _publish(
             resistor_candidates(orig_r, pool, orig_r.price_usd),
-            orig_r, _resistor_reason)
+            orig_r, _resistor_reason, _resistor_checks)
 
     # Classify as capacitor?
     caps = await ds.list_parametric("capacitors", original.package)
@@ -363,6 +408,6 @@ async def find_equivalent(ds: MatcherSource,
             return _null(_NO_PRICE_REASON)
         return await _publish(
             capacitor_candidates(orig_c, caps, orig_c.price_usd),
-            orig_c, _capacitor_reason)
+            orig_c, _capacitor_reason, _capacitor_checks)
 
     return _null(_NO_TYPE_REASON)

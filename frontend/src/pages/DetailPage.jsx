@@ -269,6 +269,38 @@ export default function DetailPage() {
               <div style={{ fontSize: 14, color: '#3a3200', fontWeight: 500, marginTop: 8, maxWidth: 440 }}>
                 {eq.match_reason}
               </div>
+              {/* Each row is a gate the matcher ran. A spec the original leaves
+                  blank had no gate, so it gets a hollow mark, never a tick. */}
+              {eq.checks && eq.checks.length ? (
+                <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                <table aria-label="Why it matches" style={{ borderCollapse: 'collapse',
+                  fontSize: 13, color: '#3a3200' }}>
+                  <thead>
+                    <tr>
+                      {['', 'Spec', 'This part', 'Swap', 'Rule'].map((h) => (
+                        <th key={h} scope="col" style={{ textAlign: 'left', fontWeight: 700, fontSize: 11,
+                          padding: '0 12px 4px 0' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {eq.checks.map((c) => {
+                      const ran = c.original != null
+                      return (
+                        <tr key={c.spec}>
+                          <td aria-label={ran ? 'checked' : 'not checked'}
+                            style={{ padding: '2px 8px 2px 0', fontWeight: 900 }}>{ran ? '✓' : '○'}</td>
+                          <td style={{ padding: '2px 12px 2px 0', fontWeight: 700 }}>{c.spec}</td>
+                          <td style={{ padding: '2px 12px 2px 0', fontFamily: MONO }}>{c.original ?? '-'}</td>
+                          <td style={{ padding: '2px 12px 2px 0', fontFamily: MONO }}>{c.candidate ?? '-'}</td>
+                          <td style={{ padding: '2px 0', fontWeight: 500 }}>{c.rule}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                </div>
+              ) : null}
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
                 <Link className="ps-chip" to={`/part/${encodeKey(eq.mpn_key)}`}
                   aria-label={`View the ${eq.mpn} part page`}

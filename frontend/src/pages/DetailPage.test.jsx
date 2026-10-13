@@ -501,3 +501,28 @@ test('no stock total for a single distributor', async () => {
   await waitFor(() => expect(screen.getByText('SPECIFICATIONS')).toBeInTheDocument())
   expect(screen.queryByText('Stock, all sources')).toBeNull()
 })
+
+test('the equivalent card shows each spec the matcher checked', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue({
+    original: { mpn_key: '0402WGJ0103TCE', mpn: '0402WGJ0103TCE', package: '0402',
+      price_usd: 0.0004, stock: 9360, lcsc: 'C25531', distributor: 'lcsc' },
+    equivalent: { mpn_key: 'RES-ALT', lcsc: 'C881063', mpn: 'RES-ALT', price_usd: 0.0003,
+      stock: 9360, package: '0402', match_reason: 'Same 0402 package', percent_cheaper: 25,
+      checks: [
+        { spec: 'Package', original: '0402', candidate: '0402', rule: 'same' },
+        { spec: 'Tolerance', original: '±1%', candidate: '±0.5%', rule: 'same or tighter' },
+        { spec: 'Power', original: null, candidate: '62.5 mW', rule: 'not checked, the original lists none' },
+      ] },
+    reason: null, as_of: '2026-08-15T07:52:24Z',
+  })
+  renderPart('/part/0402WGJ0103TCE')
+  const table = await screen.findByRole('table', { name: /why it matches/i })
+  const rows = [...table.querySelectorAll('tbody tr')].map((tr) => tr.textContent)
+  expect(rows).toEqual([
+    '✓Package04020402same',
+    '✓Tolerance±1%±0.5%same or tighter',
+    '○Power-62.5 mWnot checked, the original lists none',
+  ])
+})

@@ -17,6 +17,18 @@ class OriginalRef(BaseModel):
     distributor: str | None = None
 
 
+class SpecCheck(BaseModel):
+    """One gate the matcher ran, with both sides as a person would write them.
+
+    original is None when the original part lists no value, which is also
+    when the gate did not run; rule then says so instead of claiming a pass.
+    """
+    spec: str
+    original: str | None
+    candidate: str | None
+    rule: str
+
+
 class EquivalentMatch(BaseModel):
     mpn_key: str
     lcsc: str
@@ -26,6 +38,7 @@ class EquivalentMatch(BaseModel):
     package: str
     match_reason: str
     percent_cheaper: int
+    checks: list[SpecCheck] = []
 
 
 class EquivalentResponse(BaseModel):
