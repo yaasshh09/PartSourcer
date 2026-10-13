@@ -14,6 +14,18 @@ const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 
 const SKELETON_DELAYS = [0, 0.15, 0.3]
 
+// Recent searches live in this browser only. Storage can throw (private
+// windows, blocked site data), and losing the list is fine.
+const RECENT_KEY = 'ps-recent'
+const RECENT_MAX = 5
+function loadRecent() {
+  try {
+    const v = JSON.parse(localStorage.getItem(RECENT_KEY))
+    return Array.isArray(v) ? v.filter((s) => typeof s === 'string').slice(0, RECENT_MAX) : []
+  } catch { return [] }
+}
+function saveRecent(list) { try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)) } catch { /* convenience only */ } }
+
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') || ''
@@ -28,8 +40,19 @@ export default function SearchPage() {
   const [submitted, setSubmitted] = useState('')
   const [asOf, setAsOf] = useState(null)
   const [sources, setSources] = useState([])
+  const [recent, setRecent] = useState(loadRecent)
   const inputRef = useRef(null)
   const waking = useWaking(loading)
+
+  // Only a search that found something is worth offering again.
+  function remember(t) {
+    setRecent((prev) => {
+      const next = [t, ...prev.filter((s) => s.toLowerCase() !== t.toLowerCase())].slice(0, RECENT_MAX)
+      saveRecent(next)
+      return next
+    })
+  }
+  function forget() { saveRecent([]); setRecent([]) }
 
   useEffect(() => {
     if (!q) {
@@ -50,6 +73,7 @@ export default function SearchPage() {
         setAsOf(oldestAsOf(data.results))
         setSources(data.sources || [])
         setSubmitted(q)
+        if (data.results.length) remember(q)
       })
       // Sources go with the results they describe. A failed search knows
       // nothing about distributor health, and keeping the previous answer
@@ -201,6 +225,20 @@ export default function SearchPage() {
               borderBottomWidth: 3, padding: '1px 8px' }}>/</kbd> to focus
           </span>
         </div>
+        {recent.length ? (
+          <div role="group" aria-label="Recent searches" style={{ display: 'flex', alignItems: 'center',
+            flexWrap: 'wrap', gap: 10, marginTop: 10, maxWidth: 720 }}>
+            <span style={{ color: C.muted, fontWeight: 600, fontSize: 13 }}>Recent:</span>
+            {recent.map((r) => (
+              <button key={r} type="button" className="ps-chip" onClick={() => runSearch(r)}
+                style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 13, background: 'transparent',
+                  border: `2px dashed ${C.ink}`, padding: '4px 10px' }}>{r}</button>
+            ))}
+            <button type="button" onClick={forget}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13,
+                fontWeight: 600, color: C.muted, textDecoration: 'underline' }}>Clear</button>
+          </div>
+        ) : null}
       </section>
       <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '12px 28px 70px' }}>
         {body}
