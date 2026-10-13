@@ -7,6 +7,14 @@ import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice, fmtUnit 
 import useDocumentTitle from '../useDocumentTitle.js'
 
 const STORE_KEY = 'ps-bom'
+const MAX_BOARDS = 100000
+
+// Anything that is not a whole number of boards counts as one, so a stray
+// keystroke never multiplies a list by zero or by a fraction.
+const toBoards = (v) => {
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, MAX_BOARDS) : 1
+}
 const PARALLEL = 4
 const EXAMPLE = 'NE555P, 2\nRC0603FR-0710KL, 50\nLM358P, 4\nAMS1117-3.3, 3'
 
@@ -30,6 +38,8 @@ export default function BomPage() {
   const [params, setParams] = useSearchParams()
   const shared = params.get('list')
   const [text, setText] = useState(() => shared ?? load())
+  const [boards, setBoards] = useState(() => String(toBoards(params.get('boards'))))
+  const [checkedBoards, setCheckedBoards] = useState(1)
   const [rows, setRows] = useState([])
   const [notice, setNotice] = useState(null)
   const [skipped, setSkipped] = useState([])
@@ -44,7 +54,7 @@ export default function BomPage() {
     if (!shared || opened.current) return
     opened.current = true
     save(shared)
-    check(shared)
+    check(shared, toBoards(params.get('boards')))
     setParams({}, { replace: true })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -87,10 +97,10 @@ export default function BomPage() {
 
   function onCheck(e) {
     e.preventDefault()
-    check(text)
+    check(text, toBoards(boards))
   }
 
-  function check(src) {
+  function check(src, n) {
     const { lines, count, tooMany, missingMpn, skipped: dropped } = parseBom(src)
     setSkipped(missingMpn ? [] : dropped)
     if (missingMpn) {
@@ -106,22 +116,25 @@ export default function BomPage() {
     }
     setNotice(null)
     run.current += 1
-    const fresh = lines.map((l) => ({ ...l, state: 'loading' }))
+    setCheckedBoards(n)
+    const fresh = lines.map((l) => ({ mpn: l.mpn, per: l.qty, qty: l.qty * n, state: 'loading' }))
     setRows(fresh)
     read(fresh, fresh.map((_, i) => i))
   }
 
   function retry() {
-    read(rows.map(({ mpn, qty }) => ({ mpn, qty })),
+    read(rows.map(({ mpn, per, qty }) => ({ mpn, per, qty })),
       rows.map((r, i) => (r.state === 'error' ? i : -1)).filter((i) => i >= 0))
   }
 
   // Rebuilt from the checked lines rather than the raw paste, so designators
   // and extra columns stay behind. The header keeps an all-digit part number
-  // from reading as a quantity when the link is opened.
+  // from reading as a quantity when the link is opened. Quantities stay per
+  // board, with the board count beside them, so the receiver can change it.
   function copyLink() {
-    const list = ['MPN,Qty', ...rows.map((r) => `${r.mpn},${r.qty}`)].join('\n')
-    const url = `${window.location.origin}/bom?list=${encodeURIComponent(list)}`
+    const list = ['MPN,Qty', ...rows.map((r) => `${r.mpn},${r.per}`)].join('\n')
+    const extra = checkedBoards > 1 ? `&boards=${checkedBoards}` : ''
+    const url = `${window.location.origin}/bom?list=${encodeURIComponent(list)}${extra}`
     navigator.clipboard.writeText(url).then(() => {
       setLinked(true)
       setTimeout(() => setLinked(false), 1600)
@@ -166,6 +179,14 @@ export default function BomPage() {
           {`Part number and quantity, split by a comma, tab or space. Up to ${MAX_LINES} parts. Pasting a spreadsheet with a header row? The MPN and Qty columns are found by name.`}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: ARCHIVO,
+            fontWeight: 900, fontSize: 13 }}>
+            BOARDS
+            <input type="number" min={1} max={MAX_BOARDS} step={1} value={boards}
+              onChange={(e) => setBoards(e.target.value)}
+              style={{ width: 90, fontFamily: MONO, fontSize: 15, padding: '9px 10px',
+                border: `2px solid ${C.ink}`, background: C.bg }} />
+          </label>
           <button type="submit" className="ps-press" style={{ background: C.orange, color: '#fff',
             fontFamily: ARCHIVO, fontWeight: 900, fontSize: 15, padding: '12px 22px',
             border: `3px solid ${C.ink}` }}>CHECK PRICES</button>
@@ -253,7 +274,14 @@ export default function BomPage() {
                     <td style={{ ...cell, fontFamily: MONO, whiteSpace: 'nowrap' }}>
                       {r.key ? <Link className="ps-link" to={`/part/${encodeKey(r.key)}?qty=${r.qty}`}>{r.mpn}</Link> : r.mpn}
                     </td>
-                    <td style={cell}>{r.qty.toLocaleString('en-US')}</td>
+                    <td style={cell}>
+                      {r.qty.toLocaleString('en-US')}
+                      {checkedBoards > 1 ? (
+                        <div style={{ ...muted, fontSize: 12 }}>
+                          {`${r.per.toLocaleString('en-US')} × ${checkedBoards.toLocaleString('en-US')}`}
+                        </div>
+                      ) : null}
+                    </td>
                     <td style={{ ...cell, color: STATE_COLOR[r.state], whiteSpace: 'nowrap' }}>
                       {STATE_LABEL[r.state]}
                     </td>

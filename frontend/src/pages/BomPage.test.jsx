@@ -172,3 +172,43 @@ test('a checked part links to its page at the line quantity', async () => {
   await waitFor(() => expect(screen.getByRole('link', { name: 'NE555P' }))
     .toHaveAttribute('href', '/part/NE555P?qty=5'))
 })
+
+test('a board count multiplies every line before it is priced', async () => {
+  const spy = mockParts()
+  renderPage()
+  fireEvent.change(screen.getByLabelText(/boards/i), { target: { value: '3' } })
+  check('NE555P 5')
+  await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
+  expect(spy).toHaveBeenCalledWith('NE555P')
+  expect(screen.getByText('15')).toBeInTheDocument()
+  expect(screen.getByTestId('bom-total')).toHaveTextContent('$1.50')
+  expect(screen.getByRole('link', { name: 'NE555P' })).toHaveAttribute('href', '/part/NE555P?qty=15')
+})
+
+test('a shared link keeps the per board list and the board count apart', async () => {
+  mockParts()
+  const orig = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  const writeText = vi.fn(() => Promise.resolve())
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  try {
+    renderPage()
+    fireEvent.change(screen.getByLabelText(/boards/i), { target: { value: '4' } })
+    check('NE555P 5')
+    await waitFor(() => expect(screen.getByRole('button', { name: /copy link/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /copy link/i }))
+    const url = new URL(writeText.mock.calls[0][0])
+    expect(url.searchParams.get('list')).toBe('MPN,Qty\nNE555P,5')
+    expect(url.searchParams.get('boards')).toBe('4')
+    await waitFor(() => expect(screen.getByRole('button', { name: /link copied/i })).toBeInTheDocument())
+  } finally {
+    if (orig) Object.defineProperty(navigator, 'clipboard', orig)
+    else delete navigator.clipboard
+  }
+})
+
+test('opening a shared link with a board count prices at that count', async () => {
+  mockParts()
+  renderPage(`/bom?list=${encodeURIComponent('MPN,Qty\nNE555P,5')}&boards=2`)
+  expect(screen.getByLabelText(/boards/i)).toHaveValue(2)
+  await waitFor(() => expect(screen.getByTestId('bom-total')).toHaveTextContent('$1.00'))
+})
