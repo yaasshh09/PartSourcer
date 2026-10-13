@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { C, ARCHIVO, MONO, fmtAsOf, fmtPrice, fmtUnit, SHIPPING_NOTE } from '../theme.js'
+import { C, ARCHIVO, MONO, NO_PRICE, fmtAsOf, fmtPrice, fmtUnit, SHIPPING_NOTE } from '../theme.js'
+import { reportHref } from '../contact.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
 import { priceAt } from '../bom.js'
 import StockBadge from './StockBadge.jsx'
@@ -78,7 +79,7 @@ function AtQty({ offer, qty }) {
   )
 }
 
-function OfferRow({ offer, cheapest, showNote, qty }) {
+function OfferRow({ offer, cheapest, showNote, qty, mpn }) {
   const claimed = isClaimed(offer, cheapest)
   return (
     <tr>
@@ -131,12 +132,24 @@ function OfferRow({ offer, cheapest, showNote, qty }) {
             View ↗
           </a>
         ) : null}
+        <div style={{ marginTop: offer.product_url ? 6 : 0 }}>
+          <a className="ps-link" target="_blank" rel="noopener noreferrer"
+            aria-label={`Report wrong data for ${offer.sku || 'this offer'}`}
+            href={reportHref({
+              mpn, distributor: DISTRIBUTOR_LABEL[offer.distributor] || offer.distributor, sku: offer.sku,
+              stock: (offer.stock ?? 0).toLocaleString('en-US'), price: fmtPrice(offer.price_usd) || NO_PRICE,
+              asOf: offer.as_of, page: typeof window !== 'undefined' ? window.location.href : '',
+            })}
+            style={{ fontSize: 11, fontWeight: 600, color: C.muted }}>
+            Wrong data?
+          </a>
+        </div>
       </td>
     </tr>
   )
 }
 
-function Block({ title, offers, cheapest, showNote, caption, qty }) {
+function Block({ title, offers, cheapest, showNote, caption, qty, mpn }) {
   if (!offers.length) return null
   return (
     <div style={{ marginTop: 18 }}>
@@ -165,7 +178,7 @@ function Block({ title, offers, cheapest, showNote, caption, qty }) {
           <tbody>
             {offers.map((o) => (
               <OfferRow key={`${o.distributor}:${o.sku}`} offer={o}
-                cheapest={cheapest} showNote={showNote} qty={qty} />
+                cheapest={cheapest} showNote={showNote} qty={qty} mpn={mpn} />
             ))}
           </tbody>
         </table>
@@ -200,8 +213,8 @@ export default function OfferTable({ offers, cheapest = null, unavailableReason 
         {/* MPN,qty is what the BOM check reads, so this pastes straight in. */}
         {mpn ? <CopyButton value={`${mpn},${qty || 1}`} label="Copy BOM line" text="Copy BOM line" /> : null}
       </div>
-      <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} qty={qty} />
-      <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote qty={qty}
+      <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} qty={qty} mpn={mpn} />
+      <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote qty={qty} mpn={mpn}
         caption="Same part number, different packaging. These are not the same physical part, so check the reel or tube before you swap." />
       <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 14 }}>{SHIPPING_NOTE}</div>
       {!cheapest && unavailableReason ? (

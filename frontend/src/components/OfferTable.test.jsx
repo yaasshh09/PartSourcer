@@ -90,7 +90,7 @@ test('links only the rows that carry a product_url', () => {
     offer({ distributor: 'lcsc', sku: 'C1', product_url: null }),
     offer({ distributor: 'mouser', sku: 'M1', product_url: 'https://mouser.com/p/M1' }),
   ]} />)
-  const links = screen.getAllByRole('link')
+  const links = screen.getAllByRole('link', { name: /^view /i })
   expect(links).toHaveLength(1)
   expect(links[0]).toHaveAttribute('href', 'https://mouser.com/p/M1')
 })
@@ -190,4 +190,17 @@ test('copies the part as a BOM line at the quantity typed in', async () => {
   fireEvent.click(screen.getByRole('button', { name: /copy bom line/i }))
   expect(writeText).toHaveBeenLastCalledWith('NE555P,250')
   await screen.findByText(/copied/i)
+})
+
+test('each offer links to a prefilled report of what we showed', () => {
+  noClipboard()
+  render(<OfferTable offers={[offer()]} mpn="NE555P" />)
+  const link = screen.getByRole('link', { name: /report wrong data for C25531/i })
+  const url = new URL(link.getAttribute('href'))
+  expect(url.origin + url.pathname).toBe('https://github.com/yaasshh09/PartSourcer/issues/new')
+  expect(url.searchParams.get('title')).toBe('Wrong data: NE555P on LCSC (C25531)')
+  const body = url.searchParams.get('body')
+  expect(body).toContain('Stock shown: 9,360')
+  expect(body).toContain('Price shown: $0.50')
+  expect(body).toContain('Read at: 2026-08-15T07:52:24Z')
 })
