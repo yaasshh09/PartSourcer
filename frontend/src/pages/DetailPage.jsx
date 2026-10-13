@@ -192,7 +192,7 @@ export default function DetailPage() {
                 padding: '4px 11px' }}>{part.package}</span>
             ) : null}
             {headline ? <StockBadge stock={headline.stock} /> : null}
-            <PinButton mpnKey={part.mpn_key} />
+            <PinButton mpnKey={part.mpn_key} hotkey />
           </div>
           {/* Not hung off the LCSC branch: the datasheet comes from Mouser, so
               the parts most likely to have one are exactly the parts with no
