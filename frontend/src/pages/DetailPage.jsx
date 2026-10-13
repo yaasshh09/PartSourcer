@@ -240,7 +240,7 @@ export default function DetailPage() {
       </div>
 
       <OfferTable offers={part.offers} cheapest={part.cheapest}
-        unavailableReason={part.cheapest_unavailable_reason} initialQty={searchParams.get('qty')} />
+        unavailableReason={part.cheapest_unavailable_reason} initialQty={searchParams.get('qty')} mpn={part.mpn} />
 
       {eq ? (
         <div style={{ marginTop: 24, border: `3px solid ${C.ink}`, boxShadow: `10px 10px 0 ${C.orange}`,

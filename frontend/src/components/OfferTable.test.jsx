@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { test, expect, afterEach } from 'vitest'
+import { test, expect, afterEach, vi } from 'vitest'
 import OfferTable from './OfferTable.jsx'
 
 const origClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
@@ -177,4 +177,17 @@ test('shows no quantity line until a quantity is typed', () => {
   expect(screen.queryByText(/ for \$/)).not.toBeInTheDocument()
   fireEvent.change(screen.getByLabelText(/price for how many/i), { target: { value: '0' } })
   expect(screen.queryByText(/ for \$/)).not.toBeInTheDocument()
+})
+
+// Same shape the BOM check reads, so it pastes straight into a list.
+test('copies the part as a BOM line at the quantity typed in', async () => {
+  const writeText = vi.fn(() => Promise.resolve())
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  render(<OfferTable offers={[offer()]} mpn="NE555P" />)
+  fireEvent.click(screen.getByRole('button', { name: /copy bom line/i }))
+  expect(writeText).toHaveBeenLastCalledWith('NE555P,1')
+  fireEvent.change(screen.getByLabelText(/price for how many/i), { target: { value: '250' } })
+  fireEvent.click(screen.getByRole('button', { name: /copy bom line/i }))
+  expect(writeText).toHaveBeenLastCalledWith('NE555P,250')
+  await screen.findByText(/copied/i)
 })

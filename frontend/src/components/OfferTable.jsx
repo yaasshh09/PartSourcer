@@ -179,7 +179,7 @@ function Block({ title, offers, cheapest, showNote, caption, qty }) {
  * variants kept in separate blocks so a cheaper reel cannot silently undercut
  * the tube the user searched for.
  */
-export default function OfferTable({ offers, cheapest = null, unavailableReason = null, initialQty = null }) {
+export default function OfferTable({ offers, cheapest = null, unavailableReason = null, initialQty = null, mpn = null }) {
   const [qtyText, setQtyText] = useState(initialQty || '')
   const { exact, packaging } = groupOffersByTier(offers)
   if (!exact.length && !packaging.length) return null
@@ -188,14 +188,18 @@ export default function OfferTable({ offers, cheapest = null, unavailableReason 
 
   return (
     <div style={{ border: `3px solid ${C.ink}`, background: C.paper, padding: 22, marginTop: 20 }}>
-      <label style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
-        fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13 }}>
-        PRICE FOR HOW MANY?
-        <input type="number" min="1" step="1" inputMode="numeric" value={qtyText}
-          onChange={(e) => setQtyText(e.target.value)} placeholder="e.g. 250"
-          style={{ width: 120, fontFamily: MONO, fontSize: 14, padding: '6px 8px',
-            border: `2px solid ${C.ink}`, background: C.bg }} />
-      </label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <label style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
+          fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13 }}>
+          PRICE FOR HOW MANY?
+          <input type="number" min="1" step="1" inputMode="numeric" value={qtyText}
+            onChange={(e) => setQtyText(e.target.value)} placeholder="e.g. 250"
+            style={{ width: 120, fontFamily: MONO, fontSize: 14, padding: '6px 8px',
+              border: `2px solid ${C.ink}`, background: C.bg }} />
+        </label>
+        {/* MPN,qty is what the BOM check reads, so this pastes straight in. */}
+        {mpn ? <CopyButton value={`${mpn},${qty || 1}`} label="Copy BOM line" text="Copy BOM line" /> : null}
+      </div>
       <Block title="EXACT MATCH" offers={exact} cheapest={cheapest} showNote={false} qty={qty} />
       <Block title="DIFFERENT PACKAGING" offers={packaging} cheapest={null} showNote qty={qty}
         caption="Same part number, different packaging. These are not the same physical part, so check the reel or tube before you swap." />

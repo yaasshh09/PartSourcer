@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { C, MONO } from '../theme.js'
 
-export default function CopyButton({ value, label = 'Copy', variant = 'default' }) {
+// text: a visible word instead of the bare icon, for a copy whose payload is
+// not already on screen next to it.
+export default function CopyButton({ value, label = 'Copy', variant = 'default', text = null }) {
   const [copied, setCopied] = useState(false)
   const timer = useRef(null)
 
@@ -23,7 +25,7 @@ export default function CopyButton({ value, label = 'Copy', variant = 'default' 
       style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 12, lineHeight: 1,
         background: 'transparent', border: `2px solid ${onYellow ? '#5a4d1a' : '#d8d4c4'}`,
         color: onYellow ? '#5a4d1a' : C.sub, padding: '3px 7px' }}>
-      {copied ? '✓' : '⧉'}
+      {text ? (copied ? '✓ Copied' : text) : (copied ? '✓' : '⧉')}
     </button>
   )
 }
