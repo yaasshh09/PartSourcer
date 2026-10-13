@@ -1,0 +1,15 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { test, expect } from 'vitest'
+
+// A page added to the router but left out here never gets crawled.
+test('the sitemap lists every page a visitor can land on cold', () => {
+  const xml = readFileSync(resolve('public/sitemap.xml'), 'utf8')
+  const app = readFileSync(resolve('src/App.jsx'), 'utf8')
+  const routes = [...app.matchAll(/path="(\/[a-z]*)"/g)].map((m) => m[1])
+    .filter((p) => p !== '/compare') // holds this browser's pins, nothing to index
+  expect(routes.length).toBeGreaterThan(5)
+  for (const r of routes) expect(xml).toContain(`<loc>https://part-sourcer.vercel.app${r}</loc>`)
+  const robots = readFileSync(resolve('public/robots.txt'), 'utf8')
+  expect(robots).toContain('Sitemap: https://part-sourcer.vercel.app/sitemap.xml')
+})

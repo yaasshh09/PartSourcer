@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://part-sourcer.vercel.app/</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse/resistors</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse/capacitors</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse/leds</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse/diodes</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse/mosfets</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/browse/ldos</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/bom</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/how</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/faq</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/about</loc></url>
+  <url><loc>https://part-sourcer.vercel.app/contact</loc></url>
+</urlset>
