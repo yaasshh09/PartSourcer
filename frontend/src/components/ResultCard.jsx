@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { encodeKey } from '../api.js'
+import { encodeKey, prefetchPart } from '../api.js'
 import { C, ARCHIVO, MONO } from '../theme.js'
 import { headlineOffer, lcscOffer } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
@@ -7,6 +8,7 @@ import CopyButton from './CopyButton.jsx'
 import Price from './Price.jsx'
 import PinButton from './PinButton.jsx'
 
+const HOVER_MS = 200
 const BADGE = { padding: '3px 10px', fontSize: 12, fontWeight: 700 }
 
 export default function ResultCard({ part }) {
@@ -21,11 +23,19 @@ export default function ResultCard({ part }) {
   if (lcsc && lcsc.is_preferred) tier = 'Preferred'
   else if (lcsc && lcsc.is_basic) tier = 'Basic'
 
+  // A pointer that rests on a card for a moment is about to click it. Passing
+  // over on the way somewhere else costs nothing.
+  const intent = useRef(null)
+  const stop = () => { clearTimeout(intent.current); intent.current = null }
+  const start = () => { stop(); intent.current = setTimeout(() => prefetchPart(part.mpn_key), HOVER_MS) }
+  useEffect(() => stop, [])
+
   // A wrapping flex row, not two grid tracks: a track will not shrink below
   // its longest word, so a long MPN used to carry the price column off the
   // side of a phone. The price drops under the part instead.
   return (
-    <div className="ps-enter" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20,
+    <div className="ps-enter" onMouseEnter={start} onMouseLeave={stop} onFocus={start} onBlur={stop}
+      style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20,
       padding: '20px 22px', border: `3px solid ${C.ink}`, boxShadow: `5px 5px 0 ${C.ink}`, background: C.paper }}>
       <div style={{ flex: '1 1 240px', minWidth: 0 }}>
         {/* Only Mouser carries a manufacturer, so this is present on most of a

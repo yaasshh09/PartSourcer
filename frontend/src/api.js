@@ -38,14 +38,45 @@ export function search(q, page = 1) {
   return getJson(`/search?q=${encodeURIComponent(q)}&page=${page}`)
 }
 
+// Hovering a search result starts the part page's two reads early. Each read
+// is handed to the next page that asks for it, once, and only within a
+// minute, so a later visit always reads fresh. The budget keeps a mouse run
+// down a long list from spending the visitor's 60 requests a minute.
+const PREFETCH_TTL_MS = 60_000
+const PREFETCH_PARTS_PER_MIN = 8
+const prefetched = new Map()
+let budget = { start: 0, used: 0 }
+
+export function _resetPrefetch() { prefetched.clear(); budget = { start: 0, used: 0 } }
+
+function takeOrGet(path) {
+  const hit = prefetched.get(path)
+  prefetched.delete(path)
+  return hit && Date.now() - hit.at < PREFETCH_TTL_MS ? hit.promise : getJson(path)
+}
+
+export function prefetchPart(mpnKey) {
+  const paths = [`/part/${encodeKey(mpnKey)}`, `/equivalent/${encodeKey(mpnKey)}`]
+  const now = Date.now()
+  if (paths.every((p) => prefetched.has(p) && now - prefetched.get(p).at < PREFETCH_TTL_MS)) return
+  if (now - budget.start >= 60_000) budget = { start: now, used: 0 }
+  if (budget.used >= PREFETCH_PARTS_PER_MIN) return
+  budget.used += 1
+  for (const path of paths) {
+    const promise = getJson(path)
+    promise.catch(() => { if (prefetched.get(path)?.promise === promise) prefetched.delete(path) })
+    prefetched.set(path, { at: now, promise })
+  }
+}
+
 export function getPart(mpnKey) {
-  return getJson(`/part/${encodeKey(mpnKey)}`)
+  return takeOrGet(`/part/${encodeKey(mpnKey)}`)
 }
 
 // Moved out from under /part: a greedy path converter on /part would swallow
 // a trailing /equivalent as part of the identifier.
 export function getEquivalent(mpnKey) {
-  return getJson(`/equivalent/${encodeKey(mpnKey)}`)
+  return takeOrGet(`/equivalent/${encodeKey(mpnKey)}`)
 }
 
 export function getCategories() {

@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { search, getPart, getEquivalent, encodeKey, ApiError, browse, getCategories } from './api.js'
+import { search, getPart, getEquivalent, encodeKey, ApiError, browse, getCategories, prefetchPart, _resetPrefetch } from './api.js'
 
 function mockFetchOnce({ ok = true, status = 200, body = {} }) {
   return vi.fn().mockResolvedValue({
@@ -118,5 +118,53 @@ describe('browse', () => {
     global.fetch = mockFetchOnce({ ok: false, status: 422, body: { detail: "'ten' is not a resistance." } })
     await expect(browse('resistors', { resistance: 'ten' }))
       .rejects.toMatchObject({ status: 422, detail: "'ten' is not a resistance." })
+  })
+})
+
+describe('prefetchPart', () => {
+  beforeEach(() => _resetPrefetch())
+
+  test('a hover read is used once by the page that opens next', async () => {
+    global.fetch = mockFetchOnce({ body: { part: { mpn_key: 'NE555P' } } })
+    prefetchPart('NE555P')
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+    await getPart('NE555P')
+    await getEquivalent('NE555P')
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+    await getPart('NE555P')
+    expect(global.fetch).toHaveBeenCalledTimes(3)
+  })
+
+  test('does not prefetch the same part twice', () => {
+    global.fetch = mockFetchOnce({ body: {} })
+    prefetchPart('NE555P')
+    prefetchPart('NE555P')
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+  })
+
+  // Hovering down a long list must not spend the visitor's rate limit.
+  test('stops after a handful of parts a minute', () => {
+    global.fetch = mockFetchOnce({ body: {} })
+    for (let i = 0; i < 20; i++) prefetchPart(`P${i}`)
+    expect(global.fetch).toHaveBeenCalledTimes(16)
+  })
+
+  test('an old hover read is not used', async () => {
+    vi.useFakeTimers()
+    try {
+      global.fetch = mockFetchOnce({ body: {} })
+      prefetchPart('NE555P')
+      vi.advanceTimersByTime(61_000)
+      await getPart('NE555P')
+      expect(global.fetch).toHaveBeenCalledTimes(3)
+    } finally { vi.useRealTimers() }
+  })
+
+  test('a failed hover read does not stick', async () => {
+    global.fetch = vi.fn().mockRejectedValueOnce(new Error('down')).mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: 1 }) })
+    prefetchPart('NE555P')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(await getPart('NE555P')).toEqual({ ok: 1 })
   })
 })

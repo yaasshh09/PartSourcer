@@ -168,3 +168,21 @@ test('a search card can be pinned for comparison', () => {
   expect(JSON.parse(localStorage.getItem('ps-compare'))).toEqual([part().mpn_key])
   localStorage.clear()
 })
+
+test('resting on a card starts its part page reads early', async () => {
+  const api = await import('../api.js')
+  const spy = vi.spyOn(api, 'prefetchPart').mockImplementation(() => {})
+  vi.useFakeTimers()
+  try {
+    const { container } = renderCard(part())
+    const card = container.firstChild
+    fireEvent.mouseEnter(card)
+    vi.advanceTimersByTime(100)
+    fireEvent.mouseLeave(card)
+    vi.advanceTimersByTime(500)
+    expect(spy).not.toHaveBeenCalled()
+    fireEvent.mouseEnter(card)
+    vi.advanceTimersByTime(250)
+    expect(spy).toHaveBeenCalledWith('STM32F103C8T6')
+  } finally { vi.useRealTimers() }
+})
