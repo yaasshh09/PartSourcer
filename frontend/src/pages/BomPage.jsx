@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { encodeKey, getPart } from '../api.js'
-import { MAX_LINES, STATE_LABEL, checkLine, lineNote, parseBom, summarize, toCsv } from '../bom.js'
+import { encodeKey, getEquivalent, getPart } from '../api.js'
+import { MAX_LINES, STATE_LABEL, checkLine, compareSwap, lineNote, parseBom, shareList, summarize,
+  summarizeSwaps, toCsv } from '../bom.js'
 import { DISTRIBUTOR_LABEL } from '../offers.js'
 import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice, fmtUnit } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
@@ -16,6 +17,11 @@ const toBoards = (v) => {
   return Number.isInteger(n) && n >= 1 ? Math.min(n, MAX_BOARDS) : 1
 }
 const PARALLEL = 4
+// A swap costs up to two reads per line, so half the check's width keeps a
+// pass under the 60 a minute limit for a typical list.
+const SWAP_PARALLEL = 2
+// Used when a 429 carries no readable retry-after (it is hidden cross-origin).
+const RETRY_WAIT_S = 10
 const EXAMPLE = 'NE555P, 2\nRC0603FR-0710KL, 50\nLM358P, 4\nAMS1117-3.3, 3'
 
 // Browser storage can throw (private windows, blocked site data). The list is
@@ -47,6 +53,10 @@ export default function BomPage() {
   const run = useRef(0)
   const fileRef = useRef(null)
   const opened = useRef(false)
+  // Its own flag rather than a run bump on unmount: StrictMode's rehearsal
+  // unmount would otherwise drop the check a shared link starts on arrival.
+  const live = useRef(true)
+  useEffect(() => { live.current = true; return () => { live.current = false } }, [])
 
   // A shared link checks on arrival, then leaves the address bar, so a
   // refresh after editing does not put the sender's list back.
@@ -122,31 +132,74 @@ export default function BomPage() {
     read(fresh, fresh.map((_, i) => i))
   }
 
+  // Also stops a swap pass, whose half-done lines go back to unchecked.
   function retry() {
+    run.current += 1
+    setRows((rs) => rs.map((r) => (r.swapState === 'checking' ? { ...r, swapState: undefined } : r)))
     read(rows.map(({ mpn, per, qty }) => ({ mpn, per, qty })),
       rows.map((r, i) => (r.state === 'error' ? i : -1)).filter((i) => i >= 0))
   }
 
+  const swappable = (r) => (r.state === 'ok' || r.state === 'short') && r.key && r.swapState !== 'done'
+
+  // Run on request only, so a plain check never spends the extra reads. The
+  // drop-in is read back through /api/part and priced like its line; the
+  // equivalent endpoint's own saving is at quantity 1 and is not used.
+  function findSwaps() {
+    run.current += 1
+    const id = run.current
+    const current = () => run.current === id && live.current
+    const queue = rows.map((r, i) => (swappable(r) ? i : -1)).filter((i) => i >= 0)
+    const patch = (i, p) => { if (current()) setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...p } : r))) }
+    // A copy, because the workers start shifting the queue before React runs this.
+    const picked = new Set(queue)
+    setRows((rs) => rs.map((r, i) => (picked.has(i) ? { ...r, swapState: 'checking', swapResult: null } : r)))
+    const lookup = async (row) => {
+      const { equivalent } = await getEquivalent(row.key)
+      if (!equivalent) return null
+      const { part } = await getPart(equivalent.mpn_key)
+      return compareSwap(row, part)
+    }
+    const worker = async () => {
+      while (queue.length && current()) {
+        const i = queue.shift()
+        for (let tries = 0; ; tries++) {
+          try {
+            patch(i, { swapState: 'done', swapResult: await lookup(rows[i]) })
+          } catch (e) {
+            // One pause and one more try on a rate limit; anything else fails the line.
+            if (e && e.status === 429 && tries === 0) {
+              await new Promise((ok) => setTimeout(ok, (e.retryAfter ?? RETRY_WAIT_S) * 1000))
+              if (current()) continue
+            }
+            patch(i, { swapState: 'failed' })
+          }
+          break
+        }
+      }
+    }
+    for (let k = 0; k < Math.min(SWAP_PARALLEL, queue.length); k++) worker()
+  }
+
   // Rebuilt from the checked lines rather than the raw paste, so designators
-  // and extra columns stay behind. The header keeps an all-digit part number
-  // from reading as a quantity when the link is opened. Quantities stay per
-  // board, with the board count beside them, so the receiver can change it.
-  function copyLink() {
-    const list = ['MPN,Qty', ...rows.map((r) => `${r.mpn},${r.per}`)].join('\n')
+  // and extra columns stay behind. Quantities stay per board, with the board
+  // count beside them, so the receiver can change it.
+  function copyLink(swaps) {
     const extra = checkedBoards > 1 ? `&boards=${checkedBoards}` : ''
+    const list = shareList(rows, { swaps })
     const url = `${window.location.origin}/bom?list=${encodeURIComponent(list)}${extra}`
     navigator.clipboard.writeText(url).then(() => {
-      setLinked(true)
+      setLinked(swaps ? 'swaps' : 'plain')
       setTimeout(() => setLinked(false), 1600)
     }).catch(() => {})
   }
 
-  function download() {
+  function download(swaps) {
     if (typeof URL === 'undefined' || !URL.createObjectURL) return
-    const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: 'text/csv' }))
+    const url = URL.createObjectURL(new Blob([toCsv(rows, { swaps })], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
-    a.download = 'partsourcer-bom.csv'
+    a.download = swaps ? 'partsourcer-bom-with-swaps.csv' : 'partsourcer-bom.csv'
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 0)
   }
@@ -156,6 +209,14 @@ export default function BomPage() {
   const busy = (sum.counts.loading || 0) > 0
   const others = ['short', 'unpriced', 'missing', 'error']
     .filter((s) => sum.counts[s]).map((s) => `${sum.counts[s]} ${STATE_LABEL[s]}`)
+
+  const swapRows = rows.filter((r) => r.swapState)
+  const swapsBusy = swapRows.some((r) => r.swapState === 'checking')
+  const swapsDone = swapRows.length > 0 && !swapsBusy
+  const swapFailed = swapRows.filter((r) => r.swapState === 'failed').length
+  const sw = summarizeSwaps(rows)
+  const canSwap = !busy && !swapsBusy && rows.some(swappable)
+  const money = (n) => fmtPrice(Math.round(n * 10000) / 10000)
 
   return (
     <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '56px 28px 70px' }}>
@@ -249,12 +310,69 @@ export default function BomPage() {
               {sum.counts.error ? (
                 <button type="button" className="ps-chip" onClick={retry} style={chip}>Retry failed lines</button>
               ) : null}
-              <button type="button" className="ps-chip" onClick={download} style={chip}>Download CSV</button>
-              {navigator.clipboard && navigator.clipboard.writeText ? (
-                <button type="button" className="ps-chip" onClick={copyLink} style={chip}>
-                  {linked ? 'Link copied' : 'Copy link'}
+              {canSwap ? (
+                <button type="button" className="ps-chip" onClick={findSwaps} style={chip}>
+                  {swapFailed ? 'Retry swap checks' : 'Find cheaper swaps'}
                 </button>
               ) : null}
+              <button type="button" className="ps-chip" onClick={() => download(false)} style={chip}>Download CSV</button>
+              {navigator.clipboard && navigator.clipboard.writeText ? (
+                <button type="button" className="ps-chip" onClick={() => copyLink(false)} style={chip}>
+                  {linked === 'plain' ? 'Link copied' : 'Copy link'}
+                </button>
+              ) : null}
+              {swapsDone && sw.saves + sw.fills ? (
+                <>
+                  <button type="button" className="ps-chip" onClick={() => download(true)} style={chip}>
+                    Download CSV with swaps
+                  </button>
+                  {navigator.clipboard && navigator.clipboard.writeText ? (
+                    <button type="button" className="ps-chip" onClick={() => copyLink(true)} style={chip}>
+                      {linked === 'swaps' ? 'Link copied' : 'Copy link with swaps'}
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Beside the original total, never folded into it: the table and
+              the total stay on the parts the user listed. */}
+          {swapRows.length ? (
+            <div aria-live="polite" style={{ border: `3px solid ${C.ink}`, background: C.paper,
+              padding: '12px 16px', marginBottom: 14, fontSize: 14, fontWeight: 600 }}>
+              {swapsBusy ? (
+                <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14 }}>
+                  {`Checking swaps ${swapRows.length - swapRows.filter((r) => r.swapState === 'checking').length} of ${swapRows.length}…`}
+                </div>
+              ) : (
+                <>
+                  {sw.saves ? (
+                    <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 16 }}>
+                      {`${sw.saves} swap${sw.saves === 1 ? ' saves' : 's save'} ${money(sw.saving)} `
+                        + `(${Math.round((100 * sw.saving) / sum.total)}%) on `
+                        + `${checkedBoards > 1 ? `${checkedBoards.toLocaleString('en-US')} boards` : 'this board'}.`}
+                    </div>
+                  ) : null}
+                  {sw.fills ? (
+                    <div>
+                      {`${sw.fills} short line${sw.fills === 1 ? '' : 's'} can be filled by an in-stock drop-in, `
+                        + `adding ${money(sw.fillCost)}.`}
+                    </div>
+                  ) : null}
+                  {!sw.saves && !sw.fills ? (
+                    <div>{`No verified cheaper drop-ins for ${swapFailed ? 'the lines that could be checked' : 'these lines'}.`}</div>
+                  ) : null}
+                  {swapFailed ? (
+                    <div style={{ color: C.orange }}>
+                      {`${swapFailed} line${swapFailed === 1 ? '' : 's'} could not be checked for swaps.`}
+                    </div>
+                  ) : null}
+                  <div style={{ ...muted, fontSize: 12, marginTop: 4 }}>
+                    {`Swaps cover resistors and capacitors only.${sw.asOf ? ` Swap prices read ${fmtAsOf(sw.asOf)}.` : ''}`}
+                  </div>
+                </>
+              )}
             </div>
           ) : null}
 
@@ -270,7 +388,8 @@ export default function BomPage() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.mpn}>
+                  <Fragment key={r.mpn}>
+                  <tr>
                     <td style={{ ...cell, fontFamily: MONO, whiteSpace: 'nowrap' }}>
                       {r.key ? <Link className="ps-link" to={`/part/${encodeKey(r.key)}?qty=${r.qty}`}>{r.mpn}</Link> : r.mpn}
                     </td>
@@ -319,6 +438,36 @@ export default function BomPage() {
                           : r.state === 'error' ? r.detail : ''}
                     </td>
                   </tr>
+                  {r.swapResult ? (
+                    <tr>
+                      <td colSpan={7} style={{ ...cell, borderTop: 'none', paddingTop: 0 }}>
+                        <div style={{ background: C.yellow, border: `2px solid ${C.ink}`, padding: '8px 12px',
+                          display: 'flex', flexWrap: 'wrap', gap: '4px 14px', alignItems: 'baseline' }}>
+                          <span style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12 }}>
+                            {r.swapResult.kind === 'saves' ? 'CHEAPER DROP-IN' : 'IN-STOCK DROP-IN'}
+                          </span>
+                          <Link className="ps-link" style={{ fontFamily: MONO }}
+                            to={`/part/${encodeKey(r.swapResult.key)}?qty=${r.qty}`}>{r.swapResult.mpn}</Link>
+                          <span style={{ ...muted, fontFamily: MONO, fontSize: 12 }}>
+                            {`${DISTRIBUTOR_LABEL[r.swapResult.swap.offer.distributor] || r.swapResult.swap.offer.distributor} ${r.swapResult.swap.offer.sku}`}
+                          </span>
+                          <span style={{ fontFamily: MONO }}>
+                            {`${money(r.swapResult.swap.total)} for ${r.swapResult.swap.orderQty.toLocaleString('en-US')}`}
+                          </span>
+                          <span style={{ color: STATE_COLOR.ok, fontWeight: 800 }}>
+                            {r.swapResult.kind === 'saves'
+                              ? `saves ${money(r.swapResult.saving)} (${r.swapResult.pct}%)` : 'in stock, fills this line'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : r.swapState === 'failed' ? (
+                    <tr>
+                      <td colSpan={7} style={{ ...cell, borderTop: 'none', paddingTop: 0, fontSize: 13,
+                        color: C.orange }}>swap check failed</td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi, beforeEach, afterEach, test, expect } from 'vitest'
 import BomPage from './BomPage.jsx'
@@ -219,4 +219,154 @@ test('warns when an order takes most of what is in stock', async () => {
   renderPage()
   check('THIN 100')
   await waitFor(() => expect(screen.getByText(/takes 67% of the 150 in stock/i)).toBeInTheDocument())
+})
+
+// R10K has a verified drop-in at half the price; CAP has none.
+PARTS.R10K = part('R10K', [offer({ sku: 'C10', price_usd: 0.1 })])
+PARTS['R10K-ALT'] = part('R10K-ALT', [offer({ sku: 'C11', price_usd: 0.05, as_of: '2026-10-13T09:00:00Z' })])
+PARTS.CAP = part('CAP', [offer({ sku: 'C20', price_usd: 0.1 })])
+const EQUIV = { R10K: 'R10K-ALT' }
+
+function mockEquivalents(failing = {}) {
+  return vi.spyOn(api, 'getEquivalent').mockImplementation((k) => {
+    if (failing[k]) return Promise.reject(failing[k])
+    const to = EQUIV[k]
+    return Promise.resolve({ original: {}, equivalent: to ? { mpn_key: to } : null, reason: 'x' })
+  })
+}
+
+async function checkThenSwap(text) {
+  check(text)
+  await waitFor(() => expect(screen.getByRole('button', { name: /find cheaper swaps/i })).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /find cheaper swaps/i }))
+}
+
+function withClipboard(fn) {
+  const orig = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  const writeText = vi.fn(() => Promise.resolve())
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  return fn(writeText).finally(() => {
+    if (orig) Object.defineProperty(navigator, 'clipboard', orig)
+    else delete navigator.clipboard
+  })
+}
+
+test('swaps are offered only once a check has finished, and cost nothing before', async () => {
+  mockParts()
+  const eq = mockEquivalents()
+  renderPage()
+  expect(screen.queryByRole('button', { name: /find cheaper swaps/i })).not.toBeInTheDocument()
+  check('R10K 100')
+  await waitFor(() => expect(screen.getByRole('button', { name: /find cheaper swaps/i })).toBeInTheDocument())
+  expect(eq).not.toHaveBeenCalled()
+})
+
+test('a found swap shows its saving at the line quantity and a board summary', async () => {
+  const parts = mockParts()
+  mockEquivalents()
+  renderPage()
+  await checkThenSwap('R10K 100\nCAP 10')
+  await waitFor(() => expect(screen.getByText(/1 swap saves \$5\.00 \(45%\) on this board/i)).toBeInTheDocument())
+  expect(screen.getByText(/saves \$5\.00 \(50%\)/i)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'R10K-ALT' })).toHaveAttribute('href', '/part/R10K-ALT?qty=100')
+  expect(screen.getByText(/resistors and capacitors only/i)).toBeInTheDocument()
+  // The drop-in is read the same way the line was, not taken from the equivalent's quote.
+  expect(parts).toHaveBeenCalledWith('R10K-ALT')
+  // CAP had no drop-in and says nothing; the main total stays on the original parts.
+  expect(screen.queryByText(/swap check failed/i)).not.toBeInTheDocument()
+  expect(screen.getByTestId('bom-total')).toHaveTextContent('$11.00')
+})
+
+test('a failed swap lookup says so on its line', async () => {
+  mockParts()
+  mockEquivalents({ CAP: new api.ApiError(502, 'upstream down') })
+  renderPage()
+  await checkThenSwap('CAP 10')
+  await waitFor(() => expect(screen.getByText(/swap check failed/i)).toBeInTheDocument())
+  expect(screen.getByRole('button', { name: /retry swap checks/i })).toBeInTheDocument()
+})
+
+test('nothing found says so plainly', async () => {
+  mockParts()
+  mockEquivalents()
+  renderPage()
+  await checkThenSwap('CAP 10')
+  await waitFor(() => expect(screen.getByText(/no verified cheaper drop-ins/i)).toBeInTheDocument())
+})
+
+test('a 429 waits as long as the server asks, then tries that line again', async () => {
+  mockParts()
+  const eq = mockEquivalents()
+  eq.mockImplementationOnce(() => Promise.reject(new api.ApiError(429, 'slow down', 3)))
+  renderPage()
+  check('R10K 100')
+  await waitFor(() => expect(screen.getByRole('button', { name: /find cheaper swaps/i })).toBeInTheDocument())
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  try {
+    fireEvent.click(screen.getByRole('button', { name: /find cheaper swaps/i }))
+    await act(() => vi.advanceTimersByTimeAsync(2000))
+    expect(eq).toHaveBeenCalledTimes(1)
+    await act(() => vi.advanceTimersByTimeAsync(1500))
+    // Anchored: with one line, the board summary also reads 50%.
+    await waitFor(() => expect(screen.getByText(/^saves \$5\.00 \(50%\)/i)).toBeInTheDocument())
+    expect(eq).toHaveBeenCalledTimes(2)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('the link with swaps carries the drop-in part numbers', async () => {
+  mockParts()
+  mockEquivalents()
+  await withClipboard(async (writeText) => {
+    renderPage()
+    await checkThenSwap('R10K 100\nCAP 10')
+    await waitFor(() => expect(screen.getByRole('button', { name: /copy link with swaps/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /copy link with swaps/i }))
+    expect(new URL(writeText.mock.calls[0][0]).searchParams.get('list')).toBe('MPN,Qty\nR10K-ALT,100\nCAP,10')
+    await waitFor(() => expect(screen.getByRole('button', { name: /link copied/i })).toBeInTheDocument())
+  })
+})
+
+test('the CSV with swaps carries the drop-in part numbers', async () => {
+  mockParts()
+  mockEquivalents()
+  const blobs = []
+  // jsdom has no object URLs at all, so there is nothing to spy on.
+  const saved = [URL.createObjectURL, URL.revokeObjectURL]
+  URL.createObjectURL = (b) => { blobs.push(b); return 'blob:x' }
+  URL.revokeObjectURL = () => {}
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  try {
+    renderPage()
+    await checkThenSwap('R10K 100\nCAP 10')
+    await waitFor(() => expect(screen.getByRole('button', { name: /download csv with swaps/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /download csv with swaps/i }))
+    const csv = await new Promise((ok) => {
+      const fr = new FileReader()
+      fr.onload = () => ok(fr.result)
+      fr.readAsText(blobs[0])
+    })
+    expect(csv).toMatch(/^R10K-ALT,100,ok,LCSC,C11,0\.05,100,5,swap for R10K/m)
+    expect(csv).toMatch(/^CAP,10,ok/m)
+    // The page revokes its URL a tick later.
+    await new Promise((r) => setTimeout(r, 0))
+  } finally {
+    [URL.createObjectURL, URL.revokeObjectURL] = saved
+  }
+})
+
+test('a new check drops a swap pass that is still running', async () => {
+  mockParts()
+  let release
+  vi.spyOn(api, 'getEquivalent').mockImplementation(() => new Promise((ok) => { release = ok }))
+  renderPage()
+  await checkThenSwap('R10K 100')
+  await waitFor(() => expect(screen.getByText(/checking swaps 0 of 1/i)).toBeInTheDocument())
+  check('CAP 10')
+  await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
+  release({ original: {}, equivalent: { mpn_key: 'R10K-ALT' }, reason: 'x' })
+  await new Promise((r) => setTimeout(r, 20))
+  expect(screen.queryByText(/R10K-ALT/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/checking swaps/i)).not.toBeInTheDocument()
 })
