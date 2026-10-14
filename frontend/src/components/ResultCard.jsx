@@ -10,8 +10,11 @@ import PinButton from './PinButton.jsx'
 
 const HOVER_MS = 200
 const BADGE = { padding: '3px 10px', fontSize: 12, fontWeight: 700 }
+// Below these a week's change is noise, and a badge on most cards is none.
+const PRICE_DROP_PCT = -5
+const STOCK_FALL_PCT = -50
 
-export default function ResultCard({ part }) {
+export default function ResultCard({ part, trend }) {
   const to = `/part/${encodeKey(part.mpn_key)}`
   const headline = headlineOffer(part)
   const lcsc = lcscOffer(part)
@@ -73,6 +76,18 @@ export default function ResultCard({ part }) {
           {part.cheapest ? (
             <span style={{ ...BADGE, background: C.yellow, color: C.ink }}>
               {`cheapest of ${part.cheapest.compared_sources} sources checked`}
+            </span>
+          ) : null}
+          {/* History is LCSC only, so the badge says whose price moved: the
+              headline above can be another distributor's. */}
+          {trend && trend.price_pct != null && trend.price_pct <= PRICE_DROP_PCT ? (
+            <span style={{ ...BADGE, background: '#38d17a', color: '#062c16' }}>
+              {`LCSC price down ${-trend.price_pct}% this week`}
+            </span>
+          ) : null}
+          {trend && trend.stock_pct != null && trend.stock_pct <= STOCK_FALL_PCT ? (
+            <span style={{ ...BADGE, background: '#ffb02e', color: '#3a2500' }}>
+              {`LCSC stock fell ${-trend.stock_pct}% this week`}
             </span>
           ) : null}
           {offerCount > 1 ? (

@@ -32,6 +32,8 @@ class HistoryStore(Protocol):
     async def record_offers(self, records: list[OfferRecord]) -> int: ...
     async def get_history(self, mpn_key: str,
                           since: datetime) -> list[OfferRecord]: ...
+    async def get_history_many(self, mpn_keys: list[str],
+                               since: datetime) -> list[OfferRecord]: ...
 
 
 class InMemoryHistoryStore:
@@ -54,8 +56,13 @@ class InMemoryHistoryStore:
 
     async def get_history(self, mpn_key: str,
                           since: datetime) -> list[OfferRecord]:
+        return await self.get_history_many([mpn_key], since)
+
+    async def get_history_many(self, mpn_keys: list[str],
+                               since: datetime) -> list[OfferRecord]:
+        keys = set(mpn_keys)
         return sorted((r for r in self.records
-                       if r.mpn_key == mpn_key and r.distributor == "lcsc"
+                       if r.mpn_key in keys and r.distributor == "lcsc"
                        and r.recorded_at >= since),
                       key=lambda r: r.recorded_at)
 
@@ -135,15 +142,19 @@ class PostgresHistoryStore:
 
     async def get_history(self, mpn_key: str,
                           since: datetime) -> list[OfferRecord]:
-        if self._pool is None:
+        return await self.get_history_many([mpn_key], since)
+
+    async def get_history_many(self, mpn_keys: list[str],
+                               since: datetime) -> list[OfferRecord]:
+        if self._pool is None or not mpn_keys:
             return []
-        # One row a night, so a year is ~365 rows; the cap only guards
-        # against a recorder that ran far more often than planned.
+        # One row a night per part, so a year is ~365 rows each; the cap only
+        # guards against a recorder that ran far more often than planned.
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT mpn_key, lcsc, distributor, sku, price_usd, stock,"
                 " in_stock, currency, recorded_at FROM offer_history"
-                " WHERE mpn_key = $1 AND distributor = 'lcsc'"
-                " AND recorded_at >= $2 ORDER BY recorded_at LIMIT 2000",
-                mpn_key, since)
+                " WHERE mpn_key = ANY($1::text[]) AND distributor = 'lcsc'"
+                " AND recorded_at >= $2 ORDER BY recorded_at LIMIT 20000",
+                list(mpn_keys), since)
         return [OfferRecord(**dict(r)) for r in rows]

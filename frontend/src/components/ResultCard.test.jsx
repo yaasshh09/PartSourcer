@@ -186,3 +186,12 @@ test('resting on a card starts its part page reads early', async () => {
     expect(spy).toHaveBeenCalledWith('STM32F103C8T6')
   } finally { vi.useRealTimers() }
 })
+
+test('names a real weekly LCSC price drop or stock fall, and stays quiet about noise', () => {
+  const { unmount } = render(<MemoryRouter><ResultCard part={part()} trend={{ price_pct: -12, stock_pct: -60 }} /></MemoryRouter>)
+  expect(screen.getByText('LCSC price down 12% this week')).toBeInTheDocument()
+  expect(screen.getByText('LCSC stock fell 60% this week')).toBeInTheDocument()
+  unmount()
+  render(<MemoryRouter><ResultCard part={part()} trend={{ price_pct: -3, stock_pct: null }} /></MemoryRouter>)
+  expect(screen.queryByText(/this week/)).toBeNull()
+})

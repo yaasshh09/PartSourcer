@@ -99,3 +99,9 @@ export function browse(slug, params = {}) {
 export function getHistory(mpnKey) {
   return getJson(`/history/${encodeKey(mpnKey)}`)
 }
+
+// One call for a whole results page. Repeated keys= rather than a joined
+// list, because nothing promises an MPN has no commas.
+export function getTrends(mpnKeys) {
+  return getJson(`/trends?${mpnKeys.map((k) => `keys=${encodeURIComponent(k)}`).join('&')}`)
+}

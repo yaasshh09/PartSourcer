@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { search } from '../api.js'
+import { search, getTrends } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
 import { lcscOffer, oldestAsOf, sortByPrice } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
@@ -49,6 +49,7 @@ export default function SearchPage() {
   const [submitted, setSubmitted] = useState('')
   const [asOf, setAsOf] = useState(null)
   const [sources, setSources] = useState([])
+  const [trends, setTrends] = useState({})
   const [recent, setRecent] = useState(loadRecent)
   const inputRef = useRef(null)
   const waking = useWaking(loading)
@@ -73,6 +74,7 @@ export default function SearchPage() {
     let cancelled = false
     setLoading(true)
     setError(null)
+    setTrends({})
     search(q)
       .then((data) => {
         if (cancelled) return
@@ -82,7 +84,12 @@ export default function SearchPage() {
         setAsOf(oldestAsOf(data.results))
         setSources(data.sources || [])
         setSubmitted(q)
-        if (data.results.length) remember(q)
+        if (data.results.length) {
+          remember(q)
+          // Extra, so a failure costs the badges and nothing else.
+          getTrends(data.results.map((p) => p.mpn_key))
+            .then((b) => { if (!cancelled) setTrends(b.trends || {}) }, () => {})
+        }
       })
       // Sources go with the results they describe. A failed search knows
       // nothing about distributor health, and keeping the previous answer
@@ -195,7 +202,7 @@ export default function SearchPage() {
           </div>
         ) : null}
         <div className="ps-results">
-          {shown.map((p) => <ResultCard key={p.mpn_key} part={p} />)}
+          {shown.map((p) => <ResultCard key={p.mpn_key} part={p} trend={trends[p.mpn_key]} />)}
         </div>
       </div>
     )

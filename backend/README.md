@@ -118,6 +118,14 @@ deployment keeps no history (no `DATABASE_URL`), which is not the same as a
 part with no rows yet. A store that fails is a 503, never an empty list.
 Cached for an hour.
 
+### `GET /api/trends?keys=<k1>&keys=<k2>`
+Week-on-week LCSC change for up to 50 parts in one call, for search cards:
+`{ recording, days: 7, trends: { <mpn_key>: { price_pct, stock_pct, from, to } } }`.
+Each percent runs from the oldest to the newest reading in the past 7 days. A
+part is left out unless those readings are at least 2 days apart, and a
+percent is `null` when the starting value was zero. Same 503 and cache rules
+as `/api/history`.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`

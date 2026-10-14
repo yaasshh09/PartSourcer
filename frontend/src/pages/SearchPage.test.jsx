@@ -248,3 +248,14 @@ test('a shared Basic only link opens filtered', async () => {
   await waitFor(() => expect(screen.getByText('BASIC')).toBeInTheDocument())
   expect(screen.queryByText('EXT')).toBeNull()
 })
+
+test('asks for every result\'s weekly trend in one call and hands it to the card', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue({ page: 1, query: 'STM32',
+    results: [part(), part({ mpn_key: 'B', mpn: 'B' })], sources: OK_SOURCES })
+  vi.spyOn(api, 'getTrends').mockResolvedValue({ recording: true, days: 7,
+    trends: { STM32F103C8T6: { price_pct: -20, stock_pct: 5 } } })
+  renderAt('/?q=STM32')
+  await waitFor(() => expect(screen.getByText('LCSC price down 20% this week')).toBeInTheDocument())
+  expect(api.getTrends).toHaveBeenCalledTimes(1)
+  expect(api.getTrends).toHaveBeenCalledWith(['STM32F103C8T6', 'B'])
+})
