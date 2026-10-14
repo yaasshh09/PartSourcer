@@ -11,6 +11,7 @@ import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import OfferTable from '../components/OfferTable.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
 import Price from '../components/Price.jsx'
+import PriceHistory from '../components/PriceHistory.jsx'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
@@ -244,6 +245,8 @@ export default function DetailPage() {
           {`stock & price as of ${fmtAsOf(part.as_of)}`}
         </div>
       </div>
+
+      <PriceHistory mpnKey={part.mpn_key} />
 
       <OfferTable offers={part.offers} cheapest={part.cheapest}
         unavailableReason={part.cheapest_unavailable_reason} initialQty={searchParams.get('qty')} mpn={part.mpn} />

@@ -93,3 +93,9 @@ export function browse(slug, params = {}) {
   const qs = new URLSearchParams(params).toString()
   return getJson(`/browse/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`)
 }
+
+// Nightly LCSC readings. Not prefetched: it sits below the fold and the part
+// page renders fine without it.
+export function getHistory(mpnKey) {
+  return getJson(`/history/${encodeKey(mpnKey)}`)
+}

@@ -30,6 +30,8 @@ class HistoryStore(Protocol):
     async def add_to_watchlist(self, mpn_key: str, lcsc: str | None) -> None: ...
     async def get_watchlist(self, limit: int) -> list[tuple[str, str | None]]: ...
     async def record_offers(self, records: list[OfferRecord]) -> int: ...
+    async def get_history(self, mpn_key: str,
+                          since: datetime) -> list[OfferRecord]: ...
 
 
 class InMemoryHistoryStore:
@@ -49,6 +51,13 @@ class InMemoryHistoryStore:
     async def record_offers(self, records: list[OfferRecord]) -> int:
         self.records.extend(records)
         return len(records)
+
+    async def get_history(self, mpn_key: str,
+                          since: datetime) -> list[OfferRecord]:
+        return sorted((r for r in self.records
+                       if r.mpn_key == mpn_key and r.distributor == "lcsc"
+                       and r.recorded_at >= since),
+                      key=lambda r: r.recorded_at)
 
 
 _PG_SCHEMA = """
@@ -123,3 +132,18 @@ class PostgresHistoryStore:
                   r.stock, r.in_stock, r.currency, r.recorded_at)
                  for r in records])
         return len(records)
+
+    async def get_history(self, mpn_key: str,
+                          since: datetime) -> list[OfferRecord]:
+        if self._pool is None:
+            return []
+        # One row a night, so a year is ~365 rows; the cap only guards
+        # against a recorder that ran far more often than planned.
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT mpn_key, lcsc, distributor, sku, price_usd, stock,"
+                " in_stock, currency, recorded_at FROM offer_history"
+                " WHERE mpn_key = $1 AND distributor = 'lcsc'"
+                " AND recorded_at >= $2 ORDER BY recorded_at LIMIT 2000",
+                mpn_key, since)
+        return [OfferRecord(**dict(r)) for r in rows]

@@ -49,3 +49,15 @@ async def test_record_offers_never_overwrites(store):
     await store.record_offers([rec(price=1.82)])
     await store.record_offers([rec(price=1.75)])
     assert [r.price_usd for r in store.records] == [1.82, 1.75]
+
+
+async def test_history_is_oldest_first_for_one_part_within_the_window(store):
+    old = rec(price=2.0)
+    old.recorded_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    a, b = rec(price=1.9), rec(price=1.8)
+    a.recorded_at = datetime(2026, 8, 6, tzinfo=timezone.utc)
+    b.recorded_at = datetime(2026, 8, 7, tzinfo=timezone.utc)
+    await store.record_offers([b, rec(mpn_key="OTHER"), old, a])
+    since = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    got = await store.get_history("STM32F103C8T6", since=since)
+    assert [r.price_usd for r in got] == [1.9, 1.8]

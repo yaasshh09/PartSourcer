@@ -34,3 +34,13 @@ async def test_record_offers_appends(pg):
                     sku="C1", price_usd=1.0, stock=10, in_stock=True,
                     currency="USD", recorded_at=datetime.now(timezone.utc))
     assert await pg.record_offers([r]) == 1
+
+
+async def test_history_reads_back_what_was_recorded(pg):
+    since = datetime.now(timezone.utc)
+    r = OfferRecord(mpn_key="TESTMPN002", lcsc="C2", distributor="lcsc",
+                    sku="C2", price_usd=2.0, stock=5, in_stock=True,
+                    currency="USD", recorded_at=datetime.now(timezone.utc))
+    await pg.record_offers([r])
+    got = await pg.get_history("TESTMPN002", since=since)
+    assert got and got[-1].price_usd == 2.0
