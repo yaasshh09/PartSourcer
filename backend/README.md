@@ -110,6 +110,14 @@ state is a 200 SVG (`not found`, `unavailable`, `out of stock`), because a
 README shows a broken image for anything else. `Cache-Control` is one hour
 for a real answer, the stock TTL, and five minutes for an error.
 
+### `GET /api/history/<mpn_key>?days=90`
+The nightly recorder's rows for one part, oldest first:
+`{ mpn_key, distributor: "lcsc", recording, points: [{ at, price_usd, stock }] }`.
+`days` is 1 to 365. Only LCSC is recorded. `recording: false` means this
+deployment keeps no history (no `DATABASE_URL`), which is not the same as a
+part with no rows yet. A store that fails is a 503, never an empty list.
+Cached for an hour.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`
