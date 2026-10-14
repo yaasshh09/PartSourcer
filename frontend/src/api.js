@@ -94,10 +94,11 @@ export function browse(slug, params = {}) {
   return getJson(`/browse/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`)
 }
 
-// Nightly LCSC readings. Not prefetched: it sits below the fold and the part
-// page renders fine without it.
+// Nightly LCSC readings for the past year, the most the backend keeps
+// asking for. Not prefetched: it sits below the fold and the part page
+// renders fine without it.
 export function getHistory(mpnKey) {
-  return getJson(`/history/${encodeKey(mpnKey)}`)
+  return getJson(`/history/${encodeKey(mpnKey)}?days=365`)
 }
 
 // One call for a whole results page. Repeated keys= rather than a joined
