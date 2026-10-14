@@ -158,6 +158,13 @@ export default function CategoryPage() {
               {`stock from the LCSC snapshot, read ${fmtAsOf(data.as_of)}`}
             </div>
           </div>
+          {/* Upstream lost rows in a catalog import: AMS1117-3.3 is absent and
+              every SOT-23-5 LDO reads zero stock. Drop this once #611 closes. */}
+          <p style={{ fontSize: 12, color: C.sub, fontWeight: 600, margin: '0 0 14px' }}>
+            {"Upstream's LCSC catalog is incomplete right now, so some well-stocked parts are missing from these lists and some stock reads zero. Tracked in "}
+            <a className="ps-link" href="https://github.com/tscircuit/jlcsearch/issues/611" target="_blank"
+              rel="noopener noreferrer" style={{ color: C.ink }}>jlcsearch#611</a>.
+          </p>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* Keyed by LCSC code: one MPN can carry several codes. */}
             {data.results.map((r) => <Row key={r.lcsc} row={r} />)}

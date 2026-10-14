@@ -153,3 +153,11 @@ test('a browse row can be pinned for comparison', async () => {
   expect(JSON.parse(localStorage.getItem('ps-compare'))).toEqual(['0603WAF1002T5E'])
   localStorage.clear()
 })
+
+test('says the upstream catalog is incomplete and links to the tracking issue', async () => {
+  vi.spyOn(api, 'browse').mockResolvedValue(answer())
+  renderAt('/browse/resistors')
+  const link = await screen.findByRole('link', { name: 'jlcsearch#611' })
+  expect(link).toHaveAttribute('href', 'https://github.com/tscircuit/jlcsearch/issues/611')
+  expect(screen.getByText(/some well-stocked parts are missing/i)).toBeInTheDocument()
+})
