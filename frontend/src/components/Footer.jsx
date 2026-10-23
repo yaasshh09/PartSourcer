@@ -6,6 +6,7 @@ const PRODUCT = [
   { label: 'Search', to: '/' },
   { label: 'Browse', to: '/browse' },
   { label: 'BOM check', to: '/bom' },
+  { label: 'Watchlist', to: '/watchlist' },
   { label: 'About', to: '/about' },
   { label: 'How it works', to: '/how' },
   { label: 'FAQ', to: '/faq' },

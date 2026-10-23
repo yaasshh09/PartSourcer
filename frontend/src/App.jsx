@@ -13,6 +13,7 @@ import NotFoundPage from './pages/NotFoundPage.jsx'
 import ComparePage from './pages/ComparePage.jsx'
 import BomPage from './pages/BomPage.jsx'
 import ChangelogPage from './pages/ChangelogPage.jsx'
+import WatchlistPage from './pages/WatchlistPage.jsx'
 import { CompareProvider } from './compare.jsx'
 import CompareTray from './components/CompareTray.jsx'
 
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/browse/:slug" element={<CategoryPage />} />
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/bom" element={<BomPage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/how" element={<HowPage />} />
             <Route path="/faq" element={<FaqPage />} />

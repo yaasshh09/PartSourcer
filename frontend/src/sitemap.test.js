@@ -7,7 +7,8 @@ test('the sitemap lists every page a visitor can land on cold', () => {
   const xml = readFileSync(resolve('public/sitemap.xml'), 'utf8')
   const app = readFileSync(resolve('src/App.jsx'), 'utf8')
   const routes = [...app.matchAll(/path="(\/[a-z]*)"/g)].map((m) => m[1])
-    .filter((p) => p !== '/compare') // holds this browser's pins, nothing to index
+    // Both hold what this browser saved, so there is nothing to index.
+    .filter((p) => p !== '/compare' && p !== '/watchlist')
   expect(routes.length).toBeGreaterThan(5)
   for (const r of routes) expect(xml).toContain(`<loc>https://part-sourcer.vercel.app${r}</loc>`)
   const robots = readFileSync(resolve('public/robots.txt'), 'utf8')
