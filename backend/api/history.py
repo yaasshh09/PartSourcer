@@ -93,3 +93,28 @@ async def trends(
                 "to": last.recorded_at.isoformat()}
     response.headers["Cache-Control"] = f"public, max-age={MAX_AGE}"
     return body
+
+
+SUGGEST_LIMIT = 8
+
+
+@router.get("/suggest")
+async def suggest(
+    response: Response,
+    q: str = Query("", max_length=64),
+    store: HistoryStore | None = Depends(get_history_store),
+):
+    """Part numbers someone has opened here that start with what is typed.
+
+    Only a convenience for the search box, so a missing or failing store
+    gives an empty list rather than an error.
+    """
+    prefix = normalize_exact(q)
+    found: list[str] = []
+    if store is not None and len(prefix) >= 2:
+        try:
+            found = await store.suggest(prefix, SUGGEST_LIMIT)
+        except Exception:                       # noqa: BLE001
+            found = []
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return {"suggestions": found}

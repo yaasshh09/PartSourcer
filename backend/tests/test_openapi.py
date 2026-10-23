@@ -13,3 +13,4 @@ def test_openapi_lists_every_public_route():
     assert "/api/equivalent/{mpn_key}" in paths
     assert "/api/browse" in paths
     assert "/api/browse/{slug}" in paths
+    assert "/api/suggest" in paths

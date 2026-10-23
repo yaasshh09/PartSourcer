@@ -29,6 +29,7 @@ class OfferRecord:
 class HistoryStore(Protocol):
     async def add_to_watchlist(self, mpn_key: str, lcsc: str | None) -> None: ...
     async def get_watchlist(self, limit: int) -> list[tuple[str, str | None]]: ...
+    async def suggest(self, prefix: str, limit: int) -> list[str]: ...
     async def record_offers(self, records: list[OfferRecord]) -> int: ...
     async def get_history(self, mpn_key: str,
                           since: datetime) -> list[OfferRecord]: ...
@@ -49,6 +50,9 @@ class InMemoryHistoryStore:
 
     async def get_watchlist(self, limit: int) -> list[tuple[str, str | None]]:
         return list(self.watchlist.items())[:limit]
+
+    async def suggest(self, prefix: str, limit: int) -> list[str]:
+        return [k for k in reversed(self.watchlist) if k.startswith(prefix)][:limit]
 
     async def record_offers(self, records: list[OfferRecord]) -> int:
         self.records.extend(records)
@@ -126,6 +130,16 @@ class PostgresHistoryStore:
                 "SELECT mpn_key, lcsc FROM watchlist"
                 " ORDER BY last_seen DESC LIMIT $1", limit)
         return [(r["mpn_key"], r["lcsc"]) for r in rows]
+
+    async def suggest(self, prefix: str, limit: int) -> list[str]:
+        if self._pool is None:
+            return []
+        # starts_with, not LIKE, so a typed % or _ is only a character.
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT mpn_key FROM watchlist WHERE starts_with(mpn_key, $1)"
+                " ORDER BY last_seen DESC LIMIT $2", prefix, limit)
+        return [r["mpn_key"] for r in rows]
 
     async def record_offers(self, records: list[OfferRecord]) -> int:
         if not records or self._pool is None:

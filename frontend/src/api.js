@@ -106,3 +106,8 @@ export function getHistory(mpnKey) {
 export function getTrends(mpnKeys) {
   return getJson(`/trends?${mpnKeys.map((k) => `keys=${encodeURIComponent(k)}`).join('&')}`)
 }
+
+// Part numbers opened here before, for the search box. Never worth an error.
+export function getSuggestions(q) {
+  return getJson(`/suggest?q=${encodeURIComponent(q)}`)
+}

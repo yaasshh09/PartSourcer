@@ -44,3 +44,9 @@ async def test_history_reads_back_what_was_recorded(pg):
     await pg.record_offers([r])
     got = await pg.get_history("TESTMPN002", since=since)
     assert got and got[-1].price_usd == 2.0
+
+
+async def test_suggest_matches_a_prefix_and_treats_wildcards_literally(pg):
+    await pg.add_to_watchlist("TESTMPN001", "C1")
+    assert "TESTMPN001" in await pg.suggest("TESTMPN", 50)
+    assert await pg.suggest("TESTMPN%", 50) == []

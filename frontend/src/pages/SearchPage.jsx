@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { search, getTrends } from '../api.js'
+import { search, getTrends, getSuggestions } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
 import { DISTRIBUTOR_LABEL, lcscOffer, oldestAsOf, precedence, sortByPrice } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
@@ -58,6 +58,7 @@ export default function SearchPage() {
   const [sources, setSources] = useState([])
   const [trends, setTrends] = useState({})
   const [recent, setRecent] = useState(loadRecent)
+  const [suggestions, setSuggestions] = useState([])
   const inputRef = useRef(null)
   const waking = useWaking(loading)
 
@@ -106,6 +107,18 @@ export default function SearchPage() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [q])
+
+  // Waits for a pause in typing, and only for what was typed, not for the
+  // query a link opened with.
+  useEffect(() => {
+    const t = query.trim()
+    if (t.length < 2 || t === q) { setSuggestions([]); return undefined }
+    let live = true
+    const timer = setTimeout(() => {
+      getSuggestions(t).then((d) => { if (live) setSuggestions(d.suggestions || []) }, () => {})
+    }, 200)
+    return () => { live = false; clearTimeout(timer) }
+  }, [query]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (e) => {
@@ -288,10 +301,14 @@ export default function SearchPage() {
           {/* minWidth 0 is what lets this shrink. A flex item will not go below
               its placeholder's width without it, which pushed the SEARCH button
               past the right edge of a phone and scrolled the whole page. */}
-          <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
+          <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} list="ps-suggest"
+            autoComplete="off"
             placeholder="Search by MPN, LCSC #, or spec…"
             style={{ flex: 1, minWidth: 0, border: 'none', padding: '20px 16px', fontSize: 17,
               fontWeight: 500, background: 'transparent' }} />
+          <datalist id="ps-suggest">
+            {suggestions.map((s) => <option key={s} value={s} />)}
+          </datalist>
           <button type="submit" className="ps-press" style={{ background: C.orange, color: '#fff', fontFamily: ARCHIVO,
             fontWeight: 900, fontSize: 16, padding: '0 34px', border: 'none',
             borderLeft: `3px solid ${C.ink}`, alignSelf: 'stretch' }}>SEARCH</button>

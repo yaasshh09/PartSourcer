@@ -305,3 +305,20 @@ test('says nothing when only the letter case changed', async () => {
   await screen.findByText('STM32F103C8T6')
   expect(screen.queryByText(/Searched as/)).toBeNull()
 })
+
+test('offers part numbers opened before as the user types', async () => {
+  const spy = vi.spyOn(api, 'getSuggestions').mockResolvedValue({ suggestions: ['STM32F103C8T6', 'STM32F030F4P6'] })
+  renderAt('/')
+  fireEvent.change(screen.getByPlaceholderText(/Search by MPN/), { target: { value: 'stm' } })
+  await waitFor(() => expect(spy).toHaveBeenCalledWith('stm'))
+  const list = document.getElementById(screen.getByPlaceholderText(/Search by MPN/).getAttribute('list'))
+  await waitFor(() => expect([...list.options].map((o) => o.value)).toEqual(['STM32F103C8T6', 'STM32F030F4P6']))
+})
+
+test('asks for nothing on a single character', async () => {
+  const spy = vi.spyOn(api, 'getSuggestions').mockResolvedValue({ suggestions: [] })
+  renderAt('/')
+  fireEvent.change(screen.getByPlaceholderText(/Search by MPN/), { target: { value: 's' } })
+  await new Promise((r) => setTimeout(r, 300))
+  expect(spy).not.toHaveBeenCalled()
+})

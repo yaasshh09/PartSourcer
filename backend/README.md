@@ -148,6 +148,14 @@ part is left out unless those readings are at least 2 days apart, and a
 percent is `null` when the starting value was zero. Same 503 and cache rules
 as `/api/history`.
 
+### `GET /api/suggest?q=<prefix>`
+`{ suggestions: [<mpn_key>, ...] }`: up to 8 part numbers that someone has
+opened here and that start with `q` (normalized like a key, at least 2
+characters), most recently viewed first. They come from the recorder's
+watchlist, so with no `DATABASE_URL` the list is always empty. A store error
+is also an empty list, never a 5xx: this only feeds the search box. Cached
+for 5 minutes.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`
