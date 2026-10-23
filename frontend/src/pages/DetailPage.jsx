@@ -370,6 +370,28 @@ export default function DetailPage() {
           {`The cheaper-equivalent check could not run right now: ${equivError.detail}. Try refreshing in a moment.`}
         </NoticePanel>
       ) : null}
+
+      {/* Separate from the swap: it can exist when nothing is cheaper, and
+          the reason names exactly which spec improves and by how much. */}
+      {equiv && equiv.upgrade ? (
+        <section aria-label="Better part, same money" style={{ marginTop: 20, border: `3px solid ${C.ink}`,
+          background: C.paper, padding: 22 }}>
+          <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13 }}>BETTER PART, SAME MONEY</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px 12px', marginTop: 10 }}>
+            <Link className="ps-link" to={`/part/${encodeKey(equiv.upgrade.mpn_key)}`}
+              aria-label={`View the ${equiv.upgrade.mpn} part page`}
+              style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 20, color: C.ink,
+                overflowWrap: 'anywhere' }}>{equiv.upgrade.mpn}</Link>
+            <span style={{ fontFamily: MONO, fontSize: 12, color: C.muted }}>{equiv.upgrade.lcsc}</span>
+            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700 }}>
+              {fmtPrice(equiv.upgrade.price_usd) || NO_PRICE}
+            </span>
+          </div>
+          <div style={{ fontSize: 14, color: C.sub, fontWeight: 500, marginTop: 8 }}>
+            {equiv.upgrade.match_reason}
+          </div>
+        </section>
+      ) : null}
     </section>
   )
 }

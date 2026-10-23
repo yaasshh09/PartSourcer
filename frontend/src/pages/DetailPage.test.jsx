@@ -576,3 +576,29 @@ test('no runners-up list when only one drop-in verified', async () => {
   await screen.findByText('RES-ALT')
   expect(screen.queryByRole('list', { name: /other cheaper drop-ins/i })).toBeNull()
 })
+
+test('shows a better-spec part for the same money even with no cheaper swap', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue({
+    ...noEquivalent,
+    upgrade: { mpn_key: 'RES-TIGHT', lcsc: 'C77', mpn: 'RES-TIGHT', price_usd: 0.0004, stock: 120000,
+      package: '0402', percent_cheaper: 0, checks: [],
+      match_reason: 'Tighter tolerance (±5% to ±1%), same 0402 package, 120,000 in stock, for the same price' },
+  })
+  renderPart('/part/0402WGJ0103TCE')
+  const panel = await screen.findByRole('region', { name: /better part, same money/i })
+  expect(panel.textContent).toContain('Tighter tolerance (±5% to ±1%)')
+  expect(screen.getByRole('link', { name: /RES-TIGHT part page/i }).getAttribute('href')).toBe('/part/RES-TIGHT')
+  // The no-swap notice still says why there is no cheaper part.
+  expect(screen.getByText(/NO CHEAPER EQUIVALENT/)).toBeInTheDocument()
+})
+
+test('no upgrade panel when the matcher found none', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  await screen.findByText(/NO CHEAPER EQUIVALENT/)
+  expect(screen.queryByRole('region', { name: /better part, same money/i })).toBeNull()
+})
