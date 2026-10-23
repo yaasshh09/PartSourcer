@@ -337,6 +337,29 @@ export default function DetailPage() {
               </div>
             </div>
           </div>
+          {/* The runners-up passed the same re-read and gates as the main
+              swap, so a deeper stock can win over the last few percent.
+              Their own part pages carry the full checks. */}
+          {equiv.alternatives && equiv.alternatives.length ? (
+            <div style={{ marginTop: 22, borderTop: '2px solid #5a4d1a', paddingTop: 14 }}>
+              <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 13 }}>ALSO CHEAPER</div>
+              <ul aria-label="Other cheaper drop-ins" style={{ listStyle: 'none', padding: 0, margin: '8px 0 0' }}>
+                {equiv.alternatives.map((a) => (
+                  <li key={a.lcsc} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px',
+                    alignItems: 'baseline', padding: '6px 0', fontSize: 14, color: '#3a3200' }}>
+                    <Link className="ps-link" to={`/part/${encodeKey(a.mpn_key)}`}
+                      aria-label={`View the ${a.mpn} part page`}
+                      style={{ fontFamily: ARCHIVO, fontWeight: 900, color: '#3a3200',
+                        overflowWrap: 'anywhere' }}>{a.mpn}</Link>
+                    <span style={{ fontFamily: MONO, fontSize: 12, color: '#5a4d1a' }}>{a.lcsc}</span>
+                    <span style={{ fontWeight: 600 }}>
+                      {`${Number(a.stock || 0).toLocaleString('en-US')} in stock · ${fmtPrice(a.price_usd) || NO_PRICE} · ${a.percent_cheaper}% cheaper`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : equiv ? (
         <NoticePanel variant="inline" title={"NO CHEAPER EQUIVALENT, AND NOTHING FAKED IN ITS PLACE"}>

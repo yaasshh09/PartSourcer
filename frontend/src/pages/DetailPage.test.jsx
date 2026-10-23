@@ -539,3 +539,40 @@ test('copies a README badge for the part', async () => {
     `[![PartSourcer stock](${origin}/api/badge/0402WGJ0103TCE)](${origin}/part/0402WGJ0103TCE)`)
   await screen.findByText(/copied/i)
 })
+
+const withEquivalent = (alternatives) => ({
+  original: { mpn_key: '0402WGJ0103TCE', mpn: '0402WGJ0103TCE', package: '0402',
+    price_usd: 0.0004, stock: 9360, lcsc: 'C25531', distributor: 'lcsc' },
+  equivalent: { mpn_key: 'RES-ALT', lcsc: 'C881063', mpn: 'RES-ALT', price_usd: 0.0003,
+    stock: 9360, package: '0402', match_reason: 'Same 0402 package', percent_cheaper: 25, checks: [] },
+  alternatives,
+  reason: null, as_of: '2026-08-15T07:52:24Z',
+})
+
+test('lists the other verified drop-ins under the cheapest one', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(withEquivalent([
+    { mpn_key: 'RES-B', lcsc: 'C2', mpn: 'RES-B', price_usd: 0.00032, stock: 50000,
+      package: '0402', match_reason: 'Same 0402 package, 20% cheaper', percent_cheaper: 20, checks: [] },
+    { mpn_key: 'RES-C', lcsc: 'C3', mpn: 'RES-C', price_usd: 0.00036, stock: 4000000,
+      package: '0402', match_reason: 'Same 0402 package, 10% cheaper', percent_cheaper: 10, checks: [] },
+  ]))
+  renderPart('/part/0402WGJ0103TCE')
+  const list = await screen.findByRole('list', { name: /other cheaper drop-ins/i })
+  const items = [...list.querySelectorAll('li')]
+  expect(items).toHaveLength(2)
+  expect(items[0].textContent).toContain('RES-B')
+  expect(items[0].textContent).toContain('20% cheaper')
+  expect(items[1].textContent).toContain('4,000,000 in stock')
+  expect(screen.getByRole('link', { name: /RES-C part page/i }).getAttribute('href')).toBe('/part/RES-C')
+})
+
+test('no runners-up list when only one drop-in verified', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(withEquivalent([]))
+  renderPart('/part/0402WGJ0103TCE')
+  await screen.findByText('RES-ALT')
+  expect(screen.queryByRole('list', { name: /other cheaper drop-ins/i })).toBeNull()
+})
