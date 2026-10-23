@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { parseBom, priceAt, checkLine, summarize, toCsv, lineNote, compareSwap, summarizeSwaps, shareList, MAX_LINES,
-  lcscFacts, toJlcBom, jlcGaps } from './bom.js'
+  lcscFacts, toJlcBom, jlcGaps, summarizeBaskets } from './bom.js'
 
 function offer(over = {}) {
   return {
@@ -341,5 +341,40 @@ describe('JLCPCB assembly BOM', () => {
       { lcsc: 'C3', basic: false, refs: '' }, { lcsc: null, basic: null, refs: 'U1' },
     ]
     expect(jlcGaps(rows)).toEqual({ extended: 2, noCode: 1, noRefs: 1 })
+  })
+})
+
+describe('one distributor or a split order', () => {
+  test('a checked line keeps what each distributor would charge for it', () => {
+    const lcsc = offer({ distributor: 'lcsc', sku: 'C1', price_usd: 0.05, stock: 500 })
+    const mouser = offer({ price_breaks: [{ qty: 1, price_usd: 0.2 }, { qty: 100, price_usd: 0.04 }] })
+    const short = offer({ distributor: 'digikey', sku: 'D1', price_usd: 0.01, stock: 5 })
+    const out = checkLine(part([lcsc, mouser, short]), 200)
+    expect(out.byDist.lcsc).toBeCloseTo(10)
+    expect(out.byDist.mouser).toBeCloseTo(8)
+    expect(out.byDist.digikey).toBeUndefined()   // cannot fill the line
+  })
+
+  test('totals each distributor over the lines it can fill', () => {
+    const rows = [
+      { state: 'ok', byDist: { lcsc: 1, mouser: 2 } },
+      { state: 'ok', byDist: { lcsc: 3 } },
+      { state: 'short' },
+    ]
+    expect(summarizeBaskets(rows)).toEqual({
+      lines: 2,
+      baskets: [{ distributor: 'lcsc', total: 4, covered: 2 }, { distributor: 'mouser', total: 2, covered: 1 }],
+      best: { distributor: 'lcsc', total: 4, covered: 2 },
+    })
+  })
+
+  test('no single distributor when none can fill every line', () => {
+    const rows = [{ state: 'ok', byDist: { lcsc: 1 } }, { state: 'ok', byDist: { mouser: 2 } }]
+    expect(summarizeBaskets(rows).best).toBeNull()
+  })
+
+  test('the cheapest full basket wins, not the one listed first', () => {
+    const rows = [{ state: 'ok', byDist: { lcsc: 5, mouser: 2 } }, { state: 'ok', byDist: { lcsc: 1, mouser: 2 } }]
+    expect(summarizeBaskets(rows).best).toEqual({ distributor: 'mouser', total: 4, covered: 2 })
   })
 })

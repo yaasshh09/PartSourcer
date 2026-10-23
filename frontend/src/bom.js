@@ -131,9 +131,12 @@ export function checkLine(part, qty) {
   }
   fits.sort((a, b) => (a.total - b.total) || (precedence(a.offer.distributor) - precedence(b.offer.distributor)))
   const best = fits[0]
+  // Sorted cheapest first, so the first total seen per distributor is its best.
+  const byDist = {}
+  for (const f of fits) if (!(f.offer.distributor in byDist)) byDist[f.offer.distributor] = f.total
   return { state: 'ok', offer: best.offer, unit: best.unit, orderQty: best.orderQty,
     total: best.total, note: best.note, as_of: best.offer.as_of,
-    thin: best.offer.stock < THIN_STOCK_RATIO * best.orderQty }
+    thin: best.offer.stock < THIN_STOCK_RATIO * best.orderQty, byDist }
 }
 
 // Taking over half a shelf is flagged: another buyer's order between the read
@@ -161,6 +164,27 @@ export function summarize(rows) {
     if (r.as_of && (!asOf || Date.parse(r.as_of) < Date.parse(asOf))) asOf = r.as_of
   }
   return { total, counts, asOf }
+}
+
+/**
+ * What the orderable lines cost bought from one distributor each, against the
+ * split the main total already is. Only a distributor that can fill every
+ * line is a real one-stop order, so only one of those can be `best`.
+ */
+export function summarizeBaskets(rows) {
+  const ok = rows.filter((r) => r.state === 'ok' && r.byDist)
+  const by = new Map()
+  for (const r of ok) {
+    for (const [d, t] of Object.entries(r.byDist)) {
+      const b = by.get(d) || { distributor: d, total: 0, covered: 0 }
+      b.total += t
+      b.covered += 1
+      by.set(d, b)
+    }
+  }
+  const baskets = [...by.values()].sort((a, b) => (b.covered - a.covered) || (a.total - b.total))
+  const full = baskets.filter((b) => b.covered === ok.length)
+  return { lines: ok.length, baskets, best: full.length ? full.reduce((a, b) => (b.total < a.total ? b : a)) : null }
 }
 
 export const STATE_LABEL = {

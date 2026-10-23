@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { encodeKey, getEquivalent, getPart } from '../api.js'
 import { MAX_LINES, STATE_LABEL, checkLine, compareSwap, lineNote, parseBom, shareList, summarize,
-  summarizeSwaps, toCsv, lcscFacts, toJlcBom, jlcGaps } from '../bom.js'
+  summarizeSwaps, toCsv, lcscFacts, toJlcBom, jlcGaps, summarizeBaskets } from '../bom.js'
 import { DISTRIBUTOR_LABEL } from '../offers.js'
 import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice, fmtUnit } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
@@ -218,6 +218,20 @@ export default function BomPage() {
   const sw = summarizeSwaps(rows)
   const canSwap = !busy && !swapsBusy && rows.some(swappable)
   const money = (n) => fmtPrice(Math.round(n * 10000) / 10000)
+  // The total is already the cheapest split. Each extra distributor is
+  // another shipment, so when it takes more than one, say what one order costs.
+  const bk = summarizeBaskets(rows)
+  const splitAcross = new Set(rows.filter((r) => r.state === 'ok').map((r) => r.offer.distributor)).size
+  const label = (d) => DISTRIBUTOR_LABEL[d] || d
+  let basketNote = null
+  if (splitAcross > 1) {
+    const extra = bk.best ? Math.round((bk.best.total - sum.total) * 10000) / 10000 : 0
+    basketNote = !bk.best
+      ? `No single distributor carries every line, so this order is split across ${splitAcross}.`
+      : extra > 0
+        ? `All from ${label(bk.best.distributor)}: ${money(bk.best.total)}, ${money(extra)} more than splitting, but one order to ship.`
+        : `All from ${label(bk.best.distributor)}: ${money(bk.best.total)}, the same as splitting.`
+  }
   // JLCPCB places parts by designator, so a list pasted without any gets no
   // JLCPCB file rather than one that cannot be ordered from.
   const hasRefs = rows.some((r) => r.refs)
@@ -316,6 +330,9 @@ export default function BomPage() {
             </div>
           </div>
           <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, margin: '8px 0 14px' }}>{SHIPPING_NOTE}</div>
+          {!busy && basketNote ? (
+            <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, margin: '-6px 0 14px' }}>{basketNote}</div>
+          ) : null}
 
           {!busy ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>

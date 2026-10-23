@@ -20,6 +20,8 @@ const PARTS = {
   NE555P: part('NE555P', [offer()]),
   TINY: part('TINY', [offer({ sku: 'C2', stock: 2 })]),
   EXT: { ...part('EXT', [offer({ sku: 'C77', is_basic: false })]), package: '0603' },
+  DUAL: part('DUAL', [offer({ sku: 'C5', price_usd: 0.1 }), offer({ distributor: 'mouser', sku: 'M5', price_usd: 0.08 })]),
+  MONLY: part('MONLY', [offer({ distributor: 'mouser', sku: 'M6', price_usd: 0.1 })]),
 }
 
 function mockParts(failing = {}) {
@@ -405,4 +407,29 @@ test('a list with no designators offers no JLCPCB file', async () => {
   await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
   expect(screen.queryByRole('button', { name: /download jlcpcb bom/i })).toBeNull()
   expect(screen.queryByText(/for the jlcpcb bom/i)).toBeNull()
+})
+
+test('compares buying everything from one distributor with the split', async () => {
+  mockParts()
+  renderPage()
+  check('NE555P 5\nDUAL 10')
+  await waitFor(() => expect(screen.getByText(/2 of 2 lines can be ordered/i)).toBeInTheDocument())
+  // Split: 5 x $0.10 at LCSC + 10 x $0.08 at Mouser = $1.30. All LCSC: $0.50 + $1.00 = $1.50.
+  expect(screen.getByText(/all from LCSC: \$1\.50, \$0\.20 more than splitting/i)).toBeInTheDocument()
+})
+
+test('says when no one distributor carries every line', async () => {
+  mockParts()
+  renderPage()
+  check('NE555P 5\nMONLY 10')
+  await waitFor(() => expect(screen.getByText(/2 of 2 lines can be ordered/i)).toBeInTheDocument())
+  expect(screen.getByText(/no single distributor carries every line/i)).toBeInTheDocument()
+})
+
+test('says nothing extra when one distributor already wins every line', async () => {
+  mockParts()
+  renderPage()
+  check('NE555P 5')
+  await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
+  expect(screen.queryByText(/more than splitting|no single distributor/i)).toBeNull()
 })
