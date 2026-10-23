@@ -602,3 +602,27 @@ test('no upgrade panel when the matcher found none', async () => {
   await screen.findByText(/NO CHEAPER EQUIVALENT/)
   expect(screen.queryByRole('region', { name: /better part, same money/i })).toBeNull()
 })
+
+test('links to a CAD library search and copies the easyeda2kicad command for LCSC parts', async () => {
+  const writeText = vi.fn(() => Promise.resolve())
+  setClipboard(writeText)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse())
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  const snap = await screen.findByRole('link', { name: /SnapEDA/ })
+  expect(snap).toHaveAttribute('href', 'https://www.snapeda.com/search/?q=0402WGJ0103TCE')
+  expect(snap).toHaveAttribute('rel', 'noopener noreferrer')
+  fireEvent.click(screen.getByRole('button', { name: /copy kicad import command/i }))
+  expect(writeText).toHaveBeenCalledWith('easyeda2kicad --full --lcsc_id=C25531')
+  await screen.findByText(/copied/i)
+})
+
+test('a part with no LCSC listing still gets the library search, without the command', async () => {
+  setClipboard(vi.fn(() => Promise.resolve()))
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    offers: [offer({ distributor: 'mouser', sku: 'M-1', is_basic: null })] }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  expect(await screen.findByRole('link', { name: /SnapEDA/ })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /copy kicad import command/i })).toBeNull()
+})

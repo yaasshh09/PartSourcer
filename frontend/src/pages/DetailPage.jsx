@@ -200,20 +200,31 @@ export default function DetailPage() {
           {/* Not hung off the LCSC branch: the datasheet comes from Mouser, so
               the parts most likely to have one are exactly the parts with no
               LCSC offer, and nesting it there would hide it whenever it exists. */}
-          {lcsc || part.datasheet_url ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10,
-              flexWrap: 'wrap', marginTop: 16 }}>
-              {lcsc ? <DistributorLinks code={lcsc.sku} /> : null}
-              {part.datasheet_url ? (
-                <a className="ps-link" href={part.datasheet_url} target="_blank" rel="noopener noreferrer"
-                  style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12,
-                    textDecoration: 'none', padding: '7px 12px',
-                    border: `2px solid ${C.ink}`, color: C.ink }}>
-                  Datasheet ↗
-                </a>
-              ) : null}
-            </div>
-          ) : null}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+            flexWrap: 'wrap', marginTop: 16 }}>
+            {lcsc ? <DistributorLinks code={lcsc.sku} /> : null}
+            {part.datasheet_url ? (
+              <a className="ps-link" href={part.datasheet_url} target="_blank" rel="noopener noreferrer"
+                style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12,
+                  textDecoration: 'none', padding: '7px 12px',
+                  border: `2px solid ${C.ink}`, color: C.ink }}>
+                Datasheet ↗
+              </a>
+            ) : null}
+            {/* Symbol, footprint and 3D model. SnapEDA searches by MPN without
+                an account; easyeda2kicad converts LCSC's own EasyEDA library. */}
+            <a className="ps-link" href={`https://www.snapeda.com/search/?q=${encodeURIComponent(part.mpn)}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 12,
+                textDecoration: 'none', padding: '7px 12px',
+                border: `2px solid ${C.ink}`, color: C.ink }}>
+              KiCad library on SnapEDA ↗
+            </a>
+            {lcsc ? (
+              <CopyButton value={`easyeda2kicad --full --lcsc_id=${lcsc.sku}`}
+                label="Copy KiCad import command" text="Copy easyeda2kicad command" />
+            ) : null}
+          </div>
           {/* Markdown for a project README: the image is the live badge, the
               link is this page, so a reader can check what it says. */}
           <div style={{ marginTop: 12 }}>
