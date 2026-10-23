@@ -253,44 +253,78 @@ def _capacitor_checks(orig, cand, pkg) -> list[SpecCheck]:
     ]
 
 
-async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
-                  orig_price: float) -> list[tuple[ParametricPart, float, int]]:
-    """Re-price the leading candidates on the published basis.
+def _resistor_upgrades(orig, cand) -> list[str]:
+    """Specs where the candidate strictly beats the original. The candidate
+    gates already guarantee it is no worse on any of them."""
+    o, c = orig.specs, cand.specs
+    out = []
+    if c.get("tolerance_fraction") < o.get("tolerance_fraction"):
+        out.append(f"Tighter tolerance ({_pct(o['tolerance_fraction'])} to "
+                   f"{_pct(c['tolerance_fraction'])})")
+    if c.get("power_watts") > o.get("power_watts"):
+        out.append(f"Higher power ({o['power_watts']:g} mW to "
+                   f"{c['power_watts']:g} mW)")
+    return out
+
+
+def _capacitor_upgrades(orig, cand) -> list[str]:
+    o, c = orig.specs, cand.specs
+    out = []
+    if c.get("voltage_rating") > o.get("voltage_rating"):
+        out.append(f"Higher voltage ({o['voltage_rating']:g} V to "
+                   f"{c['voltage_rating']:g} V)")
+    o_rank = dielectric_rank(o.get("temperature_coefficient"))
+    c_rank = dielectric_rank(c.get("temperature_coefficient"))
+    if o_rank is not None and c_rank is not None and c_rank > o_rank:
+        out.append(f"Better dielectric ({o['temperature_coefficient']} to "
+                   f"{c['temperature_coefficient']})")
+    return out
+
+
+def _upgrade_reason(ups, pkg, orig_price, price, stock) -> str:
+    pct = _percent_cheaper(orig_price, price)
+    money = ("for the same price" if price == orig_price
+             else "for about the same price" if pct < 1
+             else f"and {pct}% cheaper")
+    return f"{', '.join(ups)}, same {pkg} package, {stock:,} in stock, {money}"
+
+
+async def _reread(ds: MatcherSource,
+                  cands: list[ParametricPart]) -> dict[str, PartDetail]:
+    """Read candidates back on the published basis, each one once.
 
     Ranking happens on parametric prices; those are comparable with each
     other but not with anything a user sees elsewhere in the app. So before
-    a saving is claimed, the top few candidates are read back through
-    canonical_part and held to both gates again on those numbers: genuinely
-    cheaper than the original, and genuinely well stocked. Whatever survives
-    is described with the very numbers that were checked.
-
-    Only VERIFY_LIMIT candidates are re-read. Measured against live upstream
-    data, going deeper than three recovered no further matches.
+    a saving is claimed, candidates are read back through canonical_part and
+    held to the gates again on those numbers. Whatever survives is described
+    with the very numbers that were checked.
 
     All of them are read at once. Every one is needed anyway, since the
     cheapest confirmed candidate wins rather than the first, so running them
-    together costs upstream the same requests and saves the user two round
-    trips on the slowest route in the app.
-
-    Every survivor comes back, cheapest first on the re-read price, so the
-    runners-up can be offered too without a single extra read.
+    together costs upstream the same requests and saves the user round trips
+    on the slowest route in the app. A part on both the cheaper and the
+    upgrade shortlist is read once.
     """
-    short = ranked[:VERIFY_LIMIT]
+    unique = list({c.lcsc: c for c in cands}.values())
     # Failures are collected rather than raised. One candidate's read going
     # wrong is not a reason to throw away the two that came back fine and
     # answer the whole request with an error page; an unverifiable candidate
     # is simply one we cannot offer.
     parts = await asyncio.gather(*(ds.canonical_part(c.mpn, c.lcsc)
-                                   for c in short),
+                                   for c in unique),
                                  return_exceptions=True)
-    passed: list[tuple[ParametricPart, float, int]] = []
-    for cand, part in zip(short, parts):
-        if isinstance(part, BaseException) or part is None \
-                or part.price_usd is None:
-            continue
-        if part.price_usd >= orig_price or part.stock < MATCH_MIN_STOCK:
-            continue
-        passed.append((cand, part.price_usd, part.stock))
+    return {c.lcsc: p for c, p in zip(unique, parts)
+            if not isinstance(p, BaseException) and p is not None
+            and p.price_usd is not None and p.stock >= MATCH_MIN_STOCK}
+
+
+def _verify(read: dict[str, PartDetail], short: list[ParametricPart],
+            orig_price: float) -> list[tuple[ParametricPart, float, int]]:
+    """The shortlist that is genuinely cheaper and well stocked once re-read,
+    cheapest first, so the runners-up can be offered too."""
+    passed = [(c, read[c.lcsc].price_usd, read[c.lcsc].stock)
+              for c in short
+              if c.lcsc in read and read[c.lcsc].price_usd < orig_price]
     return sorted(passed, key=lambda v: (v[1], -v[2]))
 
 
@@ -327,20 +361,30 @@ async def find_equivalent(ds: MatcherSource,
                            mpn=original.mpn, package=original.package,
                            price_usd=orig_price, stock=orig_stock)
 
-    def _null(reason: str) -> EquivalentResponse:
+    def _null(reason: str, upgrade=None) -> EquivalentResponse:
         return EquivalentResponse(original=orig_ref, equivalent=None,
-                                  reason=reason, as_of=now)
+                                  upgrade=upgrade, reason=reason, as_of=now)
 
-    async def _publish(cands: list[ParametricPart], orig_row: ParametricPart,
-                       reason_fn, checks_fn) -> EquivalentResponse:
-        ranked = rank_candidates(cands)
-        if not ranked:
-            return _null(_NO_MATCH_REASON)
-        verified = await _verify(ds, ranked, orig_price)
-        if not verified:
-            return _null(_UNVERIFIED_REASON)
+    async def _publish(orig_row: ParametricPart, pool: list[ParametricPart],
+                       cands_fn, reason_fn, checks_fn,
+                       upgrades_fn) -> EquivalentResponse:
+        # Only VERIFY_LIMIT candidates per list are re-read. Measured against
+        # live upstream data, going deeper than three recovered no further
+        # matches.
+        short = rank_candidates(
+            cands_fn(orig_row, pool, orig_row.price_usd))[:VERIFY_LIMIT]
+        # One float step over the original's price turns the gates' strict
+        # "cheaper" into "no pricier", which is what same money means.
+        same_money = cands_fn(orig_row, pool,
+                              math.nextafter(orig_row.price_usd, math.inf))
+        ups = sorted(((c, u) for c in same_money
+                      if (u := upgrades_fn(orig_row, c))),
+                     key=lambda t: (-len(t[1]), t[0].price_usd, -t[0].stock)
+                     )[:VERIFY_LIMIT]
+        read = await _reread(ds, short + [c for c, _ in ups])
+
         matches = []
-        for cand, price, stock in verified:
+        for cand, price, stock in _verify(read, short, orig_price):
             pct = _percent_cheaper(orig_price, price)
             if pct < 1:
                 # Cheaper by less than half a rounded percent. True, and
@@ -356,11 +400,37 @@ async def find_equivalent(ds: MatcherSource,
                                        pct, stock),
                 percent_cheaper=pct,
                 checks=checks_fn(orig_row, cand, original.package)))
+
+        # The best-ranked upgrade that holds up on the canonical read and is
+        # not already on screen as a swap.
+        shown = {m.lcsc for m in matches}
+        upgrade = None
+        for cand, u in ups:
+            got = read.get(cand.lcsc)
+            if got is None or got.price_usd > orig_price or cand.lcsc in shown:
+                continue
+            upgrade = EquivalentMatch(
+                mpn_key=normalize_exact(cand.mpn),
+                lcsc=cand.lcsc, mpn=cand.mpn, price_usd=got.price_usd,
+                stock=got.stock, package=cand.package,
+                match_reason=_upgrade_reason(u, original.package, orig_price,
+                                             got.price_usd, got.stock),
+                percent_cheaper=max(0, _percent_cheaper(orig_price,
+                                                        got.price_usd)),
+                checks=checks_fn(orig_row, cand, original.package))
+            break
+
+        if not short:
+            return _null(_NO_MATCH_REASON, upgrade)
         if not matches:
-            return _null(_TRIVIAL_SAVING_REASON)
+            any_cheaper = any(c.lcsc in read
+                              and read[c.lcsc].price_usd < orig_price
+                              for c in short)
+            return _null(_TRIVIAL_SAVING_REASON if any_cheaper
+                         else _UNVERIFIED_REASON, upgrade)
         return EquivalentResponse(original=orig_ref, equivalent=matches[0],
-                                  alternatives=matches[1:], reason=None,
-                                  as_of=now)
+                                  alternatives=matches[1:], upgrade=upgrade,
+                                  reason=None, as_of=now)
 
     if not original.package:
         # Empty package = specs could not be reliably identified; an unfiltered
@@ -397,9 +467,9 @@ async def find_equivalent(ds: MatcherSource,
         pool = await ds.list_parametric(
             "resistors", original.package,
             resistance_ohms=orig_r.specs.get("resistance"))
-        return await _publish(
-            resistor_candidates(orig_r, pool, orig_r.price_usd),
-            orig_r, _resistor_reason, _resistor_checks)
+        return await _publish(orig_r, pool, resistor_candidates,
+                              _resistor_reason, _resistor_checks,
+                              _resistor_upgrades)
 
     # Classify as capacitor?
     caps = await ds.list_parametric("capacitors", original.package)
@@ -412,8 +482,8 @@ async def find_equivalent(ds: MatcherSource,
             return _null(_NO_TYPE_REASON)
         if orig_c.price_usd is None:
             return _null(_NO_PRICE_REASON)
-        return await _publish(
-            capacitor_candidates(orig_c, caps, orig_c.price_usd),
-            orig_c, _capacitor_reason, _capacitor_checks)
+        return await _publish(orig_c, caps, capacitor_candidates,
+                              _capacitor_reason, _capacitor_checks,
+                              _capacitor_upgrades)
 
     return _null(_NO_TYPE_REASON)

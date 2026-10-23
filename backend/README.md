@@ -90,6 +90,16 @@ the winner, come back in `alternatives`, cheapest first, each with its own
 reason, percentage and spec checks. So the list holds at most two runners-up,
 costs no extra upstream reads, and is always empty when `equivalent` is null.
 
+**Upgrade.** `upgrade` is a part in the same package and value that beats the
+original on at least one checked spec (tighter tolerance or more power for a
+resistor, higher voltage or a better dielectric for a capacitor), is no worse
+on any, and costs no more on the same canonical read. It is independent of
+`equivalent`, so it can appear when nothing is cheaper, and it never repeats a
+listed swap. Its shortlist is up to three more parts, read in the same batch
+as the cheaper ones, and a part on both lists is read once. So the worst case
+for this route is six candidate reads rather than three, mostly served from
+the offer cache.
+
 ### `GET /api/browse`
 The six browsable categories (resistors, capacitors, LEDs, diodes, MOSFETs,
 LDOs) and the filters each one takes. Static.

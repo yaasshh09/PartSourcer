@@ -47,5 +47,9 @@ class EquivalentResponse(BaseModel):
     # Runners-up to `equivalent`, cheapest first, each verified on the same
     # gates. Never repeats `equivalent`, and always empty when it is None.
     alternatives: list[EquivalentMatch] = []
+    # A part that beats the original on at least one checked spec, is no
+    # worse on any, and costs no more. Independent of `equivalent`: it can be
+    # set when nothing is cheaper, and never repeats a listed swap.
+    upgrade: EquivalentMatch | None = None
     reason: str | None = None
     as_of: datetime

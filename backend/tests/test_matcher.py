@@ -667,3 +667,90 @@ async def test_an_honest_null_carries_no_alternatives():
 
     assert resp.equivalent is None
     assert resp.alternatives == []
+
+
+# --- better spec, same money ---------------------------------------------
+# A part in the same package and value that beats the original on at least
+# one gated spec and is no worse on any, for no more money on the canonical
+# read. Offered even when nothing is cheaper.
+
+
+@pytest.mark.anyio
+async def test_a_tighter_resistor_at_the_same_price_is_offered_as_an_upgrade():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    tighter = rp("C1", price=0.0010, stock=900000, tol=0.001)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, tighter]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0010, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None          # not cheaper, so not a swap
+    assert resp.upgrade.lcsc == "C1"
+    assert resp.upgrade.percent_cheaper == 0
+    assert "Tighter tolerance" in resp.upgrade.match_reason
+    assert "same price" in resp.upgrade.match_reason
+
+
+@pytest.mark.anyio
+async def test_an_upgrade_that_costs_more_once_reread_is_not_offered():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    tighter = rp("C1", price=0.0010, stock=900000, tol=0.001)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, tighter]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0011, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.upgrade is None
+
+
+@pytest.mark.anyio
+async def test_a_part_that_only_matches_is_not_an_upgrade():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    same = rp("C1", price=0.0010, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, same]})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.upgrade is None
+
+
+@pytest.mark.anyio
+async def test_the_upgrade_does_not_repeat_a_listed_swap():
+    # Cheaper and tighter: it is already the swap, so the upgrade slot goes
+    # to the next part that beats the original for the same money.
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    swap = rp("C1", price=0.0005, stock=900000, tol=0.001)
+    stronger = rp("C2", price=0.0010, stock=800000, power=250)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, swap, stronger]})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C1"
+    assert resp.upgrade.lcsc == "C2"
+    assert "Higher power" in resp.upgrade.match_reason
+
+
+@pytest.mark.anyio
+async def test_a_capacitor_with_a_better_dielectric_is_an_upgrade():
+    orig_row = cp("C200", price=0.0030, stock=1000)
+    better = cp("C1", price=0.0029, stock=500000, tc="C0G")
+    ds = FakeDS(detail("C200", "0402", 0.0030, 1000, mpn="C-orig"),
+                {("capacitors", "0402"): [orig_row, better]},
+                canonical={"C200": (0.0030, 1000), "C1": (0.00299, 500000)})
+    resp = await find_equivalent(ds, "C200")
+
+    # Cheaper by under 1%, so no swap, but still a better part for the money.
+    assert resp.equivalent is None
+    assert resp.upgrade.lcsc == "C1"
+    assert "Better dielectric" in resp.upgrade.match_reason
+
+
+@pytest.mark.anyio
+async def test_a_part_read_for_both_lists_is_read_once():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    tighter_cheaper = rp("C1", price=0.0005, stock=900000, tol=0.001)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, tighter_cheaper]})
+    await find_equivalent(ds, "C100")
+
+    assert ds.canonical_calls.count("C1") == 1
