@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { search, getTrends } from '../api.js'
 import { C, ARCHIVO, MONO, fmtAsOf, SHELL_MAX, SHIPPING_NOTE } from '../theme.js'
-import { lcscOffer, oldestAsOf, sortByPrice } from '../offers.js'
+import { DISTRIBUTOR_LABEL, lcscOffer, oldestAsOf, precedence, sortByPrice } from '../offers.js'
 import ResultCard from '../components/ResultCard.jsx'
 import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
@@ -13,6 +13,9 @@ import useDocumentTitle from '../useDocumentTitle.js'
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
 
 const SKELETON_DELAYS = [0, 0.15, 0.3]
+
+const selectStyle = { fontWeight: 700, fontSize: 12, padding: '4px 6px', border: `2px solid ${C.ink}`,
+  background: C.paper, color: C.ink }
 
 // JLCPCB assembly charges a setup fee per Extended part, not per Basic or
 // Preferred one. Only LCSC carries the flag, so a part with no LCSC listing
@@ -39,6 +42,9 @@ export default function SearchPage() {
   const q = params.get('q') || ''
   const byPrice = params.get('sort') === 'price'
   const basicOnly = params.get('basic') === '1'
+  const stockOnly = params.get('stock') === '1'
+  const pkg = params.get('pkg') || ''
+  const dist = params.get('dist') || ''
 
   useDocumentTitle(q || null)
 
@@ -118,6 +124,9 @@ export default function SearchPage() {
     const next = { q: t }
     if (byPrice) next.sort = 'price'
     if (basicOnly) next.basic = '1'
+    if (stockOnly) next.stock = '1'
+    // A package belongs to the last query's parts; a distributor does not.
+    if (dist) next.dist = dist
     setParams(next)
   }
 
@@ -131,14 +140,21 @@ export default function SearchPage() {
     setParams(next, { replace: true })
   }
 
-  function setBasic(on) {
+  // Filters, like sorting, are a view of the page already read.
+  function setFilter(name, value) {
     const next = new URLSearchParams(params)
-    if (on) next.set('basic', '1')
-    else next.delete('basic')
+    if (value) next.set(name, value)
+    else next.delete(name)
     setParams(next, { replace: true })
   }
 
-  const kept = basicOnly ? results.filter(isJlcBasic) : results
+  const packages = [...new Set(results.map((p) => p.package).filter(Boolean))].sort()
+  const dists = [...new Set(results.flatMap((p) => (p.offers || []).map((o) => o.distributor)))]
+    .sort((a, b) => precedence(a) - precedence(b))
+  const kept = results.filter((p) => (!basicOnly || isJlcBasic(p))
+    && (!stockOnly || (p.offers || []).some((o) => o.in_stock))
+    && (!pkg || p.package === pkg)
+    && (!dist || (p.offers || []).some((o) => o.distributor === dist)))
   const hidden = results.length - kept.length
   const shown = byPrice ? sortByPrice(kept) : kept
   const sortButton = (active, label, onClick) => (
@@ -193,12 +209,24 @@ export default function SearchPage() {
           <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>SORT</span>
           {sortButton(!byPrice, 'Best match', () => setSort(false))}
           {sortButton(byPrice, 'Price, low to high', () => setSort(true))}
-          {sortButton(basicOnly, 'JLC Basic only', () => setBasic(!basicOnly))}
+          {sortButton(basicOnly, 'JLC Basic only', () => setFilter('basic', basicOnly ? '' : '1'))}
+          {sortButton(stockOnly, 'In stock only', () => setFilter('stock', stockOnly ? '' : '1'))}
+          {/* A shared link can name a package this read did not return, so
+              the current value stays listed rather than silently vanishing. */}
+          <select aria-label="Package" value={pkg} onChange={(e) => setFilter('pkg', e.target.value)} style={selectStyle}>
+            <option value="">Any package</option>
+            {(pkg && !packages.includes(pkg) ? [...packages, pkg] : packages).map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select aria-label="Distributor" value={dist} onChange={(e) => setFilter('dist', e.target.value)} style={selectStyle}>
+            <option value="">Any distributor</option>
+            {(dist && !dists.includes(dist) ? [...dists, dist] : dists).map((v) => <option key={v} value={v}>{DISTRIBUTOR_LABEL[v] || v}</option>)}
+          </select>
           <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 'auto' }}>{SHIPPING_NOTE}</span>
         </div>
-        {basicOnly && hidden ? (
+        {hidden ? (
           <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, marginBottom: 14 }}>
-            {`${hidden} of ${results.length} results hidden: Extended at JLCPCB, or not listed on LCSC.`}
+            {`${hidden} of ${results.length} results hidden by the filters above.`}
+            {basicOnly ? ' JLC Basic only hides parts that are Extended at JLCPCB or not listed on LCSC.' : ''}
           </div>
         ) : null}
         <div className="ps-results">

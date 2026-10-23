@@ -259,3 +259,36 @@ test('asks for every result\'s weekly trend in one call and hands it to the card
   expect(api.getTrends).toHaveBeenCalledTimes(1)
   expect(api.getTrends).toHaveBeenCalledWith(['STM32F103C8T6', 'B'])
 })
+
+const FILTERABLE = { page: 1, query: 'r', sources: OK_SOURCES, results: [
+  part({ mpn_key: 'A', mpn: 'A', package: '0402', offers: [offer({ sku: 'C-A' })] }),
+  part({ mpn_key: 'B', mpn: 'B', package: '0603', offers: [offer({ sku: 'C-B', stock: 0, in_stock: false })] }),
+  part({ mpn_key: 'C', mpn: 'C', package: '0603', offers: [offer({ distributor: 'mouser', sku: 'M-C' })] }),
+] }
+const names = () => screen.getAllByRole('link', { name: /^(A|B|C)$/ }).map((a) => a.textContent)
+
+test('filters the page by stock, package and distributor', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue(FILTERABLE)
+  renderAt('/?q=r')
+  await waitFor(() => expect(screen.getByText('A')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByRole('button', { name: 'In stock only' }))
+  expect(names()).toEqual(['A', 'C'])
+  expect(screen.getByText(/1 of 3 results hidden/i)).toBeInTheDocument()
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'Package' }), { target: { value: '0603' } })
+  expect(names()).toEqual(['C'])
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'Distributor' }), { target: { value: 'lcsc' } })
+  expect(screen.queryAllByRole('link', { name: /^(A|B|C)$/ })).toEqual([])
+  expect(screen.getByText(/3 of 3 results hidden/i)).toBeInTheDocument()
+})
+
+test('a shared filtered link opens filtered, and the package list only offers what is on the page', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue(FILTERABLE)
+  renderAt('/?q=r&pkg=0603&dist=mouser')
+  await waitFor(() => expect(screen.getByText('C')).toBeInTheDocument())
+  expect(names()).toEqual(['C'])
+  const opts = [...screen.getByRole('combobox', { name: 'Package' }).options].map((o) => o.value)
+  expect(opts).toEqual(['', '0402', '0603'])
+})
