@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { C, ARCHIVO, MONO, NO_PRICE, fmtAsOf, fmtPrice, fmtUnit, SHIPPING_NOTE } from '../theme.js'
+import { C, ARCHIVO, MONO, NO_PRICE, fmtAsOf, fmtPrice, fmtUnit, fmtUsd, SHIPPING_NOTE } from '../theme.js'
 import { reportHref } from '../contact.js'
 import { groupOffersByTier, DISTRIBUTOR_LABEL } from '../offers.js'
 import { priceAt } from '../bom.js'
@@ -137,7 +137,7 @@ function OfferRow({ offer, cheapest, showNote, qty, mpn }) {
             aria-label={`Report wrong data for ${offer.sku || 'this offer'}`}
             href={reportHref({
               mpn, distributor: DISTRIBUTOR_LABEL[offer.distributor] || offer.distributor, sku: offer.sku,
-              stock: (offer.stock ?? 0).toLocaleString('en-US'), price: fmtPrice(offer.price_usd) || NO_PRICE,
+              stock: (offer.stock ?? 0).toLocaleString('en-US'), price: fmtUsd(offer.price_usd) || NO_PRICE,
               asOf: offer.as_of, page: typeof window !== 'undefined' ? window.location.href : '',
             })}
             style={{ fontSize: 11, fontWeight: 600, color: C.muted }}>

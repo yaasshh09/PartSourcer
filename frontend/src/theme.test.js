@@ -44,3 +44,17 @@ describe('C', () => {
     expect(C.ink).toBe('#111')
   })
 })
+
+describe('shown currency', () => {
+  test('converts for display and goes back to dollars', async () => {
+    const { setShownCurrency, fmtUnit, fmtUsd } = await import('./theme.js')
+    setShownCurrency('INR', 95)
+    expect(fmtPrice(1)).toBe('₹95.00')
+    expect(fmtUnit(0.0004)).toBe('₹0.0380')
+    expect(fmtUsd(1)).toBe('$1.00')
+    setShownCurrency('XYZ', 2)
+    expect(fmtPrice(1)).toBe('$1.00')
+    setShownCurrency('EUR', 0)
+    expect(fmtPrice(1)).toBe('$1.00')
+  })
+})

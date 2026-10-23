@@ -111,3 +111,8 @@ export function getTrends(mpnKeys) {
 export function getSuggestions(q) {
   return getJson(`/suggest?q=${encodeURIComponent(q)}`)
 }
+
+// ECB reference rates from USD, for showing prices in another currency.
+export function getFx() {
+  return getJson('/fx')
+}

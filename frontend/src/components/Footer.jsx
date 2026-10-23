@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { C, ARCHIVO, SHELL_MAX } from '../theme.js'
 import { CONTACT } from '../contact.js'
+import { CurrencySelect } from '../currency.jsx'
 
 const PRODUCT = [
   { label: 'Search', to: '/' },
@@ -65,6 +66,10 @@ export default function Footer() {
               Search a part once and see stock, price, footprint and datasheet across
               distributors, each stamped with when it was read. Free, open-source, no login.
             </p>
+            <div style={{ marginTop: 14, color: '#bdb9aa' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, marginRight: 8 }}>Show prices in</span>
+              <CurrencySelect onDark />
+            </div>
           </div>
 
           <Column title="PRODUCT">

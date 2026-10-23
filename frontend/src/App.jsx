@@ -16,8 +16,11 @@ import ChangelogPage from './pages/ChangelogPage.jsx'
 import WatchlistPage from './pages/WatchlistPage.jsx'
 import { CompareProvider } from './compare.jsx'
 import CompareTray from './components/CompareTray.jsx'
+import { useCurrency } from './currency.jsx'
 
 export default function App() {
+  // Subscribed only so a currency change re-renders every price on screen.
+  useCurrency()
   return (
     <CompareProvider>
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

@@ -156,6 +156,16 @@ watchlist, so with no `DATABASE_URL` the list is always empty. A store error
 is also an empty list, never a 5xx: this only feeds the search box. Cached
 for 5 minutes.
 
+### `GET /api/fx`
+`{ base: "USD", date: "2026-10-23", rates: { EUR, GBP, INR } }`: the European
+Central Bank's daily reference rates, read from frankfurter.dev (no key) at
+most once every 6 hours per process. Display only. The page converts what it
+shows and names the rate's date, while every comparison, saving, total and
+CSV export stays in USD, the currency the distributors quote. If a refresh
+fails the last dated rates are kept, since they are still true about their
+date. With none ever read it is a `503`, and the page falls back to USD and
+says so. `FX_BASE_URL` overrides the source.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`

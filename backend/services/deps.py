@@ -18,6 +18,7 @@ from config import settings
 from history.store import HistoryStore, PostgresHistoryStore
 from services.adapters.lcsc import LcscAdapter
 from services.browse import BrowseService
+from services.fx import FxRates
 from services.lcsc_matcher_source import LcscMatcherSource
 from services.part_service import PartService, build_part_service
 from services.throttle import RefreshThrottle
@@ -33,6 +34,7 @@ _lcsc_adapter: LcscAdapter | None = None
 _matcher_source: LcscMatcherSource | None = None
 _browse_service: BrowseService | None = None
 _distributor_clients: list[httpx.AsyncClient] = []
+_fx: FxRates | None = None
 
 
 async def _open_cache() -> CacheStore:
@@ -59,13 +61,15 @@ async def _open_cache() -> CacheStore:
 async def startup() -> None:
     global _client, _store, _history_store, _part_service
     global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
-    global _browse_service
+    global _browse_service, _fx
     _client = httpx.AsyncClient(
         base_url=settings.jlcsearch_base_url,
         timeout=settings.request_timeout_secs,
         follow_redirects=True,
     )
     _store = await _open_cache()
+    # An absolute URL, so the shared client's jlcsearch base does not apply.
+    _fx = FxRates(_client, settings.fx_base_url)
     _lcsc_adapter = LcscAdapter(_client)
     # Same store and same TTL as the pages, so an equivalent card quotes the
     # row the part's own page is serving rather than a second reading of it.
@@ -99,7 +103,7 @@ async def startup() -> None:
 async def shutdown() -> None:
     global _client, _store, _history_store, _part_service
     global _cached_service, _lcsc_adapter, _matcher_source, _distributor_clients
-    global _browse_service
+    global _browse_service, _fx
     if _history_store is not None and hasattr(_history_store, "close"):
         await _history_store.close()
     if _store is not None:
@@ -114,11 +118,17 @@ async def shutdown() -> None:
     _lcsc_adapter = None
     _matcher_source = None
     _browse_service = None
+    _fx = None
     if _client is not None:
         await _client.aclose()
     _client = None
     _store = None
     _history_store = None
+
+
+def get_fx() -> FxRates:
+    assert _fx is not None, "fx not initialized (lifespan not run)"
+    return _fx
 
 
 def get_history_store() -> HistoryStore | None:

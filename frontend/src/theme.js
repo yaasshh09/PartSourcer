@@ -21,14 +21,35 @@ export const NO_PRICE = 'no price'
 // order goes, so every surface that shows a price says what it leaves out.
 export const SHIPPING_NOTE = 'Excludes shipping, tax and import duties, which each distributor adds at checkout.'
 
+// Every price arrives in USD. Another currency is a display choice only, set
+// once by the currency provider, so the formatters below are the one place a
+// conversion happens and nothing that compares or exports prices sees it.
+const SYMBOL = { USD: '$', EUR: '€', GBP: '£', INR: '₹' }
+let shown = { code: 'USD', rate: 1 }
+
+export function setShownCurrency(code, rate) {
+  shown = SYMBOL[code] && rate > 0 ? { code, rate } : { code: 'USD', rate: 1 }
+}
+
+function money(usd, fourBelow) {
+  const v = usd * shown.rate
+  return SYMBOL[shown.code] + (v < fourBelow ? v.toFixed(4) : v.toFixed(2))
+}
+
 export function fmtPrice(p) {
   if (p == null) return ''
-  return '$' + (p < 0.01 ? p.toFixed(4) : p.toFixed(2))
+  return money(p, 0.01)
 }
 
 // Four places under a dollar. Rounded to cents, $0.014 shows as $0.01 and
 // fifty of them then add up to $0.70, which reads as a wrong sum.
-export const fmtUnit = (p) => `$${p < 1 ? p.toFixed(4) : p.toFixed(2)}`
+export const fmtUnit = (p) => money(p, 1)
+
+// Always dollars, for text that leaves the page, like a data report.
+export function fmtUsd(p) {
+  if (p == null) return ''
+  return '$' + (p < 0.01 ? p.toFixed(4) : p.toFixed(2))
+}
 
 export function stockInfo(stock) {
   const n = Number(stock) || 0

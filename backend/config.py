@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     digikey_client_secret: str | None = None
     digikey_base_url: str = "https://api.digikey.com"
     mouser_base_url: str = "https://api.mouser.com"
+    fx_base_url: str = "https://api.frankfurter.dev"
     distributor_timeout_secs: float = 8.0
 
     # Per-distributor daily call ceilings. None means unlimited, which is what

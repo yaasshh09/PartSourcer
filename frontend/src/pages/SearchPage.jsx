@@ -8,6 +8,7 @@ import SourceStatusBar from '../components/SourceStatusBar.jsx'
 import NoticePanel from '../components/NoticePanel.jsx'
 import Landing from '../components/Landing.jsx'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
+import { CurrencySelect } from '../currency.jsx'
 import useDocumentTitle from '../useDocumentTitle.js'
 
 const EXAMPLES = ['STM32F103', 'NE555', 'AMS1117']
@@ -241,6 +242,7 @@ export default function SearchPage() {
             <option value="">Any distributor</option>
             {(dist && !dists.includes(dist) ? [...dists, dist] : dists).map((v) => <option key={v} value={v}>{DISTRIBUTOR_LABEL[v] || v}</option>)}
           </select>
+          <CurrencySelect />
           <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 'auto' }}>{SHIPPING_NOTE}</span>
         </div>
         {hidden ? (
