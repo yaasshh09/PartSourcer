@@ -44,6 +44,9 @@ class RawListing:
     # exactly as LCSC leaves price_breaks null.
     is_basic: bool | None = None
     is_preferred: bool | None = None
+    # The distributor's own lifecycle words ("End of Life", "Obsolete"),
+    # verbatim, because neither publishes a fixed list to map them onto.
+    lifecycle: str | None = None
     # Zero-based index within this distributor's own response. The merge uses
     # the best rank across a part's listings so a part only one distributor
     # carries is not buried under every hit from an earlier distributor.

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { getPart, getEquivalent, encodeKey } from '../api.js'
 import { C, ARCHIVO, MONO, fmtPrice, fmtAsOf, NO_PRICE, PROSE_MAX, SHELL_MAX } from '../theme.js'
-import { DISTRIBUTOR_LABEL, headlineOffer, lcscOffer, stockBySource } from '../offers.js'
+import { DISTRIBUTOR_LABEL, headlineOffer, lcscOffer, lifecycleWarnings, stockBySource } from '../offers.js'
 import StockBadge from '../components/StockBadge.jsx'
 import CopyButton from '../components/CopyButton.jsx'
 import DistributorLinks from '../components/DistributorLinks.jsx'
@@ -197,6 +197,13 @@ export default function DetailPage() {
             <PinButton mpnKey={part.mpn_key} hotkey />
             <WatchButton part={part} />
           </div>
+          {lifecycleWarnings(part).length ? (
+            <p role="note" aria-label="Lifecycle" style={{ margin: '12px 0 0', fontSize: 14, fontWeight: 700,
+              color: C.orange }}>
+              {lifecycleWarnings(part).map((w) => `${DISTRIBUTOR_LABEL[w.distributor] || w.distributor} lists this part as ${w.status}.`).join(' ')}
+              {' Check it is still made before designing it in.'}
+            </p>
+          ) : null}
           {/* Not hung off the LCSC branch: the datasheet comes from Mouser, so
               the parts most likely to have one are exactly the parts with no
               LCSC offer, and nesting it there would hide it whenever it exists. */}

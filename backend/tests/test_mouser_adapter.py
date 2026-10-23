@@ -150,3 +150,9 @@ async def test_real_fixture_parses_without_error():
     async with client_returning(load("keyword_0")) as c:
         out = await MouserAdapter(c, "k").search("STM32F103C8T6", limit=10)
     assert all(r.distributor == "mouser" and r.mpn for r in out)
+
+
+async def test_lifecycle_is_mousers_own_words_or_absent():
+    async with client_returning(body([{**PART, "LifecycleStatus": "End of Life"}, PART])) as c:
+        rows = await MouserAdapter(c, "k").search("stm32", limit=10)
+    assert [r.lifecycle for r in rows] == ["End of Life", None]

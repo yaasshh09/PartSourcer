@@ -195,3 +195,8 @@ test('names a real weekly LCSC price drop or stock fall, and stays quiet about n
   render(<MemoryRouter><ResultCard part={part()} trend={{ price_pct: -3, stock_pct: null }} /></MemoryRouter>)
   expect(screen.queryByText(/this week/)).toBeNull()
 })
+
+test('flags a part a distributor calls obsolete', () => {
+  renderCard(part({ offers: [offer(), offer({ distributor: 'mouser', sku: 'M-1', lifecycle: 'Obsolete' })] }))
+  expect(screen.getByText('Obsolete at Mouser')).toBeInTheDocument()
+})

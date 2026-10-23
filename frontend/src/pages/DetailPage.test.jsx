@@ -626,3 +626,13 @@ test('a part with no LCSC listing still gets the library search, without the com
   expect(await screen.findByRole('link', { name: /SnapEDA/ })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /copy kicad import command/i })).toBeNull()
 })
+
+test('warns when a distributor says the part is on its way out', async () => {
+  setClipboard(null)
+  vi.spyOn(api, 'getPart').mockResolvedValue(partResponse({
+    offers: [offer(), offer({ distributor: 'mouser', sku: 'M-1', lifecycle: 'End of Life' })] }))
+  vi.spyOn(api, 'getEquivalent').mockResolvedValue(noEquivalent)
+  renderPart('/part/0402WGJ0103TCE')
+  expect(await screen.findByRole('note', { name: 'Lifecycle' })).toHaveTextContent(
+    'Mouser lists this part as End of Life. Check it is still made before designing it in.')
+})

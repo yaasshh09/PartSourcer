@@ -155,3 +155,19 @@ export function sortByPrice(parts) {
     .sort((a, b) => (a[0] === b[0] ? 0 : a[0] - b[0]))
     .map(([, part]) => part)
 }
+
+// Neither Mouser nor DigiKey publishes a fixed list of lifecycle strings, so
+// their words are shown as given and only matched loosely to decide whether
+// they warn. Active, New Product and the like say nothing worth showing.
+const ENDING = /obsolete|end of life|\beol\b|not recommended|\bnrnd\b|not for new|last time buy|discontinued/i
+
+/** One entry per distributor whose own lifecycle status says the part is ending. */
+export function lifecycleWarnings(part) {
+  const seen = new Map()
+  for (const o of (part && part.offers) || []) {
+    if (o.lifecycle && ENDING.test(o.lifecycle) && !seen.has(o.distributor)) {
+      seen.set(o.distributor, { distributor: o.distributor, status: o.lifecycle })
+    }
+  }
+  return [...seen.values()]
+}

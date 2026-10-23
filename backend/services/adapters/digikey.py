@@ -147,6 +147,7 @@ class DigiKeyAdapter(DistributorAdapter):
             price_breaks=breaks or None,
             datasheet_url=product.get("DatasheetUrl") or None,
             product_url=product.get("ProductUrl") or None,
+            lifecycle=(product.get("ProductStatus") or {}).get("Status") or None,
             as_of=as_of,
             rank=rank,
         )

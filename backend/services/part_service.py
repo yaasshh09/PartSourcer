@@ -270,7 +270,8 @@ class PartService:
                       price_usd=row.price, price_breaks=row.price_breaks,
                       currency=row.currency, product_url=row.product_url,
                       as_of=row.as_of,
-                      is_basic=row.is_basic, is_preferred=row.is_preferred)
+                      is_basic=row.is_basic, is_preferred=row.is_preferred,
+                      lifecycle=row.lifecycle)
                 for row, tier, note in rows
             ]
             claim, reason = compute_cheapest(offers, sources)

@@ -31,6 +31,7 @@ class Offer(BaseModel):
     as_of: datetime
     is_basic: bool | None = None       # LCSC only, null elsewhere
     is_preferred: bool | None = None   # LCSC only, null elsewhere
+    lifecycle: str | None = None       # Mouser/DigiKey's own words, verbatim
 
 
 class Cheapest(BaseModel):

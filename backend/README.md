@@ -349,6 +349,12 @@ above.
   `is_preferred` are the mirror case, real for LCSC and `null` elsewhere. A
   part shows the first populated value across its offers rather than inventing
   one.
+- `lifecycle` on an offer is the distributor's own lifecycle words, verbatim:
+  Mouser's `LifecycleStatus`, DigiKey's `ProductStatus.Status`, `null` for
+  LCSC and whenever the distributor sent none. Neither publishes a fixed list
+  of values, so nothing is mapped. The frontend only warns when the words read
+  as ending (obsolete, end of life, NRND, last time buy, discontinued), and it
+  names which distributor said so.
 - **One DigiKey offer is one package type.** DigiKey lists a part once per
   package type (cut tape, tape and reel, Digi-Reel, sometimes a MarketPlace
   listing that ships from the supplier), each with its own SKU, ladder and

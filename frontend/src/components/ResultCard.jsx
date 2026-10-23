@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { encodeKey, prefetchPart } from '../api.js'
 import { C, ARCHIVO, MONO } from '../theme.js'
-import { headlineOffer, lcscOffer } from '../offers.js'
+import { DISTRIBUTOR_LABEL, headlineOffer, lcscOffer, lifecycleWarnings } from '../offers.js'
 import StockBadge from './StockBadge.jsx'
 import CopyButton from './CopyButton.jsx'
 import Price from './Price.jsx'
@@ -69,6 +69,11 @@ export default function ResultCard({ part, trend }) {
             <span style={{ ...BADGE, background: 'transparent', color: C.sub,
               border: '2px solid #d8d4c4' }}>{tier}</span>
           ) : null}
+          {lifecycleWarnings(part).map((w) => (
+            <span key={w.distributor} style={{ ...BADGE, background: C.orange, color: '#fff' }}>
+              {`${w.status} at ${DISTRIBUTOR_LABEL[w.distributor] || w.distributor}`}
+            </span>
+          ))}
           {/* Only a backend claim may be called cheapest. "checked" is
               load-bearing: compared_sources counts the distributors that
               answered, not the offers that carried a price, so a part only

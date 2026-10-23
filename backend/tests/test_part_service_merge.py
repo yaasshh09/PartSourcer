@@ -302,3 +302,12 @@ def test_select_part_returns_nothing_when_only_a_variant_exists():
     part, canonical = select_part(parts, "PART-A")
 
     assert part is None and canonical is True
+
+
+def test_each_offer_keeps_its_distributors_lifecycle():
+    from dataclasses import replace
+    parts = svc().merge([listing("lcsc", "X1"),
+                         replace(listing("mouser", "X1"), lifecycle="Not Recommended for New Designs")],
+                        ok("lcsc", "mouser"))
+    by = {o.distributor: o.lifecycle for o in parts[0].offers}
+    assert by == {"lcsc": None, "mouser": "Not Recommended for New Designs"}

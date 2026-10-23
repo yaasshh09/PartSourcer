@@ -254,3 +254,10 @@ async def test_several_variations_without_quantities_do_not_borrow_the_sum():
          "StandardPricing": [{"BreakQuantity": 1, "UnitPrice": 3.44}]}])
     r = await one({"Products": [p]})
     assert r.stock == 0 and r.in_stock is False
+
+
+async def test_lifecycle_is_digikeys_product_status_or_absent():
+    a, c = make({"Products": [{**PRODUCT, "ProductStatus": {"Id": 2, "Status": "Obsolete"}}, PRODUCT]})
+    async with c:
+        rows = await a.search("stm32", limit=10)
+    assert [r.lifecycle for r in rows] == ["Obsolete", None]

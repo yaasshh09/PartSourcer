@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   headlineOffer, degradedSources, groupOffersByTier, lcscOffer, oldestAsOf, sortByPrice, stockBySource,
+  lifecycleWarnings,
   DISTRIBUTOR_LABEL, SOURCE_STATE_COPY,
 } from './offers.js'
 
@@ -230,4 +231,29 @@ describe('stockBySource', () => {
     expect(stockBySource([offer({ stock: 0, in_stock: false })])).toEqual({ total: 0, rows: [] })
     expect(stockBySource(null)).toEqual({ total: 0, rows: [] })
   })
+})
+
+describe('lifecycleWarnings', () => {
+  test('names each distributor that calls the part ending, in its own words', () => {
+    const part = { offers: [
+      offer({ distributor: 'mouser', sku: 'M', lifecycle: 'Not Recommended for New Designs' }),
+      offer({ distributor: 'digikey', sku: 'D', lifecycle: 'Obsolete' }),
+      offer({ lifecycle: null }),
+    ] }
+    expect(lifecycleWarnings(part)).toEqual([
+      { distributor: 'mouser', status: 'Not Recommended for New Designs' },
+      { distributor: 'digikey', status: 'Obsolete' },
+    ])
+  })
+
+  test('active and new parts raise nothing', () => {
+    const part = { offers: [offer({ distributor: 'digikey', lifecycle: 'Active' }),
+      offer({ distributor: 'mouser', lifecycle: 'New Product' })] }
+    expect(lifecycleWarnings(part)).toEqual([])
+  })
+
+  test.each(['End of Life', 'EOL', 'Last Time Buy', 'Discontinued at Digi-Key', 'NRND', 'Not For New Designs'])(
+    '%s is a warning', (s) => {
+      expect(lifecycleWarnings({ offers: [offer({ lifecycle: s })] })).toHaveLength(1)
+    })
 })

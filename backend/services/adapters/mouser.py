@@ -106,6 +106,7 @@ class MouserAdapter(DistributorAdapter):
             price_breaks=breaks or None,
             datasheet_url=part.get("DataSheetUrl") or None,
             product_url=part.get("ProductDetailUrl") or None,
+            lifecycle=_text(part.get("LifecycleStatus")) or None,
             as_of=as_of,
             rank=rank,
         )
