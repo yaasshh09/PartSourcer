@@ -596,3 +596,74 @@ def test_a_spec_the_original_leaves_blank_is_shown_as_unchecked():
     volt = next(c for c in rows if c.spec == "Voltage")
     assert volt.model_dump() == {"spec": "Voltage", "original": None, "candidate": "16 V",
                                  "rule": "not checked, the original lists none"}
+
+
+# --- runners-up -----------------------------------------------------------
+# The three re-read candidates are already in hand, so the ones that also
+# verified are offered as alternatives instead of being thrown away. Each one
+# is held to exactly the gates the headline swap is.
+
+
+@pytest.mark.anyio
+async def test_the_runners_up_that_verified_are_offered_cheapest_first():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row,
+                                         rp("C1", price=0.0004, stock=900000),
+                                         rp("C2", price=0.0005, stock=800000),
+                                         rp("C3", price=0.0006, stock=700000)]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0007, 900000),
+                           "C2": (0.0005, 800000), "C3": (0.0006, 700000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C2"
+    assert [a.lcsc for a in resp.alternatives] == ["C3", "C1"]
+    assert [a.percent_cheaper for a in resp.alternatives] == [40, 30]
+    assert "40% cheaper" in resp.alternatives[0].match_reason
+    assert resp.alternatives[0].checks
+
+
+@pytest.mark.anyio
+async def test_a_runner_up_that_fails_a_gate_is_left_out():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row,
+                                         rp("C1", price=0.0004, stock=900000),
+                                         rp("C2", price=0.0005, stock=800000),
+                                         rp("C3", price=0.0006, stock=700000)]},
+                canonical={"C100": (0.0010, 1000),
+                           "C1": (0.0005, 900000),
+                           "C2": (0.0011, 800000),    # not cheaper once re-read
+                           "C3": (0.0006, 19)})       # thin stock
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C1"
+    assert resp.alternatives == []
+
+
+@pytest.mark.anyio
+async def test_a_runner_up_whose_saving_rounds_to_nothing_is_left_out():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row,
+                                         rp("C1", price=0.0004, stock=900000),
+                                         rp("C2", price=0.0005, stock=800000)]},
+                canonical={"C100": (0.001000, 1000), "C1": (0.0005, 900000),
+                           "C2": (0.000999, 800000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C1"
+    assert resp.alternatives == []
+
+
+@pytest.mark.anyio
+async def test_an_honest_null_carries_no_alternatives():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    looks_cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, looks_cheaper]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0011, 900000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert resp.alternatives == []

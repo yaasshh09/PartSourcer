@@ -254,7 +254,7 @@ def _capacitor_checks(orig, cand, pkg) -> list[SpecCheck]:
 
 
 async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
-                  orig_price: float) -> tuple[ParametricPart, float, int] | None:
+                  orig_price: float) -> list[tuple[ParametricPart, float, int]]:
     """Re-price the leading candidates on the published basis.
 
     Ranking happens on parametric prices; those are comparable with each
@@ -271,6 +271,9 @@ async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
     cheapest confirmed candidate wins rather than the first, so running them
     together costs upstream the same requests and saves the user two round
     trips on the slowest route in the app.
+
+    Every survivor comes back, cheapest first on the re-read price, so the
+    runners-up can be offered too without a single extra read.
     """
     short = ranked[:VERIFY_LIMIT]
     # Failures are collected rather than raised. One candidate's read going
@@ -280,16 +283,15 @@ async def _verify(ds: MatcherSource, ranked: list[ParametricPart],
     parts = await asyncio.gather(*(ds.canonical_part(c.mpn, c.lcsc)
                                    for c in short),
                                  return_exceptions=True)
-    best: tuple[ParametricPart, float, int] | None = None
+    passed: list[tuple[ParametricPart, float, int]] = []
     for cand, part in zip(short, parts):
         if isinstance(part, BaseException) or part is None \
                 or part.price_usd is None:
             continue
         if part.price_usd >= orig_price or part.stock < MATCH_MIN_STOCK:
             continue
-        if best is None or part.price_usd < best[1]:
-            best = (cand, part.price_usd, part.stock)
-    return best
+        passed.append((cand, part.price_usd, part.stock))
+    return sorted(passed, key=lambda v: (v[1], -v[2]))
 
 
 async def find_equivalent(ds: MatcherSource,
@@ -335,26 +337,30 @@ async def find_equivalent(ds: MatcherSource,
         if not ranked:
             return _null(_NO_MATCH_REASON)
         verified = await _verify(ds, ranked, orig_price)
-        if verified is None:
+        if not verified:
             return _null(_UNVERIFIED_REASON)
-        cand, price, stock = verified
-        pct = _percent_cheaper(orig_price, price)
-        if pct < 1:
-            # Cheaper by less than half a rounded percent. True, and useless:
-            # the card would shout "CHEAPER EQUIVALENT FOUND" over a 0% badge
-            # and two identical prices.
-            return _null(_TRIVIAL_SAVING_REASON)
-        return EquivalentResponse(
-            original=orig_ref,
-            equivalent=EquivalentMatch(
+        matches = []
+        for cand, price, stock in verified:
+            pct = _percent_cheaper(orig_price, price)
+            if pct < 1:
+                # Cheaper by less than half a rounded percent. True, and
+                # useless: the card would shout "CHEAPER EQUIVALENT FOUND"
+                # over a 0% badge and two identical prices. Sorted cheapest
+                # first, so everything after this one is no better.
+                break
+            matches.append(EquivalentMatch(
                 mpn_key=normalize_exact(cand.mpn),
                 lcsc=cand.lcsc, mpn=cand.mpn, price_usd=price,
                 stock=stock, package=cand.package,
                 match_reason=reason_fn(orig_row, cand, original.package,
                                        pct, stock),
                 percent_cheaper=pct,
-                checks=checks_fn(orig_row, cand, original.package)),
-            reason=None, as_of=now)
+                checks=checks_fn(orig_row, cand, original.package)))
+        if not matches:
+            return _null(_TRIVIAL_SAVING_REASON)
+        return EquivalentResponse(original=orig_ref, equivalent=matches[0],
+                                  alternatives=matches[1:], reason=None,
+                                  as_of=now)
 
     if not original.package:
         # Empty package = specs could not be reliably identified; an unfiltered

@@ -85,6 +85,11 @@ claimed. Every figure in the response, on both sides, comes from that one read,
 so the card agrees with the part's own page. A saving that rounds below 1%
 returns a null rather than a 0% claim.
 
+**Alternatives.** Any of those three that also cleared both gates, other than
+the winner, come back in `alternatives`, cheapest first, each with its own
+reason, percentage and spec checks. So the list holds at most two runners-up,
+costs no extra upstream reads, and is always empty when `equivalent` is null.
+
 ### `GET /api/browse`
 The six browsable categories (resistors, capacitors, LEDs, diodes, MOSFETs,
 LDOs) and the filters each one takes. Static.

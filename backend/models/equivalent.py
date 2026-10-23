@@ -44,5 +44,8 @@ class EquivalentMatch(BaseModel):
 class EquivalentResponse(BaseModel):
     original: OriginalRef
     equivalent: EquivalentMatch | None
+    # Runners-up to `equivalent`, cheapest first, each verified on the same
+    # gates. Never repeats `equivalent`, and always empty when it is None.
+    alternatives: list[EquivalentMatch] = []
     reason: str | None = None
     as_of: datetime
