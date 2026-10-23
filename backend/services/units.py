@@ -72,3 +72,35 @@ def fmt_farads(f: float) -> str:
     if f >= 1e-9:
         return f"{f * 1e9:g} nF"
     return f"{f * 1e12:g} pF"
+
+
+# A capacitance as people type it: 0.1uF, 100 nF, 100n, 4n7. A bare prefix
+# with no F counts only when nothing but one digit follows it, so 1N4148,
+# 2N2222 and ATmega328P are never read as values.
+_CAP_TYPED = re.compile(
+    r"(?<![\w.])(?:(\d+(?:\.\d+)?|\.\d+)\s?([pnuµ])[fF]|(\d+(?:\.\d+)?|\.\d+)([pnuµ])(\d?))(?![\w.])",
+    re.IGNORECASE)
+
+
+def _cap_spelling(m: re.Match) -> str:
+    if m.group(1) is not None:
+        typed = m.group(1) + m.group(2).lower()
+    else:
+        typed = m.group(3) + m.group(4).lower() + m.group(5)
+    try:
+        farads = parse_si(typed, "F")
+    except ValueError:
+        return m.group(0)
+    return fmt_farads(farads).replace(" ", "")
+
+
+def spell_query(query: str) -> str:
+    """Rewrite capacitances in a search the way LCSC lists them.
+
+    Upstream splits a query on anything that is not a letter or digit and
+    substring-matches each piece, so 0.1uF becomes "1uf" and finds 1uF and
+    10uF parts. LCSC writes the same part as 100nF, so that is what is sent.
+    Resistances are left alone: 4k7 already appears in many MPNs, and 4.7k
+    would split into a looser "7k".
+    """
+    return _CAP_TYPED.sub(_cap_spelling, query)

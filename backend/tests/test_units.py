@@ -7,7 +7,7 @@ browse filter from quietly showing the wrong parts.
 
 import pytest
 
-from services.units import fmt_farads, fmt_ohms, fmt_si, parse_si
+from services.units import fmt_farads, fmt_ohms, fmt_si, parse_si, spell_query
 
 
 @pytest.mark.parametrize("text,unit,expected", [
@@ -74,3 +74,26 @@ def test_moved_formatters_are_unchanged():
     assert fmt_ohms(4.7) == "4.7 Ohm"
     assert fmt_farads(1e-7) == "100 nF"
     assert fmt_farads(2.2e-6) == "2.2 uF"
+
+
+@pytest.mark.parametrize("typed,sent", [
+    ("0.1uF 0402", "100nF 0402"),
+    (".1uf", "100nF"),
+    ("100n 0402", "100nF 0402"),
+    ("100 nF", "100nF"),
+    ("4n7", "4.7nF"),
+    ("4700pF", "4.7nF"),
+    ("10u 25V", "10uF 25V"),
+    ("1000uF", "1000uF"),
+    ("100NF", "100nF"),
+    # Part numbers and other units are left exactly as typed.
+    ("1N4148", "1N4148"),
+    ("2N2222", "2N2222"),
+    ("4N35", "4N35"),
+    ("ATmega328P", "ATmega328P"),
+    ("100uH", "100uH"),
+    ("STM32F103", "STM32F103"),
+    ("10k 0805", "10k 0805"),
+])
+def test_spell_query_writes_capacitance_the_way_lcsc_lists_it(typed, sent):
+    assert spell_query(typed) == sent

@@ -292,3 +292,16 @@ test('a shared filtered link opens filtered, and the package list only offers wh
   const opts = [...screen.getByRole('combobox', { name: 'Package' }).options].map((o) => o.value)
   expect(opts).toEqual(['', '0402', '0603'])
 })
+
+test('says so when the search went upstream spelled differently', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue({ page: 1, query: '100nF 0402', sources: OK_SOURCES, results: [part()] })
+  renderAt('/?q=0.1uF%200402')
+  expect(await screen.findByText(/Searched as/)).toHaveTextContent('Searched as 100nF 0402, the way LCSC lists it.')
+})
+
+test('says nothing when only the letter case changed', async () => {
+  vi.spyOn(api, 'search').mockResolvedValue({ page: 1, query: '100nF', sources: OK_SOURCES, results: [part()] })
+  renderAt('/?q=100nf')
+  await screen.findByText('STM32F103C8T6')
+  expect(screen.queryByText(/Searched as/)).toBeNull()
+})

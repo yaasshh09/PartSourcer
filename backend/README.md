@@ -54,6 +54,13 @@ curl "http://127.0.0.1:8000/api/search?q=STM32F103"
 A distributor that fails is a `sources` entry, not an error: the response is
 still `200`. Only a total failure of every callable distributor is a `502`.
 
+Capacitances in `q` are respelled the way LCSC lists them before anything is
+sent or cached: `0.1uF`, `100n`, `100 nF` and `.1uf` all search as `100nF`,
+and `4700pF` as `4.7nF`. `query` in the response is what was actually sent, so
+the page can say so. Upstream splits on punctuation and substring-matches each
+piece, which turned `0.1uF` into `1uf`. Resistances and part numbers are left
+as typed (`4k7` appears inside many MPNs; `1N4148` is not 1 nF).
+
 ### `GET /api/part/<mpn_key>?refresh=false`
 `{"part": {...}, "sources": [...]}`, the same `Part` shape as a search result.
 `404` only when every distributor we asked answered and none has the part. If

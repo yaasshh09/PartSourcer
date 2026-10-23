@@ -79,3 +79,9 @@ def test_sources_are_reported_even_with_no_results():
 
     assert body["results"] == []
     assert len(body["sources"]) == 3
+
+
+def test_a_capacitance_is_searched_the_way_lcsc_writes_it():
+    stub = StubCached(found=part())
+    body = client_over(stub).get("/api/search", params={"q": "0.1uF 0402"}).json()
+    assert body["query"] == "100nF 0402"

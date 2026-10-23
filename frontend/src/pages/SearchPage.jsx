@@ -53,6 +53,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(!!q)
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState('')
+  const [sentAs, setSentAs] = useState('')
   const [asOf, setAsOf] = useState(null)
   const [sources, setSources] = useState([])
   const [trends, setTrends] = useState({})
@@ -90,6 +91,7 @@ export default function SearchPage() {
         setAsOf(oldestAsOf(data.results))
         setSources(data.sources || [])
         setSubmitted(q)
+        setSentAs(data.query || q)
         if (data.results.length) {
           remember(q)
           // Extra, so a failure costs the badges and nothing else.
@@ -204,6 +206,11 @@ export default function SearchPage() {
             {`stock & price as of ${fmtAsOf(asOf)}`}
           </div>
         </div>
+        {sentAs.toLowerCase() !== submitted.trim().toLowerCase() ? (
+          <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, marginBottom: 12 }}>
+            {'Searched as '}<span style={{ fontFamily: MONO }}>{sentAs}</span>{', the way LCSC lists it.'}
+          </div>
+        ) : null}
         <div role="group" aria-label="Sort and filter results" style={{ display: 'flex', flexWrap: 'wrap',
           alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>SORT</span>
