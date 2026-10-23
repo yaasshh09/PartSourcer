@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { encodeKey, getEquivalent, getPart } from '../api.js'
 import { MAX_LINES, STATE_LABEL, checkLine, compareSwap, lineNote, parseBom, shareList, summarize,
-  summarizeSwaps, toCsv } from '../bom.js'
+  summarizeSwaps, toCsv, lcscFacts, toJlcBom, jlcGaps } from '../bom.js'
 import { DISTRIBUTOR_LABEL } from '../offers.js'
 import { C, ARCHIVO, MONO, SHELL_MAX, SHIPPING_NOTE, fmtAsOf, fmtPrice, fmtUnit } from '../theme.js'
 import useDocumentTitle from '../useDocumentTitle.js'
@@ -95,7 +95,7 @@ export default function BomPage() {
         const i = queue.shift()
         try {
           const { part } = await getPart(lines[i].mpn)
-          settle(i, { ...checkLine(part, lines[i].qty), key: part.mpn_key })
+          settle(i, { ...checkLine(part, lines[i].qty), ...lcscFacts(part), key: part.mpn_key })
         } catch (e) {
           settle(i, e && e.status === 404 ? { state: 'missing' }
             : { state: 'error', detail: (e && e.detail) || 'Request failed' })
@@ -127,7 +127,7 @@ export default function BomPage() {
     setNotice(null)
     run.current += 1
     setCheckedBoards(n)
-    const fresh = lines.map((l) => ({ mpn: l.mpn, per: l.qty, qty: l.qty * n, state: 'loading' }))
+    const fresh = lines.map((l) => ({ mpn: l.mpn, per: l.qty, qty: l.qty * n, refs: l.refs, state: 'loading' }))
     setRows(fresh)
     read(fresh, fresh.map((_, i) => i))
   }
@@ -136,7 +136,7 @@ export default function BomPage() {
   function retry() {
     run.current += 1
     setRows((rs) => rs.map((r) => (r.swapState === 'checking' ? { ...r, swapState: undefined } : r)))
-    read(rows.map(({ mpn, per, qty }) => ({ mpn, per, qty })),
+    read(rows.map(({ mpn, per, qty, refs }) => ({ mpn, per, qty, refs })),
       rows.map((r, i) => (r.state === 'error' ? i : -1)).filter((i) => i >= 0))
   }
 
@@ -194,12 +194,13 @@ export default function BomPage() {
     }).catch(() => {})
   }
 
-  function download(swaps) {
+  function download(swaps, jlc = false) {
     if (typeof URL === 'undefined' || !URL.createObjectURL) return
-    const url = URL.createObjectURL(new Blob([toCsv(rows, { swaps })], { type: 'text/csv' }))
+    const csv = jlc ? toJlcBom(rows) : toCsv(rows, { swaps })
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
-    a.download = swaps ? 'partsourcer-bom-with-swaps.csv' : 'partsourcer-bom.csv'
+    a.download = jlc ? 'jlcpcb-bom.csv' : swaps ? 'partsourcer-bom-with-swaps.csv' : 'partsourcer-bom.csv'
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 0)
   }
@@ -217,6 +218,17 @@ export default function BomPage() {
   const sw = summarizeSwaps(rows)
   const canSwap = !busy && !swapsBusy && rows.some(swappable)
   const money = (n) => fmtPrice(Math.round(n * 10000) / 10000)
+  // JLCPCB places parts by designator, so a list pasted without any gets no
+  // JLCPCB file rather than one that cannot be ordered from.
+  const hasRefs = rows.some((r) => r.refs)
+  const gaps = jlcGaps(rows)
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+  // No fee figure: JLCPCB sets it and it changes, so the note only says one applies.
+  const jlcNote = [
+    gaps.extended ? `${plural(gaps.extended, 'extended part')}, each with a JLCPCB setup fee` : null,
+    gaps.noCode ? `${plural(gaps.noCode, 'line')} ${gaps.noCode === 1 ? 'has' : 'have'} no LCSC code, so JLCPCB will ask you to pick one` : null,
+    gaps.noRefs ? `${plural(gaps.noRefs, 'line')} ${gaps.noRefs === 1 ? 'has' : 'have'} no designators, which JLCPCB needs to place the part` : null,
+  ].filter(Boolean)
 
   return (
     <section style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: '56px 28px 70px' }}>
@@ -316,6 +328,11 @@ export default function BomPage() {
                 </button>
               ) : null}
               <button type="button" className="ps-chip" onClick={() => download(false)} style={chip}>Download CSV</button>
+              {hasRefs ? (
+                <button type="button" className="ps-chip" onClick={() => download(false, true)} style={chip}>
+                  Download JLCPCB BOM
+                </button>
+              ) : null}
               {navigator.clipboard && navigator.clipboard.writeText ? (
                 <button type="button" className="ps-chip" onClick={() => copyLink(false)} style={chip}>
                   {linked === 'plain' ? 'Link copied' : 'Copy link'}
@@ -334,6 +351,11 @@ export default function BomPage() {
                 </>
               ) : null}
             </div>
+          ) : null}
+          {!busy && hasRefs && jlcNote.length ? (
+            <p style={{ fontSize: 12, color: C.sub, fontWeight: 600, margin: '0 0 14px' }}>
+              {`For the JLCPCB BOM: ${jlcNote.join('; ')}.`}
+            </p>
           ) : null}
 
           {/* Beside the original total, never folded into it: the table and

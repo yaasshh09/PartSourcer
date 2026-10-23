@@ -19,6 +19,7 @@ const part = (key, offers) => ({ mpn_key: key, mpn: key, brand: null, package: '
 const PARTS = {
   NE555P: part('NE555P', [offer()]),
   TINY: part('TINY', [offer({ sku: 'C2', stock: 2 })]),
+  EXT: { ...part('EXT', [offer({ sku: 'C77', is_basic: false })]), package: '0603' },
 }
 
 function mockParts(failing = {}) {
@@ -369,4 +370,39 @@ test('a new check drops a swap pass that is still running', async () => {
   await new Promise((r) => setTimeout(r, 20))
   expect(screen.queryByText(/R10K-ALT/)).not.toBeInTheDocument()
   expect(screen.queryByText(/checking swaps/i)).not.toBeInTheDocument()
+})
+
+test('downloads a JLCPCB assembly BOM and says what JLCPCB will ask about', async () => {
+  mockParts()
+  const blobs = []
+  const saved = [URL.createObjectURL, URL.revokeObjectURL]
+  URL.createObjectURL = (b) => { blobs.push(b); return 'blob:x' }
+  URL.revokeObjectURL = () => {}
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  try {
+    renderPage()
+    check('Designator,MPN\n"R1,R2",EXT\nU1,GHOST')
+    await waitFor(() => expect(screen.getByText(/0 of 2 lines|1 of 2 lines/i)).toBeInTheDocument())
+    expect(screen.getByText(/1 extended part/i)).toBeInTheDocument()
+    expect(screen.getByText(/1 line has no LCSC code/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /download jlcpcb bom/i }))
+    const csv = await new Promise((ok) => {
+      const fr = new FileReader()
+      fr.onload = () => ok(fr.result)
+      fr.readAsText(blobs[0])
+    })
+    expect(csv).toBe('Comment,Designator,Footprint,JLCPCB Part #\nEXT,"R1,R2",0603,C77\nGHOST,U1,,\n')
+    await new Promise((r) => setTimeout(r, 0))
+  } finally {
+    [URL.createObjectURL, URL.revokeObjectURL] = saved
+  }
+})
+
+test('a list with no designators offers no JLCPCB file', async () => {
+  mockParts()
+  renderPage()
+  check('NE555P 5')
+  await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
+  expect(screen.queryByRole('button', { name: /download jlcpcb bom/i })).toBeNull()
+  expect(screen.queryByText(/for the jlcpcb bom/i)).toBeNull()
 })

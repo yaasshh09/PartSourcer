@@ -24,6 +24,7 @@ const HEADER_WORDS = new Set([...MPN_HEADERS, ...QTY_HEADERS, ...REF_HEADERS, 'p
 const header = (t) => t.toLowerCase().replace(/[(（][^)）]*[)）]/g, '').replace(/_/g, ' ').trim()
 // ponytail: counts "R1-R4" as one; exports that compress ranges also write a Qty column.
 const refCount = (t) => (t || '').split(/[\s,;]+/).filter(Boolean).length
+const refList = (t) => (t || '').split(/[\s,;]+/).filter(Boolean).join(',')
 
 const isQty = (t) => /^\d+$/.test(t) && Number(t) > 0
 
@@ -81,7 +82,12 @@ export function parseBom(text) {
         : cols.qty < 0 && cols.ref >= 0 && refCount(row[cols.ref]) ? refCount(row[cols.ref]) : null
     const key = mpn.toUpperCase()
     const prev = byKey.get(key)
-    byKey.set(key, { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) })
+    const entry = { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) }
+    // Kept for the JLCPCB export, which places parts by designator.
+    const refs = [prev && prev.refs, cols && sep && cols.ref >= 0 ? refList(row[cols.ref]) : '']
+      .filter(Boolean).join(',')
+    if (refs) entry.refs = refs
+    byKey.set(key, entry)
   }
   const lines = [...byKey.values()]
   return { lines, count: lines.length, tooMany: lines.length > MAX_LINES, missingMpn, skipped }
@@ -185,6 +191,35 @@ export function toCsv(rows, { swaps = false } = {}) {
       note].map(cell).join(',')
   })
   return [head.join(','), ...body].join('\n') + '\n'
+}
+
+/**
+ * What the JLCPCB export needs from a part, taken from its exact LCSC offer
+ * whichever distributor was cheapest. A packaging variant is another part.
+ */
+export function lcscFacts(part) {
+  const o = ((part && part.offers) || []).find((x) => x.distributor === 'lcsc' && x.match_tier === 'exact')
+  return { lcsc: o ? o.sku : null, basic: o ? o.is_basic : null, pkg: (part && part.package) || null }
+}
+
+/**
+ * JLCPCB's assembly BOM: Comment, Designator, Footprint and the part code, as
+ * its upload page names them. Every line is written, so no designator goes
+ * missing; a line with no LCSC code is left for JLCPCB to ask about. The MPN
+ * stands in as the comment, which JLCPCB only shows back.
+ */
+export function toJlcBom(rows) {
+  const body = rows.map((r) => [r.mpn, r.refs, r.pkg, r.lcsc].map(cell).join(','))
+  return ['Comment,Designator,Footprint,JLCPCB Part #', ...body].join('\n') + '\n'
+}
+
+/** What JLCPCB will charge extra for or ask about: extended parts, counted once each. */
+export function jlcGaps(rows) {
+  return {
+    extended: new Set(rows.filter((r) => r.lcsc && r.basic === false).map((r) => r.lcsc)).size,
+    noCode: rows.filter((r) => !r.lcsc).length,
+    noRefs: rows.filter((r) => !r.refs).length,
+  }
 }
 
 /**

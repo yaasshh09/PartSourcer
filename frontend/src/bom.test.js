@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest'
-import { parseBom, priceAt, checkLine, summarize, toCsv, lineNote, compareSwap, summarizeSwaps, shareList, MAX_LINES } from './bom.js'
+import { parseBom, priceAt, checkLine, summarize, toCsv, lineNote, compareSwap, summarizeSwaps, shareList, MAX_LINES,
+  lcscFacts, toJlcBom, jlcGaps } from './bom.js'
 
 function offer(over = {}) {
   return {
@@ -45,12 +46,13 @@ describe('parseBom', () => {
   // A real export leads with designators, so the first column is not the part.
   test('a header row picks the part number and quantity columns by name', () => {
     const csv = 'Reference,Value,Footprint,Qty,MPN\n"R1,R2",10k,R_0603,2,RC0603FR-0710KL\nU1,NE555,DIP-8,1,NE555P'
-    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2 }, { mpn: 'NE555P', qty: 1 }])
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2, refs: 'R1,R2' },
+      { mpn: 'NE555P', qty: 1, refs: 'U1' }])
   })
 
   test('works the same for a tab separated paste from a spreadsheet', () => {
     const tsv = 'Designator\tManufacturer Part Number\tQuantity\nC1 C2 C3\tCL10B104KB8NNNC\t3'
-    expect(parseBom(tsv).lines).toEqual([{ mpn: 'CL10B104KB8NNNC', qty: 3 }])
+    expect(parseBom(tsv).lines).toEqual([{ mpn: 'CL10B104KB8NNNC', qty: 3, refs: 'C1,C2,C3' }])
   })
 
   // KiCad's default export has no MPN column. Reading R1 as a part is a guess.
@@ -65,7 +67,7 @@ describe('parseBom', () => {
   })
 
   test('a row with an empty part number cell is skipped, not guessed', () => {
-    expect(parseBom('Ref,MPN,Qty\nJ1,,1\nU1,NE555P,1').lines).toEqual([{ mpn: 'NE555P', qty: 1 }])
+    expect(parseBom('Ref,MPN,Qty\nJ1,,1\nU1,NE555P,1').lines).toEqual([{ mpn: 'NE555P', qty: 1, refs: 'U1' }])
   })
 
   // Two plain numbers could be a part and a quantity either way round.
@@ -203,23 +205,23 @@ describe('parseBom reads EDA exports', () => {
   // JLCPCB's assembly BOM has no quantity column, so the designators count it.
   test('JLCPCB format, counted by designators', () => {
     const csv = 'Comment,Designator,Footprint,JLCPCB Part #（optional）\n10k,"R1,R2,R3",0603,C25804\n100n,C1,0402,C1525'
-    expect(parseBom(csv).lines).toEqual([{ mpn: 'C25804', qty: 3 }, { mpn: 'C1525', qty: 1 }])
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'C25804', qty: 3, refs: 'R1,R2,R3' }, { mpn: 'C1525', qty: 1, refs: 'C1' }])
   })
 
   test('KiCad with an added part number field', () => {
     const csv = 'Reference,Value,Footprint,Qty,Manufacturer_Part_Number\n"R1, R2",10k,R_0603,2,RC0603FR-0710KL'
-    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2 }])
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2, refs: 'R1,R2' }])
   })
 
   test('KiCad with an LCSC field and no quantity', () => {
     const csv = 'Reference\tValue\tLCSC Part #\nC1 C2\t100n\tC1525'
-    expect(parseBom(csv).lines).toEqual([{ mpn: 'C1525', qty: 2 }])
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'C1525', qty: 2, refs: 'C1,C2' }])
   })
 
   test('Altium default export', () => {
     const csv = '"Comment","Description","Designator","Footprint","LibRef","Quantity","Manufacturer Part Number 1"\n'
       + '"NE555","Timer","U1, U2","DIP8","NE555","2","NE555P"'
-    expect(parseBom(csv).lines).toEqual([{ mpn: 'NE555P', qty: 2 }])
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'NE555P', qty: 2, refs: 'U1,U2' }])
   })
 
   test('a header names no part number column, LCSC or otherwise', () => {
@@ -299,5 +301,45 @@ describe('swap exports', () => {
   test('the share list keeps per board quantities, with or without swaps', () => {
     expect(shareList([swapped, plain])).toBe('MPN,Qty\nORIG,100\nNE555P,1')
     expect(shareList([swapped, plain], { swaps: true })).toBe('MPN,Qty\nSWAP,100\nNE555P,1')
+  })
+})
+
+describe('JLCPCB assembly BOM', () => {
+  test('a part listed twice keeps both sets of designators', () => {
+    const csv = 'Designator,MPN\nR1,RC0603FR-0710KL\n"R2, R3",rc0603fr-0710kl'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 3, refs: 'R1,R2,R3' }])
+  })
+
+  test('reads the LCSC code, Basic flag and package off a part', () => {
+    const p = part([offer(), offer({ distributor: 'lcsc', sku: 'C25804', is_basic: false })], { package: '0603' })
+    expect(lcscFacts(p)).toEqual({ lcsc: 'C25804', basic: false, pkg: '0603' })
+  })
+
+  test('a packaging variant on LCSC is not the part that was asked for', () => {
+    const p = part([offer({ distributor: 'lcsc', sku: 'C9', match_tier: 'packaging' })], { package: '0603' })
+    expect(lcscFacts(p)).toEqual({ lcsc: null, basic: null, pkg: '0603' })
+  })
+
+  test('writes the columns JLCPCB asks for, one row per line', () => {
+    const rows = [
+      { mpn: 'RC0603FR-0710KL', refs: 'R1,R2', lcsc: 'C25804', pkg: '0603', state: 'ok' },
+      { mpn: 'NOPE-1', refs: '', lcsc: null, pkg: null, state: 'missing' },
+    ]
+    expect(toJlcBom(rows)).toBe('Comment,Designator,Footprint,JLCPCB Part #\n'
+      + 'RC0603FR-0710KL,"R1,R2",0603,C25804\n'
+      + 'NOPE-1,,,\n')
+  })
+
+  test('the file reads back in as the same lines', () => {
+    const rows = [{ mpn: 'RC0603FR-0710KL', refs: 'R1,R2', lcsc: 'C25804', pkg: '0603' }]
+    expect(parseBom(toJlcBom(rows)).lines).toEqual([{ mpn: 'C25804', qty: 2, refs: 'R1,R2' }])
+  })
+
+  test('counts what JLCPCB will ask about', () => {
+    const rows = [
+      { lcsc: 'C1', basic: false, refs: 'R1' }, { lcsc: 'C2', basic: true, refs: 'R2' },
+      { lcsc: 'C3', basic: false, refs: '' }, { lcsc: null, basic: null, refs: 'U1' },
+    ]
+    expect(jlcGaps(rows)).toEqual({ extended: 2, noCode: 1, noRefs: 1 })
   })
 })
