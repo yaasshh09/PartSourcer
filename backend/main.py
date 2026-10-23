@@ -17,6 +17,7 @@ from api.browse import router as browse_router
 from api.equivalent import router as equivalent_router
 from api.history import router as history_router
 from api.fx import router as fx_router
+from api.status import router as status_router
 from api.internal import router as internal_router
 from api.part import router as part_router
 from api.search import router as search_router
@@ -115,6 +116,7 @@ app.include_router(internal_router)
 app.include_router(badge_router)
 app.include_router(history_router)
 app.include_router(fx_router)
+app.include_router(status_router)
 
 
 @app.get("/health")

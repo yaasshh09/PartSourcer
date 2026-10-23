@@ -116,3 +116,8 @@ export function getSuggestions(q) {
 export function getFx() {
   return getJson('/fx')
 }
+
+// How each distributor answered real requests over the past day.
+export function getStatus() {
+  return getJson('/status')
+}

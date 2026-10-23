@@ -323,6 +323,15 @@ class PostgresCacheStore:
                 removed += _deleted(status)
         return removed
 
+    async def recent_statuses(self, since: datetime, limit: int
+                              ) -> list[tuple[datetime, list[dict]]]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT as_of, status_json FROM cache_search WHERE as_of >= $1"
+                " UNION ALL SELECT as_of, status_json FROM cache_part"
+                " WHERE as_of >= $1 ORDER BY as_of DESC LIMIT $2", since, limit)
+        return [(r["as_of"], json.loads(r["status_json"])) for r in rows]
+
     async def get_quota_markers(self) -> dict[str, datetime]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(

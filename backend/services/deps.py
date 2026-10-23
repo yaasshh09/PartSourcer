@@ -126,6 +126,11 @@ async def shutdown() -> None:
     _history_store = None
 
 
+def get_cache_store() -> CacheStore:
+    assert _store is not None, "cache not initialized (lifespan not run)"
+    return _store
+
+
 def get_fx() -> FxRates:
     assert _fx is not None, "fx not initialized (lifespan not run)"
     return _fx

@@ -14,6 +14,7 @@ import ComparePage from './pages/ComparePage.jsx'
 import BomPage from './pages/BomPage.jsx'
 import ChangelogPage from './pages/ChangelogPage.jsx'
 import WatchlistPage from './pages/WatchlistPage.jsx'
+import StatusPage from './pages/StatusPage.jsx'
 import { CompareProvider } from './compare.jsx'
 import CompareTray from './components/CompareTray.jsx'
 import { useCurrency } from './currency.jsx'
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/bom" element={<BomPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/status" element={<StatusPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/how" element={<HowPage />} />
             <Route path="/faq" element={<FaqPage />} />

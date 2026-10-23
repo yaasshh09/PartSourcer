@@ -12,6 +12,7 @@ const PRODUCT = [
   { label: 'How it works', to: '/how' },
   { label: 'FAQ', to: '/faq' },
   { label: 'Changelog', to: '/changelog' },
+  { label: 'Status', to: '/status' },
   { label: 'Contact', to: '/contact' },
 ]
 

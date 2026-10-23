@@ -15,3 +15,4 @@ def test_openapi_lists_every_public_route():
     assert "/api/browse/{slug}" in paths
     assert "/api/suggest" in paths
     assert "/api/fx" in paths
+    assert "/api/status" in paths

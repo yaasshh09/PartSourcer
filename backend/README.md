@@ -166,6 +166,16 @@ fails the last dated rates are kept, since they are still true about their
 date. With none ever read it is a `503`, and the page falls back to USD and
 says so. `FX_BASE_URL` overrides the source.
 
+### `GET /api/status`
+`{ window_hours: 24, since, reads, distributors: [{ distributor, ok, problems:
+{ <state>: n }, last_ok_at, last_problem: { state, at } | null, configured }] }`.
+Counted from the per-distributor outcome that every search and part read
+already stores with its cache row, so it reports what real requests met at no
+extra upstream call or write. A cache hit is not a new read and is not
+counted. `configured` is `false` when every read said the distributor has no
+credentials here, and `null` when nothing touched it in the window. Capped at
+the newest 2000 reads, cached for 5 minutes, `503` if the cache cannot be read.
+
 ## Configuration (env vars)
 
 Loaded via pydantic-settings from the environment or a local `.env`

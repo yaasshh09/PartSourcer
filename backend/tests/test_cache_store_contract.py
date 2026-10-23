@@ -306,3 +306,17 @@ async def test_postgres_rebuilds_the_cache_when_the_stamped_version_is_wrong():
         assert stamped == CACHE_SCHEMA_VERSION
     finally:
         await reopened.close()
+
+
+async def test_recent_statuses_reads_search_and_part_rows_newest_first(store):
+    old = AS_OF - timedelta(days=2)
+    await store.put_search("old", 20, [], [{"distributor": "lcsc", "state": "timeout"}], old)
+    await store.put_search("new", 20, [], [{"distributor": "lcsc", "state": "ok"}], AS_OF)
+    await store.put_part_status("PART-A", [{"distributor": "mouser", "state": "unavailable"}],
+                                AS_OF - timedelta(hours=1))
+
+    rows = await store.recent_statuses(AS_OF - timedelta(days=1), limit=10)
+
+    assert [(at, s[0]["state"]) for at, s in rows] == [
+        (AS_OF, "ok"), (AS_OF - timedelta(hours=1), "unavailable")]
+    assert len(await store.recent_statuses(AS_OF - timedelta(days=3), limit=1)) == 1

@@ -133,6 +133,9 @@ class CacheStore(Protocol):
 
     async def prune(self, before: datetime) -> int: ...
 
+    async def recent_statuses(self, since: datetime, limit: int
+                              ) -> list[tuple[datetime, list[dict]]]: ...
+
     async def get_quota_markers(self) -> dict[str, datetime]: ...
 
     async def put_quota_marker(self, distributor: str,
@@ -236,6 +239,15 @@ class SqliteCacheStore:
         TTL would send every old link back upstream for no reason.
         """
         return await asyncio.to_thread(self._prune, before)
+
+    async def recent_statuses(self, since: datetime, limit: int
+                              ) -> list[tuple[datetime, list[dict]]]:
+        """Every fan-out's per-distributor outcome since then, newest first.
+
+        Read from rows the cache already writes, so a status page costs no
+        extra write on the search path.
+        """
+        return await asyncio.to_thread(self._recent_statuses, since, limit)
 
     async def get_quota_markers(self) -> dict[str, datetime]:
         return await asyncio.to_thread(self._get_quota_markers)
@@ -371,6 +383,16 @@ class SqliteCacheStore:
                 removed += cur.rowcount if cur.rowcount > 0 else 0
             self._conn.commit()
         return removed
+
+    def _recent_statuses(self, since: datetime, limit: int):
+        cutoff = since.isoformat()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT as_of, status_json FROM search_cache WHERE as_of >= ?"
+                " UNION ALL SELECT as_of, status_json FROM part_cache"
+                " WHERE as_of >= ? ORDER BY as_of DESC LIMIT ?",
+                (cutoff, cutoff, limit)).fetchall()
+        return [(datetime.fromisoformat(r[0]), json.loads(r[1])) for r in rows]
 
     def _get_quota_markers(self) -> dict[str, datetime]:
         with self._lock:
