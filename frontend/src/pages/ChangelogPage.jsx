@@ -13,6 +13,12 @@ export const RELEASES = [
     'A part a distributor calls obsolete or end of life is flagged, in the distributor\'s own words.',
     'Prices can be shown in EUR, GBP or INR at the dated ECB rate. Totals and exports stay in USD.',
     'A status page shows how each distributor answered over the past day.',
+    'An API page lists every public endpoint and the rules for calling it.',
+    'A command-line tool and a GitHub Action price a BOM outside the browser.',
+    'A KiCad plugin opens the BOM check with the open board\'s parts filled in.',
+    'A part can be shared as a link whose preview shows its price, stock and read time.',
+    'On a phone the BOM check shows each line as a card instead of a wide table.',
+    'Small grey and orange text is darker so it reads clearly, and inputs show keyboard focus.',
   ] },
   { date: '2026-10-23', items: [
     'A part page lists the other verified cheaper drop-ins under the main one.',
