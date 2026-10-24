@@ -1,4 +1,10 @@
 * { box-sizing: border-box; }
+/* Light only, by design: the palette is one set of fixed colours, and ink is
+   both the text colour and the fill behind light text, so it cannot simply
+   be inverted. Saying so keeps native controls (the selects, the search
+   suggestions, scrollbars) light on a dark-mode system instead of dark
+   boxes on a light page. */
+:root { color-scheme: light; }
 body {
   margin: 0;
   background-color: #fffdf5;

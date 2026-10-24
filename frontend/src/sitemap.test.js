@@ -21,3 +21,8 @@ test('the install manifest parses and every icon it names exists', () => {
   for (const icon of m.icons) expect(() => readFileSync(resolve(`public${icon.src}`))).not.toThrow()
   expect(readFileSync(resolve('index.html'), 'utf8')).toContain('href="/manifest.webmanifest"')
 })
+
+test('the page says it is light only, so native controls match it on a dark system', () => {
+  expect(readFileSync(resolve('index.html'), 'utf8')).toContain('<meta name="color-scheme" content="light" />')
+  expect(readFileSync(resolve('src/index.css'), 'utf8')).toMatch(/:root\s*\{\s*color-scheme:\s*light;/)
+})
