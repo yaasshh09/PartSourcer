@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getHistory } from '../api.js'
+import { getHistory, feedUrl } from '../api.js'
 import { C, ARCHIVO, fmtUnit, fmtAsOf } from '../theme.js'
 
 const W = 240, H = 44, PAD = 3
@@ -82,7 +82,8 @@ export default function PriceHistory({ mpnKey }) {
         <Spark points={points} field="stock" label="Stock" fmt={fmtStock} color={C.ink} />
       </div>
       <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginTop: 12 }}>
-        {`${points.length} nightly LCSC readings since ${fmtAsOf(points[0].at)}. Other distributors are not recorded yet.`}
+        {`${points.length} nightly LCSC readings since ${fmtAsOf(points[0].at)}. Other distributors are not recorded yet. `}
+        <a href={feedUrl(mpnKey)} style={{ color: C.ink }}>RSS feed</a> of price moves and stock changes.
       </div>
       {restock ? (
         <div style={{ fontSize: 14, fontWeight: 700, marginTop: 10 }}>

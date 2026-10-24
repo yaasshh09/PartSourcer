@@ -101,6 +101,11 @@ export function getHistory(mpnKey) {
   return getJson(`/history/${encodeKey(mpnKey)}?days=365`)
 }
 
+// A plain link for a feed reader, not a fetch.
+export function feedUrl(mpnKey) {
+  return `${API_BASE}/feed/${encodeKey(mpnKey)}`
+}
+
 // One call for a whole results page. Repeated keys= rather than a joined
 // list, because nothing promises an MPN has no commas.
 export function getTrends(mpnKeys) {

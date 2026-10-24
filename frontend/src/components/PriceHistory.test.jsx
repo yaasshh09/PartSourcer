@@ -17,6 +17,7 @@ test('draws price and stock lines with the range and where the numbers come from
   expect(screen.getByRole('img', { name: /price from \$0\.0019 to \$0\.0024/i })).toBeInTheDocument()
   expect(screen.getByRole('img', { name: /stock from 9,000 to 15,000/i })).toBeInTheDocument()
   expect(screen.getByText(/3 nightly LCSC readings since/i)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /rss feed/i })).toHaveAttribute('href', '/api/feed/RC0402')
 })
 
 test('stays hidden with fewer than two readings, no recorder, or an error', async () => {

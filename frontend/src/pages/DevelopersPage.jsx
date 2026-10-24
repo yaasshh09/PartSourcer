@@ -11,6 +11,7 @@ export const ENDPOINTS = [
   { path: '/api/browse', what: 'The categories that can be browsed by value and package, and their filters.' },
   { path: '/api/browse/resistors?resistance=10k&package=0402', what: 'Parts in a category matching typed values. No prices: open the part for those.' },
   { path: '/api/history/STM32F103C8T6?days=90', what: 'Nightly LCSC price and stock readings, oldest first. recording: false means this site keeps none.' },
+  { path: '/api/feed/STM32F103C8T6', what: 'RSS of LCSC price moves and the part going out of or back into stock, for wiring up your own alerts.' },
   { path: '/api/trends?keys=STM32F103C8T6&keys=NE555DR', what: 'Week-on-week LCSC price and stock change for up to 50 parts.' },
   { path: '/api/badge/STM32F103C8T6', what: 'An SVG stock badge for a README.' },
   { path: '/api/og/part/STM32F103C8T6', what: 'A 1200 by 630 PNG preview card with the price, stock and when they were read.' },
