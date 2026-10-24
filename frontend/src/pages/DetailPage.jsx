@@ -16,6 +16,19 @@ import PriceHistory from '../components/PriceHistory.jsx'
 import { useWaking, WAKE_NOTICE } from '../useWaking.js'
 import useDocumentTitle from '../useDocumentTitle.js'
 
+// What a search engine shows under the link. No price or stock: a crawler's
+// copy can sit for weeks, and a number in it would be a stale claim.
+export function partMeta(part) {
+  if (!part) return {}
+  const what = [part.brand ? `by ${part.brand}` : '', part.package ? `in ${part.package}` : '']
+    .filter(Boolean).join(' ')
+  const desc = part.description ? ` ${part.description.replace(/\.?$/, '.')}` : ''
+  return {
+    description: `${part.mpn}${what ? ` ${what}` : ''}.${desc} Stock and price across LCSC, Mouser and DigiKey, each stamped with when it was read, plus a cheaper in-stock drop-in where one is verified.`,
+    canonical: `${window.location.origin}/part/${encodeKey(part.mpn_key)}`,
+  }
+}
+
 export default function DetailPage() {
   const params = useParams()
   const [searchParams] = useSearchParams()
@@ -32,7 +45,7 @@ export default function DetailPage() {
   const [error, setError] = useState(null)
   const waking = useWaking(loading)
 
-  useDocumentTitle(data?.part?.mpn || key || 'Part')
+  useDocumentTitle(data?.part?.mpn || key || 'Part', partMeta(data?.part))
 
   useEffect(() => {
     let cancelled = false

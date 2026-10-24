@@ -636,3 +636,13 @@ test('warns when a distributor says the part is on its way out', async () => {
   expect(await screen.findByRole('note', { name: 'Lifecycle' })).toHaveTextContent(
     'Mouser lists this part as End of Life. Check it is still made before designing it in.')
 })
+
+test('describes the part for search engines without quoting a price', async () => {
+  const { partMeta } = await import('./DetailPage.jsx')
+  const m = partMeta({ mpn: 'NE555P', mpn_key: 'NE555P', brand: 'TI', package: 'DIP-8', description: 'Timer' })
+  expect(m.description).toBe('NE555P by TI in DIP-8. Timer. Stock and price across LCSC, Mouser and DigiKey, each stamped with when it was read, plus a cheaper in-stock drop-in where one is verified.')
+  expect(m.description).not.toMatch(/\$/)
+  expect(m.canonical).toBe(`${window.location.origin}/part/NE555P`)
+  expect(partMeta({ mpn: 'X', mpn_key: 'X', brand: null, package: '', description: '' }).description)
+    .toMatch(/^X\. Stock and price/)
+})
