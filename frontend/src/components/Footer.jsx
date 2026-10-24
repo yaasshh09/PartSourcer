@@ -13,6 +13,7 @@ const PRODUCT = [
   { label: 'FAQ', to: '/faq' },
   { label: 'Changelog', to: '/changelog' },
   { label: 'Status', to: '/status' },
+  { label: 'API', to: '/developers' },
   { label: 'Contact', to: '/contact' },
 ]
 

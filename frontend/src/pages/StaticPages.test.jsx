@@ -82,3 +82,18 @@ test('changelog lists releases newest first', () => {
   expect([...dates].sort().reverse()).toEqual(dates)
   expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(dates)
 })
+
+test('the API page lists every public route the backend serves, and nothing private', async () => {
+  const { default: DevelopersPage, ENDPOINTS } = await import('./DevelopersPage.jsx')
+  wrap(<DevelopersPage />)
+  expect(screen.getByText('SCRIPT AGAINST IT.')).toBeInTheDocument()
+  const { readFileSync, readdirSync } = await import('node:fs')
+  const { resolve } = await import('node:path')
+  const dir = resolve('../backend/api')
+  const routes = readdirSync(dir).filter((f) => f.endsWith('.py'))
+    .flatMap((f) => [...readFileSync(resolve(dir, f), 'utf8').matchAll(/@router\.get\("([^"{]+)/g)].map((m) => m[1]))
+  expect(routes.length).toBeGreaterThan(9)
+  const listed = ENDPOINTS.map((e) => e.path.replace(/^\/api/, ''))
+  for (const r of routes) expect(listed.some((p) => p.startsWith(r))).toBe(true)
+  expect(listed.some((p) => p.includes('internal'))).toBe(false)
+})
