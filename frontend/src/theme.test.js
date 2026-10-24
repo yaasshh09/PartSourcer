@@ -58,3 +58,22 @@ describe('shown currency', () => {
     expect(fmtPrice(1)).toBe('$1.00')
   })
 })
+
+describe('contrast', () => {
+  const lum = (hex) => {
+    const h = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+
+  // Small text needs 4.5:1 (WCAG AA) on both page backgrounds.
+  test.each(['ink', 'sub', 'muted', 'alert'])('%s text is readable on paper and page', (k) => {
+    expect(ratio(C[k], C.paper)).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(C[k], C.bg)).toBeGreaterThanOrEqual(4.5)
+  })
+  test('white on alert is readable for small labels', () => {
+    expect(ratio('#ffffff', C.alert)).toBeGreaterThanOrEqual(4.5)
+  })
+})

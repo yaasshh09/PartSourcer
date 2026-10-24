@@ -199,7 +199,7 @@ export default function DetailPage() {
           </div>
           {lifecycleWarnings(part).length ? (
             <p role="note" aria-label="Lifecycle" style={{ margin: '12px 0 0', fontSize: 14, fontWeight: 700,
-              color: C.orange }}>
+              color: C.alert }}>
               {lifecycleWarnings(part).map((w) => `${DISTRIBUTOR_LABEL[w.distributor] || w.distributor} lists this part as ${w.status}.`).join(' ')}
               {' Check it is still made before designing it in.'}
             </p>

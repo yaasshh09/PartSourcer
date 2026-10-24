@@ -30,7 +30,7 @@ const EXAMPLE_OFFERS = [
 ]
 
 const heading = {
-  fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.orange,
+  fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.alert,
   letterSpacing: '0.06em',
 }
 

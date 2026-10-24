@@ -151,7 +151,7 @@ export default function ComparePage() {
                           fontSize: 12, padding: '1px 6px' }}>✕</button>
                     </div>
                     {col.status === 'error' ? (
-                      <div style={{ fontSize: 12, color: C.orange, fontWeight: 700, marginTop: 6 }}>
+                      <div style={{ fontSize: 12, color: C.alert, fontWeight: 700, marginTop: 6 }}>
                         {`Could not load: ${col.error.detail}`}
                       </div>
                     ) : null}

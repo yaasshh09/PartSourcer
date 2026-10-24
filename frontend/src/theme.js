@@ -1,6 +1,9 @@
+// Contrast on paper, measured: ink 18.9, sub 5.6, muted 5.3, alert 5.4. The
+// brand orange is 3.1, too faint for small text, so it fills buttons and
+// marks while alert carries warnings and errors written in words.
 export const C = {
   bg: '#fffdf5', yellow: '#ffe14d', orange: '#ff5c38', ink: '#111',
-  paper: '#fff', sub: '#6a6858', muted: '#8a8778',
+  paper: '#fff', sub: '#6a6858', muted: '#6f6c5e', alert: '#c2381a',
 }
 
 // How wide a page runs before it starts leaving margin, in two tiers. The

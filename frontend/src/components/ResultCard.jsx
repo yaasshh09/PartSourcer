@@ -70,7 +70,7 @@ export default function ResultCard({ part, trend }) {
               border: '2px solid #d8d4c4' }}>{tier}</span>
           ) : null}
           {lifecycleWarnings(part).map((w) => (
-            <span key={w.distributor} style={{ ...BADGE, background: C.orange, color: '#fff' }}>
+            <span key={w.distributor} style={{ ...BADGE, background: C.alert, color: '#fff' }}>
               {`${w.status} at ${DISTRIBUTOR_LABEL[w.distributor] || w.distributor}`}
             </span>
           ))}
@@ -107,7 +107,7 @@ export default function ResultCard({ part, trend }) {
             <Price value={headline.price_usd} size={14} />
           </div>
         ) : null}
-        <Link className="ps-link" to={to} style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, color: C.orange,
+        <Link className="ps-link" to={to} style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, color: C.alert,
           marginTop: 6, textDecoration: 'none' }}>VIEW DETAIL →</Link>
         <div style={{ marginTop: 8 }}><PinButton mpnKey={part.mpn_key} /></div>
       </div>

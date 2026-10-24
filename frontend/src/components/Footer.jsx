@@ -98,10 +98,10 @@ export default function Footer() {
 
         <div style={{ borderTop: `1px solid #3a382f`, marginTop: 34, padding: '18px 0 26px',
           display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>
+          <div style={{ fontSize: 12, color: '#bdb9aa', fontWeight: 500 }}>
             Not affiliated with or endorsed by LCSC, JLCPCB, Mouser or DigiKey.
           </div>
-          <div style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>
+          <div style={{ fontSize: 12, color: '#bdb9aa', fontWeight: 500 }}>
             {/* Read at render, so it never needs remembering in January. */}
             &copy; {new Date().getFullYear()} PartSourcer. MIT licensed. Built by{' '}
             <a className="ps-link" href={CONTACT.githubUrl} target="_blank" rel="noreferrer"

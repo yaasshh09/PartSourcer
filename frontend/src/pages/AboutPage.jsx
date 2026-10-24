@@ -43,7 +43,7 @@ const PROMISES = [
 ]
 
 const sectionTitle = {
-  fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.orange,
+  fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.alert,
   letterSpacing: '0.06em', marginTop: 46,
 }
 
@@ -54,7 +54,7 @@ export default function AboutPage() {
 
   return (
     <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '64px 28px 80px' }}>
-      <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,
+      <span style={{ display: 'inline-block', background: C.alert, color: '#fff', fontWeight: 700,
         fontSize: 13, padding: '6px 12px' }}>ABOUT</span>
       <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 46, lineHeight: 1.0,
         letterSpacing: '-0.03em', margin: '22px 0 0' }}>
@@ -153,7 +153,7 @@ export default function AboutPage() {
 
       <div style={{ marginTop: 34, fontSize: 15, fontWeight: 500, color: C.sub }}>
         Something looks wrong, or you want to help?{' '}
-        <Link to="/contact" className="ps-link" style={{ color: C.orange, fontWeight: 700 }}>Get in touch</Link>.
+        <Link to="/contact" className="ps-link" style={{ color: C.alert, fontWeight: 700 }}>Get in touch</Link>.
       </div>
     </section>
   )

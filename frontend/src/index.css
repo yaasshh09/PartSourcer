@@ -18,7 +18,6 @@ body {
 }
 a { color: #111; text-decoration: none; }
 input { font-family: inherit; }
-input:focus { outline: none; }
 button { cursor: pointer; }
 ::selection { background: #ffe14d; }
 @keyframes ps-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }

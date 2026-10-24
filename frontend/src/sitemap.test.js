@@ -26,3 +26,9 @@ test('the page says it is light only, so native controls match it on a dark syst
   expect(readFileSync(resolve('index.html'), 'utf8')).toContain('<meta name="color-scheme" content="light" />')
   expect(readFileSync(resolve('src/index.css'), 'utf8')).toMatch(/:root\s*\{\s*color-scheme:\s*light;/)
 })
+
+test('nothing hides the keyboard focus ring', () => {
+  const css = readFileSync(resolve('src/index.css'), 'utf8')
+  expect(css).not.toMatch(/outline:\s*(none|0)/)
+  expect(css).toMatch(/:focus-visible\s*\{\s*outline:\s*3px solid/)
+})

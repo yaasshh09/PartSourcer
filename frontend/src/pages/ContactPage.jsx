@@ -31,7 +31,7 @@ export default function ContactPage() {
 
   return (
     <section style={{ maxWidth: PROSE_MAX, margin: '0 auto', padding: '64px 28px 80px' }}>
-      <span style={{ display: 'inline-block', background: C.orange, color: '#fff', fontWeight: 700,
+      <span style={{ display: 'inline-block', background: C.alert, color: '#fff', fontWeight: 700,
         fontSize: 13, padding: '6px 12px' }}>CONTACT</span>
       <h1 style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 46, lineHeight: 1.0,
         letterSpacing: '-0.03em', margin: '22px 0 0' }}>

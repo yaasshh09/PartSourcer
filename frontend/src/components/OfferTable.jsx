@@ -73,7 +73,7 @@ function AtQty({ offer, qty }) {
       <div>{`${p.orderQty.toLocaleString('en-US')} for ${fmtPrice(p.total)}`}</div>
       {p.note ? <div style={{ color: C.sub, fontWeight: 600 }}>{p.note}</div> : null}
       {short ? (
-        <div style={{ color: C.orange }}>{`only ${(offer.stock || 0).toLocaleString('en-US')} in stock`}</div>
+        <div style={{ color: C.alert }}>{`only ${(offer.stock || 0).toLocaleString('en-US')} in stock`}</div>
       ) : null}
     </div>
   )

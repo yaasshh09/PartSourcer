@@ -33,8 +33,8 @@ const cell = { padding: '10px 12px', borderTop: '2px solid #e6e2d2', verticalAli
   fontSize: 14, fontWeight: 600, textAlign: 'left' }
 const head = { ...cell, borderTop: 'none', color: C.sub, fontSize: 12, whiteSpace: 'nowrap' }
 const muted = { color: C.muted, fontWeight: 500 }
-const STATE_COLOR = { ok: '#1d7a45', short: C.orange, unpriced: C.muted, missing: C.orange,
-  error: C.orange, loading: C.muted }
+const STATE_COLOR = { ok: '#1d7a45', short: C.alert, unpriced: C.muted, missing: C.alert,
+  error: C.alert, loading: C.muted }
 
 const chip = { background: 'transparent', border: `2px solid ${C.ink}`, fontWeight: 700,
   fontSize: 13, padding: '7px 13px' }
@@ -293,7 +293,7 @@ export default function BomPage() {
       </form>
 
       {notice ? (
-        <p role="alert" style={{ fontSize: 14, fontWeight: 700, color: C.orange, margin: '18px 0 0' }}>{notice}</p>
+        <p role="alert" style={{ fontSize: 14, fontWeight: 700, color: C.alert, margin: '18px 0 0' }}>{notice}</p>
       ) : null}
 
       {/* A line dropped without a word would make the total look more
@@ -403,7 +403,7 @@ export default function BomPage() {
                     <div>{`No verified cheaper drop-ins for ${swapFailed ? 'the lines that could be checked' : 'these lines'}.`}</div>
                   ) : null}
                   {swapFailed ? (
-                    <div style={{ color: C.orange }}>
+                    <div style={{ color: C.alert }}>
                       {`${swapFailed} line${swapFailed === 1 ? '' : 's'} could not be checked for swaps.`}
                     </div>
                   ) : null}
@@ -469,7 +469,7 @@ export default function BomPage() {
                         <>
                           {r.note || ''}
                           {r.thin ? (
-                            <div style={{ color: C.orange, fontWeight: 700 }}>
+                            <div style={{ color: C.alert, fontWeight: 700 }}>
                               {lineNote({ ...r, note: null })}
                             </div>
                           ) : null}
@@ -505,7 +505,7 @@ export default function BomPage() {
                   ) : r.swapState === 'failed' ? (
                     <tr>
                       <td colSpan={7} style={{ ...cell, borderTop: 'none', paddingTop: 0, fontSize: 13,
-                        color: C.orange }}>swap check failed</td>
+                        color: C.alert }}>swap check failed</td>
                     </tr>
                   ) : null}
                   </Fragment>

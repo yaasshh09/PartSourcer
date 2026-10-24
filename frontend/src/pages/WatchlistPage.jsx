@@ -27,7 +27,7 @@ function Then({ e }) {
 
 function Now({ e, row }) {
   if (!row || row.status === 'loading') return <span style={muted}>reading…</span>
-  if (row.status === 'error') return <span style={{ color: C.orange, fontWeight: 700 }}>{`Could not read: ${row.detail}`}</span>
+  if (row.status === 'error') return <span style={{ color: C.alert, fontWeight: 700 }}>{`Could not read: ${row.detail}`}</span>
   const c = sinceAdded(e, row.part)
   if (!c.offer) {
     return <span style={muted}>{e.distributor ? `No longer listed at ${DISTRIBUTOR_LABEL[e.distributor] || e.distributor}.` : 'Nothing to compare.'}</span>
