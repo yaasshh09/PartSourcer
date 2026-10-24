@@ -1,0 +1,89 @@
+name: PartSourcer BOM check
+description: Price a BOM on every pull request and comment the cost and the lines that cannot be bought.
+branding:
+  icon: cpu
+  color: yellow
+
+inputs:
+  bom:
+    description: Path to the BOM file in the repository (CSV, TSV or a plain part list).
+    required: true
+  boards:
+    description: How many boards to price for. Every quantity is multiplied by this.
+    default: "1"
+  swaps:
+    description: Also look for a cheaper in-stock drop-in for each line ("true" or "false").
+    default: "false"
+  comment:
+    description: Comment the result on the pull request ("true" or "false"). Needs pull-requests write permission.
+    default: "true"
+  fail-on-unavailable:
+    description: Fail the job when a line is not found, has no price or is short on stock ("true" or "false").
+    default: "false"
+  api:
+    description: The PartSourcer API to ask.
+    default: https://part-sourcer.vercel.app/api
+  github-token:
+    description: Token used to post the comment.
+    default: ${{ github.token }}
+
+outputs:
+  status:
+    description: '"ok" when every line can be bought, "unavailable" when at least one cannot.'
+    value: ${{ steps.check.outputs.status }}
+
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      # Inputs reach the script as environment variables, never pasted into
+      # it, so a crafted path or value cannot run as shell.
+      env:
+        PS_BOM: ${{ inputs.bom }}
+        PS_BOARDS: ${{ inputs.boards }}
+        PS_SWAPS: ${{ inputs.swaps }}
+        PARTSOURCER_API: ${{ inputs.api }}
+      run: |
+        args=(check "$PS_BOM" --boards "$PS_BOARDS")
+        if [ "$PS_SWAPS" = "true" ]; then args+=(--swaps); fi
+        set +e
+        python3 "$GITHUB_ACTION_PATH/partsourcer.py" "${args[@]}" > "$RUNNER_TEMP/partsourcer.txt" 2>&1
+        code=$?
+        set -e
+        cat "$RUNNER_TEMP/partsourcer.txt"
+        if [ "$code" -eq 2 ]; then exit 2; fi
+        if [ "$code" -eq 0 ]; then echo "status=ok" >> "$GITHUB_OUTPUT"; else echo "status=unavailable" >> "$GITHUB_OUTPUT"; fi
+        {
+          echo "<!-- partsourcer-bom-check -->"
+          echo "### PartSourcer BOM check"
+          echo
+          echo "\`$PS_BOM\` priced for $PS_BOARDS board(s):"
+          echo
+          echo '```'
+          cat "$RUNNER_TEMP/partsourcer.txt"
+          echo '```'
+        } > "$RUNNER_TEMP/partsourcer.md"
+        cat "$RUNNER_TEMP/partsourcer.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+      # One comment per pull request, found by its hidden marker and edited on
+      # each push, so nobody else's comment is ever touched.
+      run: |
+        id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+          --jq '[.[] | select(.body | startswith("<!-- partsourcer-bom-check -->"))][0].id // empty' | head -n 1)
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$RUNNER_TEMP/partsourcer.md" > /dev/null
+        else
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$RUNNER_TEMP/partsourcer.md" > /dev/null
+        fi
+
+    - if: inputs.fail-on-unavailable == 'true' && steps.check.outputs.status == 'unavailable'
+      shell: bash
+      run: |
+        echo "::error::Some BOM lines cannot be bought as listed. See the table above."
+        exit 1

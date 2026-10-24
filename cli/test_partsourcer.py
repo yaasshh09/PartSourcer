@@ -101,3 +101,15 @@ def test_exit_codes(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(ps, "check", lambda lines, boards=1, swaps=False: [{"mpn": "A", "qty": 1, "state": "missing"}])
     assert ps.main(["check", str(bom)]) == 1
     assert ps.main(["check", str(tmp_path / "nope.csv")]) == 2
+
+
+def test_the_action_never_pastes_an_expression_into_a_shell_script():
+    """Inputs go through env. A ${{ }} inside run: would let a crafted input run as shell."""
+    import pathlib
+    yaml = __import__("pytest").importorskip("yaml")
+    action = yaml.safe_load((pathlib.Path(__file__).parent / "action.yml").read_text(encoding="utf-8"))
+    steps = action["runs"]["steps"]
+    assert action["runs"]["using"] == "composite" and steps
+    for step in steps:
+        assert "${{" not in step.get("run", "")
+    assert {"bom", "boards", "swaps", "comment", "fail-on-unavailable"} <= set(action["inputs"])
