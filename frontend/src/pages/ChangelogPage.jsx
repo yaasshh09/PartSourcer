@@ -4,7 +4,31 @@ import useDocumentTitle from '../useDocumentTitle.js'
 // Newest first. Each line is something a visitor can see or use, written from
 // the commit that shipped it, so nothing here is a plan.
 export const RELEASES = [
+  { date: '2026-10-24', items: [
+    'A watchlist keeps parts in this browser and shows how price and stock moved since you added them.',
+    'Search results filter by in stock, package and distributor.',
+    'Searches for 0.1uF, 100n or 100 nF find the 100nF parts LCSC lists.',
+    'The search box suggests part numbers people have opened before.',
+    'Part pages link to a KiCad library search and copy the easyeda2kicad command.',
+    'A part a distributor calls obsolete or end of life is flagged, in that distributor's words.',
+    'Prices can be shown in EUR, GBP or INR at the dated ECB rate. Totals and exports stay in USD.',
+    'A status page shows how each distributor answered over the past day.',
+  ] },
+  { date: '2026-10-23', items: [
+    'A part page lists the other verified cheaper drop-ins under the main one.',
+    'A part page can suggest a better-spec part that costs no more.',
+    'A checked BOM downloads in the format JLCPCB assembly takes.',
+    'The BOM check says what the whole list costs from one distributor.',
+  ] },
+  { date: '2026-10-14', items: [
+    'Part pages chart recorded LCSC price and stock history.',
+    'Search cards flag a weekly price drop or stock fall.',
+    'An out-of-stock part says how long it usually takes to come back.',
+  ] },
   { date: '2026-10-13', items: [
+    'The BOM check finds cheaper drop-ins for its lines on request.',
+    'Search can show only JLC Basic and Preferred parts.',
+    'A part can carry a stock badge in a project README.',
     'The BOM check prices a list for any number of boards.',
     'A BOM line that would take most of a distributor\'s stock says so.',
     'KiCad, Altium and JLCPCB BOM exports load without editing.',
