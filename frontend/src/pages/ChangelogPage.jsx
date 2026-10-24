@@ -4,6 +4,10 @@ import useDocumentTitle from '../useDocumentTitle.js'
 // Newest first. Each line is something a visitor can see or use, written from
 // the commit that shipped it, so nothing here is a plan.
 export const RELEASES = [
+  { date: '2026-10-25', items: [
+    'Each part with price history has an RSS feed that only posts price moves and stock running out or coming back.',
+    'A downloaded BOM can no longer carry a spreadsheet formula from a shared link.',
+  ] },
   { date: '2026-10-24', items: [
     'A watchlist keeps parts in this browser and shows how price and stock moved since you added them.',
     'Search results filter by in stock, package and distributor.',
