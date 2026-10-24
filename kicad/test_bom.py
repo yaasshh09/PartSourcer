@@ -65,6 +65,13 @@ def test_a_manufacturer_number_wins_over_an_lcsc_code_and_dnp_parts_are_left_out
     assert lines == [{"mpn": "NE555P", "qty": 1, "refs": ["U1"]}]
 
 
+def test_a_p_slash_n_field_counts_as_a_part_number():
+    # KiCad's own CM5 demo board keeps its numbers in "P/N".
+    lines, missing = collect([Fp8("U1", **{"P/N": "SN74LVC1G14DBVR"}), Fp8("D1", **{"P/N": ""})])
+    assert lines == [{"mpn": "SN74LVC1G14DBVR", "qty": 1, "refs": ["U1"]}]
+    assert missing == ["D1"]
+
+
 def test_kicad_7_properties_are_read_the_same_way():
     assert fields_of(Fp7("C1", {"Manufacturer Part Number": "CL05B104KO5NNNC"})) == {
         "manufacturer part number": "CL05B104KO5NNNC"}

@@ -13,7 +13,7 @@ MAX_LINES = 40     # the site's cap per check
 # Part number fields as people name them, best first. An LCSC code works as
 # well as a manufacturer number, since the site finds a part by either.
 PART_FIELDS = ("mpn", "manufacturer part number", "manufacturer_part_number", "mfr part number",
-               "mfr. part #", "mfr pn", "pn", "lcsc", "lcsc part", "lcsc part #",
+               "mfr. part #", "mfr pn", "pn", "p/n", "part number", "lcsc", "lcsc part", "lcsc part #",
                "lcsc part number", "jlcpcb part #", "jlc part")
 
 

@@ -24,7 +24,7 @@ Tools > External Plugins.
 
 The first of these fields that has a value, case-insensitive: `MPN`,
 `Manufacturer Part Number`, `Mfr Part Number`, `Mfr. Part #`, `Mfr PN`, `PN`,
-`LCSC`, `LCSC Part`, `LCSC Part #`, `LCSC Part Number`, `JLCPCB Part #`.
+`P/N`, `Part Number`, `LCSC`, `LCSC Part`, `LCSC Part #`, `LCSC Part Number`, `JLCPCB Part #`.
 Footprints marked DNP or excluded from the BOM are skipped, and any without a
 part number are listed in a message so nothing is left out silently. The site
 checks up to 40 different parts at a time, so a bigger board opens more than
@@ -33,6 +33,7 @@ one page.
 Nothing is sent anywhere until the browser opens the page, and the list
 travels in the address, so it shows up in browser history.
 
-Tests (no KiCad needed): `python -m pytest kicad -q`. Not yet run inside a
-real KiCad; the board-reading code is written against the KiCad 7 and 8
-footprint APIs.
+Tests (no KiCad needed): `python -m pytest kicad -q`. The board reading has
+also been run under KiCad 10.0.4's own Python on its StickHub and CM5 demo
+boards, which is where the `P/N` field came from. The toolbar button itself
+has not been clicked in a running KiCad yet.
