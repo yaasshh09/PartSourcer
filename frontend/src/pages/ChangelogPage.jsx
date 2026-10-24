@@ -10,7 +10,7 @@ export const RELEASES = [
     'Searches for 0.1uF, 100n or 100 nF find the 100nF parts LCSC lists.',
     'The search box suggests part numbers people have opened before.',
     'Part pages link to a KiCad library search and copy the easyeda2kicad command.',
-    'A part a distributor calls obsolete or end of life is flagged, in that distributor's words.',
+    'A part a distributor calls obsolete or end of life is flagged, in the distributor\'s own words.',
     'Prices can be shown in EUR, GBP or INR at the dated ECB rate. Totals and exports stay in USD.',
     'A status page shows how each distributor answered over the past day.',
   ] },
