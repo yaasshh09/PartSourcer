@@ -86,6 +86,7 @@ does not mean rewriting anything.
 ```
 backend/    the API
 frontend/   the site
+cli/        price a BOM from a terminal (see cli/README.md)
 docs/       notes on the upstream data
 ```
 
