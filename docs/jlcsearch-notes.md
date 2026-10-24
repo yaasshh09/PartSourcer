@@ -195,3 +195,30 @@ attribute text we never receive. `lookup_mpn` is not filtered.
 What it still costs while upstream is broken: LCSC drops out of most searches,
 a cold part page for an LCSC-only part 404s, and the equivalent matcher's
 canonical re-read mostly finds nothing, so it answers with an honest null.
+
+## 2026-10-24: why equivalents stop at resistors and capacitors
+
+Measured against live `/mosfets`, `/diodes` and `/leds` list endpoints while
+scoping equivalents for more part types. The parametric fields are not
+reliable enough to call anything a drop-in:
+
+- **MOSFETs.** `continuous_drain_current` disagrees with the same row's own
+  `attributes` JSON on 12 of 83 SOT-23 rows, 7 of 54 SOP-8 and 6 of 59
+  TO-252 (10 to 14%). Example: 2N7002K has `continuous_drain_current: 0.5`
+  while its attributes say `300mA`. N or P channel and RDS(on) exist only in
+  the description and the attributes, under two different key spellings in
+  the same row. Same package does not settle pinout either.
+- **Diodes.** Of 69 SOD-123 parts with Zener part numbers (BZT, MMSZ, BZX),
+  33 are flagged `is_zener`. BZT52C5V6 is typed `general_purpose`. Forward and
+  reverse voltage are filled on 4 of 100 rows.
+- **LEDs.** `/leds/list.json?package=0603` returns 14 rows in total, and
+  `forward_voltage` is filled on 1 of them, so a pool is too small to find a
+  cheaper match and too sparse to check one.
+- **LDOs.** Not attempted: same package does not mean the same pinout
+  (SOT-23-5 regulators put enable and bypass on different pins), and nothing
+  in the data records it.
+
+A matcher reading these fields would publish wrong drop-ins, so the
+equivalent route keeps its honest null for every other type. Revisit with the
+official LCSC API or a cleaner source; the attributes JSON would need its own
+parser and a per-type spec list before any type is added.
