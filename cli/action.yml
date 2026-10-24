@@ -72,14 +72,21 @@ runs:
         GH_TOKEN: ${{ inputs.github-token }}
         PR: ${{ github.event.pull_request.number }}
       # One comment per pull request, found by its hidden marker and edited on
-      # each push, so nobody else's comment is ever touched.
+      # each push, so nobody else's comment is ever touched. A pull request
+      # from a fork gets a read-only token, so a failed post is a warning: the
+      # table is already in the job summary.
       run: |
-        id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
-          --jq '[.[] | select(.body | startswith("<!-- partsourcer-bom-check -->"))][0].id // empty' | head -n 1)
-        if [ -n "$id" ]; then
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$RUNNER_TEMP/partsourcer.md" > /dev/null
-        else
-          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$RUNNER_TEMP/partsourcer.md" > /dev/null
+        post() {
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- partsourcer-bom-check -->"))][0].id // empty' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$RUNNER_TEMP/partsourcer.md" > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$RUNNER_TEMP/partsourcer.md" > /dev/null
+          fi
+        }
+        if ! post; then
+          echo "::warning::Could not comment on the pull request (a fork's token is read-only). The table is in the job summary."
         fi
 
     - if: inputs.fail-on-unavailable == 'true' && steps.check.outputs.status == 'unavailable'
