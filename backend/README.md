@@ -154,6 +154,14 @@ deployment keeps no history (no `DATABASE_URL`), which is not the same as a
 part with no rows yet. A store that fails is a 503, never an empty list.
 Cached for an hour.
 
+### `GET /api/feed/<mpn_key>`
+RSS 2.0 built from the same rows over the past year: one item for the first
+reading, then one per price change and per flip out of or back into stock.
+Day-to-day stock drift is not an item, so a reader only lights up for news.
+Newest 20 items, guid is `<mpn_key>@<recorded_at>` so readers do not repeat
+them. 404 with no `DATABASE_URL`, 503 when the store fails, an empty channel
+for a part with no rows. Cached for an hour.
+
 ### `GET /api/trends?keys=<k1>&keys=<k2>`
 Week-on-week LCSC change for up to 50 parts in one call, for search cards:
 `{ recording, days: 7, trends: { <mpn_key>: { price_pct, stock_pct, from, to } } }`.
