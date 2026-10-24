@@ -433,3 +433,13 @@ test('says nothing extra when one distributor already wins every line', async ()
   await waitFor(() => expect(screen.getByText(/1 of 1 lines can be ordered/i)).toBeInTheDocument())
   expect(screen.queryByText(/more than splitting|no single distributor/i)).toBeNull()
 })
+
+test('every BOM cell carries the label of its column, for the stacked phone layout', async () => {
+  mockParts()
+  const { container } = renderPage()
+  check('NE555P 5')
+  await waitFor(() => expect(screen.getByTestId('bom-total')).toBeInTheDocument())
+  const heads = [...container.querySelectorAll('table.ps-bom thead th')].map((th) => th.textContent)
+  const firstRow = container.querySelector('table.ps-bom tbody tr')
+  expect([...firstRow.querySelectorAll('td')].map((td) => td.dataset.label)).toEqual(heads)
+})

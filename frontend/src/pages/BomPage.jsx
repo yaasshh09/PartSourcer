@@ -417,7 +417,9 @@ export default function BomPage() {
 
           {/* Scrolls inside its own box so the page never scrolls sideways. */}
           <div style={{ overflowX: 'auto', border: `3px solid ${C.ink}`, background: C.paper }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 760 }}>
+            {/* A table on a wide screen, a stack of labelled cards on a phone:
+                the ps-bom rules in index.css read each cell's data-label. */}
+            <table className="ps-bom" style={{ borderCollapse: 'collapse', width: '100%', minWidth: 760 }}>
               <thead>
                 <tr>
                   {['Part', 'Qty', 'Status', 'From', 'Unit price', 'Line total', 'Note'].map((h) => (
@@ -429,10 +431,10 @@ export default function BomPage() {
                 {rows.map((r) => (
                   <Fragment key={r.mpn}>
                   <tr>
-                    <td style={{ ...cell, fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                    <td data-label="Part" style={{ ...cell, fontFamily: MONO, whiteSpace: 'nowrap' }}>
                       {r.key ? <Link className="ps-link" to={`/part/${encodeKey(r.key)}?qty=${r.qty}`}>{r.mpn}</Link> : r.mpn}
                     </td>
-                    <td style={cell}>
+                    <td data-label="Qty" style={cell}>
                       {r.qty.toLocaleString('en-US')}
                       {checkedBoards > 1 ? (
                         <div style={{ ...muted, fontSize: 12 }}>
@@ -440,10 +442,10 @@ export default function BomPage() {
                         </div>
                       ) : null}
                     </td>
-                    <td style={{ ...cell, color: STATE_COLOR[r.state], whiteSpace: 'nowrap' }}>
+                    <td data-label="Status" style={{ ...cell, color: STATE_COLOR[r.state], whiteSpace: 'nowrap' }}>
                       {STATE_LABEL[r.state]}
                     </td>
-                    <td style={cell}>
+                    <td data-label="From" style={cell}>
                       {r.state === 'ok' ? (
                         <>
                           {DISTRIBUTOR_LABEL[r.offer.distributor] || r.offer.distributor}
@@ -456,13 +458,13 @@ export default function BomPage() {
                         </>
                       ) : <span style={muted}>-</span>}
                     </td>
-                    <td style={{ ...cell, fontFamily: MONO }}>
+                    <td data-label="Unit price" style={{ ...cell, fontFamily: MONO }}>
                       {r.state === 'ok' ? fmtUnit(r.unit) : <span style={muted}>-</span>}
                     </td>
-                    <td style={{ ...cell, fontFamily: MONO }}>
+                    <td data-label="Line total" style={{ ...cell, fontFamily: MONO }}>
                       {r.state === 'ok' ? fmtPrice(Math.round(r.total * 10000) / 10000) : <span style={muted}>-</span>}
                     </td>
-                    <td style={{ ...cell, ...muted, fontSize: 13 }}>
+                    <td data-label="Note" style={{ ...cell, ...muted, fontSize: 13 }}>
                       {r.state === 'ok' ? (
                         <>
                           {r.note || ''}

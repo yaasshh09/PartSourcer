@@ -157,3 +157,24 @@ button { cursor: pointer; }
   }
   .ps-lift:hover, .ps-press:hover:not(:disabled) { transform: none; }
 }
+
+/* The BOM table on a phone. Seven columns need about 760px, so below 640px
+   each line becomes a card: one label and value per row, the labels taken
+   from data-label so they always match the header. The !important lines
+   beat the inline styles the wide layout needs. */
+@media (max-width: 640px) {
+  .ps-bom { min-width: 0 !important; }
+  .ps-bom thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .ps-bom tr, .ps-bom td { display: block; }
+  .ps-bom td[data-label] {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    text-align: right; border-top: none !important; padding: 4px 14px !important;
+    white-space: normal !important; overflow-wrap: anywhere;
+  }
+  .ps-bom td[data-label]::before {
+    content: attr(data-label); flex: 0 0 auto; text-align: left;
+    font-style: normal; font-weight: 700; font-size: 12px; color: #6a6858;
+  }
+  .ps-bom td[data-label="Part"] { border-top: 2px solid #e6e2d2 !important; padding-top: 12px !important; }
+  .ps-bom td[data-label]:empty { display: none; }
+}
