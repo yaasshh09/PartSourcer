@@ -192,8 +192,11 @@ export const STATE_LABEL = {
   error: 'could not check', loading: 'checking',
 }
 
+// A leading = + - @ makes Excel run the cell as a formula, and a shared link
+// lets someone else choose the text, so those cells are forced to text.
 const cell = (v) => {
-  const s = v == null ? '' : String(v)
+  let s = v == null ? '' : String(v)
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 

@@ -185,6 +185,17 @@ describe('toCsv', () => {
     expect(rows[2]).toBe('"A,B",1,not found,,,,,,')
   })
 
+  test('a cell a spreadsheet would run as a formula is written as text', () => {
+    // A shared link carries its lines, so the sender picks what lands in the file.
+    const csv = toCsv([{ mpn: '=HYPERLINK("http://x")', qty: 1, state: 'missing' },
+      { mpn: '@SUM(A1)', qty: 1, state: 'missing' }, { mpn: '+1', qty: 1, state: 'missing' }])
+    const rows = csv.trim().split('\n')
+    expect(rows[1]).toBe(`"'=HYPERLINK(""http://x"")",1,not found,,,,,,`)
+    expect(rows[2]).toBe("'@SUM(A1),1,not found,,,,,,")
+    expect(rows[3]).toBe("'+1,1,not found,,,,,,")
+    expect(toJlcBom([{ mpn: '-CMD', refs: 'R1' }]).split('\n')[1]).toBe("'-CMD,R1,,")
+  })
+
   test('the note says when an order takes most of the stock', () => {
     const csv = toCsv([{ mpn: 'X', qty: 100, state: 'ok', offer: { distributor: 'lcsc', sku: 'C1', stock: 150 },
       unit: 0.1, orderQty: 100, total: 10, note: null, thin: true }])
