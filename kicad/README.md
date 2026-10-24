@@ -11,7 +11,7 @@ JLCPCB assembly BOM can be downloaded, since the designators come along.
 Copy the `partsourcer` folder into KiCad's plugin folder, then in the PCB
 editor use Tools > External Plugins > Refresh Plugins.
 
-| OS | Plugin folder (KiCad 8; use 7.0 or 9.0 for those versions) |
+| OS | Plugin folder (KiCad 8; use 7.0, 9.0 or 10.0 for those versions) |
 |---|---|
 | Windows | `Documents\KiCad\8.0\scripting\plugins` |
 | macOS | `~/Documents/KiCad/8.0/scripting/plugins` |
