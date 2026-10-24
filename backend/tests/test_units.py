@@ -79,11 +79,13 @@ def test_moved_formatters_are_unchanged():
 @pytest.mark.parametrize("typed,sent", [
     ("0.1uF 0402", "100nF 0402"),
     (".1uf", "100nF"),
-    ("100n 0402", "100nF 0402"),
+    ("100n 0402", "100n 0402"),
+    ("0.1u 0402", "100nF 0402"),
+    ("2u2", "2.2uF"),
     ("100 nF", "100nF"),
     ("4n7", "4.7nF"),
     ("4700pF", "4.7nF"),
-    ("10u 25V", "10uF 25V"),
+    ("10u 25V", "10u 25V"),
     ("1000uF", "1000uF"),
     ("100NF", "100nF"),
     # Part numbers and other units are left exactly as typed.

@@ -55,11 +55,13 @@ A distributor that fails is a `sources` entry, not an error: the response is
 still `200`. Only a total failure of every callable distributor is a `502`.
 
 Capacitances in `q` are respelled the way LCSC lists them before anything is
-sent or cached: `0.1uF`, `100n`, `100 nF` and `.1uf` all search as `100nF`,
-and `4700pF` as `4.7nF`. `query` in the response is what was actually sent, so
-the page can say so. Upstream splits on punctuation and substring-matches each
-piece, which turned `0.1uF` into `1uf`. Resistances and part numbers are left
-as typed (`4k7` appears inside many MPNs; `1N4148` is not 1 nF).
+sent or cached: `0.1uF`, `0.1u`, `100 nF` and `.1uf` all search as `100nF`,
+`4n7` as `4.7nF`, and `4700pF` as `4.7nF`. `query` in the response is what was
+actually sent, so the page can say so. Upstream splits on punctuation and
+substring-matches each piece, which turned `0.1uF` into `1uf`. A bare whole
+number like `100n` is left alone, since it already matches `100nF` upstream
+and adding the F would drop `100nH` inductors. Resistances and part numbers
+are left as typed (`4k7` appears inside many MPNs; `1N4148` is not 1 nF).
 
 ### `GET /api/part/<mpn_key>?refresh=false`
 `{"part": {...}, "sources": [...]}`, the same `Part` shape as a search result.

@@ -74,7 +74,7 @@ def fmt_farads(f: float) -> str:
     return f"{f * 1e12:g} pF"
 
 
-# A capacitance as people type it: 0.1uF, 100 nF, 100n, 4n7. A bare prefix
+# A capacitance as people type it: 0.1uF, 100 nF, 0.1u, 4n7. A bare prefix
 # with no F counts only when nothing but one digit follows it, so 1N4148,
 # 2N2222 and ATmega328P are never read as values.
 _CAP_TYPED = re.compile(
@@ -86,6 +86,11 @@ def _cap_spelling(m: re.Match) -> str:
     if m.group(1) is not None:
         typed = m.group(1) + m.group(2).lower()
     else:
+        # A bare whole number like 100n already substring-matches 100nF
+        # upstream, and adding the F would drop 100nH inductors from the
+        # results, so only the forms upstream gets wrong are rewritten.
+        if "." not in m.group(3) and not m.group(5):
+            return m.group(0)
         typed = m.group(3) + m.group(4).lower() + m.group(5)
     try:
         farads = parse_si(typed, "F")
