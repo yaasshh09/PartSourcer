@@ -13,6 +13,8 @@ export const ENDPOINTS = [
   { path: '/api/history/STM32F103C8T6?days=90', what: 'Nightly LCSC price and stock readings, oldest first. recording: false means this site keeps none.' },
   { path: '/api/trends?keys=STM32F103C8T6&keys=NE555DR', what: 'Week-on-week LCSC price and stock change for up to 50 parts.' },
   { path: '/api/badge/STM32F103C8T6', what: 'An SVG stock badge for a README.' },
+  { path: '/api/og/part/STM32F103C8T6', what: 'A 1200 by 630 PNG preview card with the price, stock and when they were read.' },
+  { path: '/api/share/part/STM32F103C8T6', what: 'A link to paste in chat: it shows that card as the preview and opens the part page.' },
   { path: '/api/suggest?q=stm32', what: 'Part numbers opened here that start with what was typed.' },
   { path: '/api/fx', what: 'The ECB reference rates the site uses to show prices in EUR, GBP and INR.' },
   { path: '/api/status', what: 'How each distributor answered real requests over the past day.' },

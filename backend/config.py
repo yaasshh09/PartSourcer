@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     digikey_base_url: str = "https://api.digikey.com"
     mouser_base_url: str = "https://api.mouser.com"
     fx_base_url: str = "https://api.frankfurter.dev"
+    # The public site, for links the API writes into share pages. Config, not
+    # the request Host header, so a forged header cannot rewrite them.
+    site_url: str = "https://part-sourcer.vercel.app"
     distributor_timeout_secs: float = 8.0
 
     # Per-distributor daily call ceilings. None means unlimited, which is what

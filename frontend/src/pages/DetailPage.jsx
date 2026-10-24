@@ -247,7 +247,11 @@ export default function DetailPage() {
           </div>
           {/* Markdown for a project README: the image is the live badge, the
               link is this page, so a reader can check what it says. */}
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* Opens this page, but chat apps and social sites see a card
+                with the price, stock and when they were read. */}
+            <CopyButton label="Copy share link" text="Copy share link"
+              value={`${window.location.origin}/api/share/part/${encodeKey(part.mpn_key)}`} />
             <CopyButton label="Copy README badge" text="Copy README badge"
               value={`[![PartSourcer stock](${window.location.origin}/api/badge/${encodeKey(part.mpn_key)})](${window.location.origin}/part/${encodeKey(part.mpn_key)})`} />
           </div>

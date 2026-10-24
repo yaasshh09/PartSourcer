@@ -132,6 +132,18 @@ state is a 200 SVG (`not found`, `unavailable`, `out of stock`), because a
 README shows a broken image for anything else. `Cache-Control` is one hour
 for a real answer, the stock TTL, and five minutes for an error.
 
+### `GET /api/og/part/<mpn_key>` and `GET /api/share/part/<mpn_key>`
+Link previews. `og` draws a 1200x630 PNG card from the same cached part the
+page reads: the part number, the headline price named with its distributor
+(never called the cheapest), stock across distributors, and the time it was
+read, since chat apps and social sites cache a preview for a long time. Every
+failure is still a PNG, a generic card cached for 5 minutes. `share` is the
+link to paste: an HTML page whose Open Graph tags point at the card and which
+sends a person straight on to `/part/<mpn_key>`. Links in it are built from
+`SITE_URL` (default `https://part-sourcer.vercel.app`), never from the request
+Host header. Needs Pillow; text uses Pillow's built-in scalable font, so no
+font file ships.
+
 ### `GET /api/history/<mpn_key>?days=90`
 The nightly recorder's rows for one part, oldest first:
 `{ mpn_key, distributor: "lcsc", recording, points: [{ at, price_usd, stock }] }`.
