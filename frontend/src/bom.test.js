@@ -378,3 +378,9 @@ describe('one distributor or a split order', () => {
     expect(summarizeBaskets(rows).best).toEqual({ distributor: 'mouser', total: 4, covered: 2 })
   })
 })
+
+// kicad/partsourcer/bom.py writes exactly this. Kept here so the two cannot drift.
+test('reads the list the KiCad plugin sends, designators and all', () => {
+  expect(parseBom('MPN,Qty,Designator\nR10K,2,"R1,R2"\nC8734,1,"U1"').lines).toEqual([
+    { mpn: 'R10K', qty: 2, refs: 'R1,R2' }, { mpn: 'C8734', qty: 1, refs: 'U1' }])
+})

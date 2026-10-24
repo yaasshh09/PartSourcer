@@ -87,6 +87,7 @@ does not mean rewriting anything.
 backend/    the API
 frontend/   the site
 cli/        price a BOM from a terminal (see cli/README.md)
+kicad/      a KiCad plugin that prices the open board (see kicad/README.md)
 docs/       notes on the upstream data
 ```
 
