@@ -65,6 +65,12 @@ def test_items_have_stable_guids_and_dates():
     assert guids == [i.findtext("guid") for i in ET.fromstring(get(store).text).iter("item")]
 
 
+def test_a_change_too_small_to_show_is_not_a_price_move():
+    store = InMemoryHistoryStore()
+    store.records = [row(2, 0.0021), row(1, 0.00210000001)]
+    assert len(titles(get(store))) == 1
+
+
 def test_a_part_with_no_rows_is_an_empty_feed_not_an_error():
     resp = get(InMemoryHistoryStore())
     assert resp.status_code == 200 and titles(resp) == []

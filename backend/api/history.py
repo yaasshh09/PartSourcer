@@ -114,9 +114,10 @@ def _events(key: str, rows: list) -> list[tuple[str, object]]:
     first = rows[0]
     out = [(f"{key} first reading: {_money(first.price_usd)}, {first.stock:,} in stock at LCSC", first)]
     for prev, cur in zip(rows, rows[1:]):
-        if cur.price_usd != prev.price_usd:
-            out.append((f"{key} price went from {_money(prev.price_usd)} to "
-                        f"{_money(cur.price_usd)} at LCSC", cur))
+        # Compared as printed, so float noise never posts "$0.0021 to $0.0021".
+        was, now = _money(prev.price_usd), _money(cur.price_usd)
+        if was != now:
+            out.append((f"{key} price went from {was} to {now} at LCSC", cur))
         if prev.in_stock and not cur.in_stock:
             out.append((f"{key} out of stock at LCSC", cur))
         elif cur.in_stock and not prev.in_stock:
