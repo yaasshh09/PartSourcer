@@ -196,6 +196,13 @@ What it still costs while upstream is broken: LCSC drops out of most searches,
 a cold part page for an LCSC-only part 404s, and the equivalent matcher's
 canonical re-read mostly finds nothing, so it answers with an honest null.
 
+Re-checked 2026-10-25: still broken. `search=STM32F103C8T6` returns three
+unrelated parts and `RC0402FR-0710KL` returns none. Code lookups are patchy:
+`C8734` resolves, `C25744` (0402WGF1002TCE) and `C307331` return nothing. Live
+`/api/equivalent` for 0402WGF1002TCE, CL05B104KO5NNNC and 0603WAF1002T5E all
+answer "no LCSC listing". tscircuit/jlcsearch#611 is open with no maintainer
+reply.
+
 ## 2026-10-24: why equivalents stop at resistors and capacitors
 
 Measured against live `/mosfets`, `/diodes` and `/leds` list endpoints while
