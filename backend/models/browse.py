@@ -32,7 +32,7 @@ class BrowseRow(BaseModel):
     mpn_key: str
     lcsc: str
     package: str
-    stock: int
+    stock: int | None
     specs: list[tuple[str, str | None]]
 
 

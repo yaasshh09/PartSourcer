@@ -271,3 +271,14 @@ def test_map_row_copies_only_what_it_names():
     from services.browse import map_row
     row = map_row(CATEGORIES["resistors"], RES)
     assert set(row) == {"mpn", "mpn_key", "lcsc", "package", "stock", "specs"}
+
+
+def test_a_stock_upstream_did_not_publish_stays_null():
+    # Upstream sends null where it has no count and 0 where it has none.
+    # On 2026-10-27 C25804, usually millions in stock, came back null.
+    from models.browse import BrowseRow
+    from services.browse import map_row
+    unknown = map_row(CATEGORIES["resistors"], dict(RES, stock=None))
+    assert unknown["stock"] is None
+    assert BrowseRow(**unknown).stock is None
+    assert map_row(CATEGORIES["resistors"], dict(RES, stock=0))["stock"] == 0

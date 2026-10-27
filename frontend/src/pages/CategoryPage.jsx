@@ -161,7 +161,7 @@ export default function CategoryPage() {
           {/* Upstream lost rows in a catalog import: AMS1117-3.3 is absent and
               every SOT-23-5 LDO reads zero stock. Drop this once #611 closes. */}
           <p style={{ fontSize: 12, color: C.sub, fontWeight: 600, margin: '0 0 14px' }}>
-            {"Upstream's LCSC catalog is incomplete right now, so some well-stocked parts are missing from these lists and some stock reads zero. Tracked in "}
+            {"Upstream's LCSC catalog is incomplete right now, so some well-stocked parts are missing from these lists and some carry no stock count at all. Tracked in "}
             <a className="ps-link" href="https://github.com/tscircuit/jlcsearch/issues/611" target="_blank"
               rel="noopener noreferrer" style={{ color: C.ink }}>jlcsearch#611</a>.
           </p>

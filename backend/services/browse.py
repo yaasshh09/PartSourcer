@@ -242,7 +242,8 @@ def map_row(cat: Category, raw: dict) -> dict | None:
         return None
     return {"mpn": mpn, "mpn_key": key, "lcsc": f"C{code}",
             "package": str(raw.get("package") or ""),
-            "stock": int(raw.get("stock") or 0),
+            # null is upstream having no count, which is not a count of zero.
+            "stock": None if raw.get("stock") is None else int(raw["stock"]),
             "specs": [[c.label, c.read(raw)] for c in cat.columns]}
 
 

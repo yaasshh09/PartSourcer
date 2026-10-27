@@ -28,6 +28,12 @@ describe('stockInfo', () => {
     expect(s.bg).toBe('#111')
     expect(s.label).toBe('OUT OF STOCK')
   })
+  test('unpublished stock is named, never read as zero', () => {
+    // Upstream sends null for a part it has no count for, and 0 for one it
+    // has none of. Calling the first OUT OF STOCK would be a claim we lack.
+    expect(stockInfo(null).label).toBe('STOCK NOT LISTED')
+    expect(stockInfo(undefined).label).toBe('STOCK NOT LISTED')
+  })
 })
 
 describe('fmtAsOf', () => {

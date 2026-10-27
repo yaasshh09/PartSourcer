@@ -55,6 +55,9 @@ export function fmtUsd(p) {
 }
 
 export function stockInfo(stock) {
+  // Browse rows carry null where upstream published no count, which is not
+  // the same as a count of zero.
+  if (stock == null) return { bg: '#e8e5d6', color: C.ink, label: 'STOCK NOT LISTED' }
   const n = Number(stock) || 0
   if (n >= 3000) return { bg: '#38d17a', color: '#062c16', label: n.toLocaleString() + ' IN STOCK' }
   if (n > 0) return { bg: '#ffb02e', color: '#3a2500', label: n.toLocaleString() + ' LOW' }
