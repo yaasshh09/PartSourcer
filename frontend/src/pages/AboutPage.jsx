@@ -61,20 +61,20 @@ export default function AboutPage() {
         A FREE TOOL FOR BUILDERS ON A BUDGET.
       </h1>
       <p style={{ ...body, fontSize: 18, margin: '20px 0 0' }}>
-        Every hardware builder hits the same wall: finding a part that&apos;s actually in stock, at a good price,
-        with a known footprint. Doing it by hand across distributor sites is slow and painful. PartSourcer does it
+        Finding a part that&apos;s actually in stock, at a good price, with a known footprint, means checking
+        distributor sites one by one, and that is slow. PartSourcer does it
         in one search.
       </p>
 
       <div style={sectionTitle}>THE PROBLEM</div>
       <p style={{ ...body, margin: '14px 0 0' }}>
-        Sourcing a board is not one hard question, it is fifty easy ones asked fifty times. For every line of a
+        Sourcing a board is fifty easy questions, each asked fifty times. For every line of a
         bill of materials you open the same handful of distributor sites, type the same part number, and compare
         numbers that are formatted differently, priced in different quantity breaks, and updated on different
         schedules. Half an hour later you have a spreadsheet nobody else can check.
       </p>
       <p style={{ ...body, margin: '14px 0 0' }}>
-        The expensive part is not the search. It is that the answer goes stale the moment you write it down, and
+        The expensive part is that the answer goes stale the moment you write it down, and
         that a part which looked available on Tuesday can be gone on Thursday with nothing in your notes to tell
         you which it was. PartSourcer collapses that loop into one query and stamps every figure with the time it
         was read, so the answer carries its own expiry date.
@@ -115,7 +115,7 @@ export default function AboutPage() {
       <p style={{ ...body, margin: '14px 0 0' }}>
         The cheaper-equivalent matcher covers resistors and capacitors, because those are the parts the upstream
         catalogue gives real parametric specs for. Ask it about a microcontroller and it will tell you it cannot
-        verify a drop-in, which is the correct answer rather than a missing feature. Some fields are simply
+        verify a drop-in, which is the correct answer rather than a missing feature. Some fields are
         absent from some distributors, and where that happens the page leaves the line out instead of printing a
         placeholder.
       </p>

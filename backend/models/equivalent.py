@@ -1,4 +1,4 @@
-"""Response models for GET /api/equivalent/<mpn_key> (spec §9)."""
+"""Response models for GET /api/equivalent/<mpn_key>."""
 
 from datetime import datetime
 

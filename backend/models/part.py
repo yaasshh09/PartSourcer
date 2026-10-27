@@ -5,7 +5,7 @@ This is what LcscMatcherSource hands the matcher, kept because the matcher is
 v1 logic that reads LCSC parametric data and was deliberately not rewritten.
 price_breaks and stock_breakdown are typed to hold real structures once the
 official LCSC API lands, but are always null over jlcsearch (which has no
-price ladder or per-warehouse stock; honesty, §5).
+price ladder or per-warehouse stock).
 """
 
 from datetime import datetime

@@ -1,4 +1,4 @@
-"""Unit tests for the PartDetail response model (spec §9 detail)."""
+"""Unit tests for the PartDetail response model."""
 
 from datetime import datetime, timezone
 

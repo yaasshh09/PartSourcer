@@ -13,12 +13,11 @@ import { C, ARCHIVO, MONO } from '../theme.js'
 
 const STEPS = [
   { n: '1', title: 'Search a part', body: 'By manufacturer part number, LCSC code, or plain-text spec.' },
-  { n: '2', title: 'See stock & price', body: 'Package, stock, unit price and datasheet, all scannable.' },
-  { n: '3', title: 'Get a cheaper swap 💡', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
+  { n: '2', title: 'See stock & price', body: 'Package, stock, unit price and datasheet on one page.' },
+  { n: '3', title: 'Get a cheaper swap', body: "One drop-in equivalent that's in stock and costs less.", accent: true },
 ]
 
 const FUTURE = [
-  { title: 'Price history', body: 'The nightly recorder is already writing the series. The charts that read it are what is still missing.' },
   { title: 'Biggest savings this week', body: 'A public list of the swaps currently worth the most, so you can find one without searching first.' },
 ]
 
@@ -85,7 +84,7 @@ export default function Landing() {
 
       <div style={{ border: `3px solid ${C.ink}`, background: C.ink, color: C.bg, padding: 26 }}>
         <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14, color: C.yellow }}>
-          EQUIVALENT OR NOTHING: THE LINE NEVER BLURS
+          EQUIVALENT OR NO MATCH
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 22, marginTop: 16 }}>
           <div>
@@ -97,7 +96,7 @@ export default function Landing() {
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: '#ffb02e' }}>✗ No match</div>
             <div style={{ fontSize: 14, fontWeight: 500, color: '#e6e2d4', marginTop: 6 }}>
-              Close is not good enough. If a drop-in cannot be verified you get a plain no and the reason why, never a maybe.
+              Close does not count. If a drop-in cannot be verified you get a plain no and the reason why.
             </div>
           </div>
         </div>
@@ -143,7 +142,7 @@ export default function Landing() {
             </div>
             <div style={{ fontSize: 13, color: C.sub, fontWeight: 500, marginTop: 14, lineHeight: 1.6 }}>
               A timer is not a resistor or a capacitor, so this one would come back with{' '}
-              <b>no verified drop-in</b> and the reason why. That is the honest answer, not a missing feature.
+              <b>no verified drop-in</b> and the reason why.
             </div>
           </div>
         </div>
@@ -151,7 +150,7 @@ export default function Landing() {
 
       <Section
         title="FUTURE PLANS"
-        lead="What is being built next. None of it is on the site yet, so none of it is described as though it were.">
+        lead="What is being built next. It is not on the site yet.">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: 16, marginTop: 18 }}>
           {FUTURE.map((f) => (

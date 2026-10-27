@@ -1,8 +1,7 @@
 # jlcsearch API: Reference & Field Mapping
 
-> Real, verified notes for the PartSourcer backend data source. Written from live
-> requests on 2026-07-10. Source of truth for building the datasource abstraction
-> and `/api/search` (Prompt 3). Sample responses live in `docs/api-samples/`.
+> Notes on the backend's LCSC data source, written from live requests on
+> 2026-07-10. Sample responses live in `docs/api-samples/`.
 
 **Base URL:** `https://jlcsearch.tscircuit.com`
 
@@ -18,7 +17,7 @@ All endpoints read from **one backing database**, the open [`yaqwsx/jlcparts`](h
 | Resistor parametric | `/resistors/list.json?package=<pkg>&resistance=<val>` | GET | `package`, `resistance` (e.g. `10k`) | `resistors` |
 | Capacitor parametric | `/capacitors/list.json?package=<pkg>` | GET | `package` (and other spec filters) | `capacitors` |
 
-Each response is `{ "<envelope key>": [ {...}, ... ] }`. Parametric endpoints follow the pattern `/<component-type>/list.json`, and the same shape exists for other component types (used later by the equivalent-matcher, Prompt 6).
+Each response is `{ "<envelope key>": [ {...}, ... ] }`. Parametric endpoints follow the pattern `/<component-type>/list.json`, and the same shape exists for other component types (the equivalent matcher reads them).
 
 ### Verified per-item fields
 
@@ -33,15 +32,15 @@ Each response is `{ "<envelope key>": [ {...}, ... ] }`. Parametric endpoints fo
 
 ---
 
-## Field mapping → section-9 schema
+## Field mapping to our part model
 
-Our internal search result (spec §9) maps from upstream as follows:
+Our search result maps from upstream as follows:
 
-| Section-9 field | Source | Transform / notes |
+| Our field | Source | Transform / notes |
 |---|---|---|
 | `lcsc` | `lcsc` (int) | Prefix with `C` → `"C" + str(lcsc)` (e.g. `8734` → `"C8734"`). Upstream is a bare integer. |
 | `mpn` | `mfr` | Direct. `mfr` **is the manufacturer part number**, not the maker. |
-| `brand` | n/a | **`null`.** No manufacturer-name field exists upstream. Documented gap; do not guess from the MPN prefix (honesty, §5). |
+| `brand` | n/a | **`null`.** No manufacturer-name field exists upstream. Documented gap; do not guess from the MPN prefix. |
 | `package` | `package` | Direct (e.g. `"LQFP-48(7x7)"`, `"0402"`). |
 | `description` | `description` | Direct, but **usually empty** in this dataset. May compose from specs later if needed. |
 | `stock` | `stock` | Direct (int). |
@@ -50,24 +49,24 @@ Our internal search result (spec §9) maps from upstream as follows:
 | `as_of` | *(none)* | Set by **our backend** to the real fetch time (ISO-8601, UTC). Not provided upstream. |
 
 ### `datasheet_url` fallbacks (documented, not used in v1)
-- **Product-detail link (derivable):** `https://jlcpcb.com/partdetail/C<lcsc>` returns HTTP 200. This is a **product page, not a datasheet PDF**, so only use it if the UI labels it "product page", never "datasheet" (honesty, §5). (LCSC's own `lcsc.com/product-detail/...` returned 403, bot-blocked.)
+- **Product-detail link (derivable):** `https://jlcpcb.com/partdetail/C<lcsc>` returns HTTP 200. This is a **product page, not a datasheet PDF**, so only use it if the UI labels it "product page", never "datasheet". (LCSC's own `lcsc.com/product-detail/...` returned 403, bot-blocked.)
 - **jlcparts dataset:** the underlying `yaqwsx/jlcparts` database **does** carry real datasheet URLs; jlcsearch just doesn't expose them over these endpoints. This is the honest long-term source, aligned with the "swap the data layer later" plan.
 
 ---
 
-## Gotchas (read before writing the datasource)
+## Gotchas
 
 - **`lcsc` is an integer**, not `"C…"`. Always format with a `C` prefix for our API and for building links.
 - **`description` is usually empty**, so don't rely on it for display.
-- **`page` is ignored** by `/api/search`; only `limit` narrows the result set. Our `?page=N` pagination (spec §9) must be implemented in **our** layer (e.g. fetch with a limit and slice, or window client-side), not delegated upstream.
+- **`page` is ignored** by `/api/search`; only `limit` narrows the result set. Our `?page=N` pagination must be implemented in **our** layer (e.g. fetch with a limit and slice, or window client-side), not delegated upstream.
 - **`attributes` is a JSON-encoded *string***, not a nested object, so it requires a second `json.loads(...)`. Example (resistor): `"{\"Resistance\":\"10Ω\",\"Power(Watts)\":\"62.5mW\",...}"`.
 - **`in_stock`** (bool) accompanies parametric rows alongside the numeric `stock`.
 - **Price field name differs:** `price` on search, `price1` on parametric endpoints.
-- **No per-part detail endpoint**, so Prompt 5 (`/api/part/<code>`) must assemble detail from the search/parametric data, not a dedicated upstream detail call.
+- **No per-part detail endpoint**, so `/api/part/<code>` assembles detail from the search/parametric data, not a dedicated upstream detail call.
 
 ---
 
-## Data freshness reality (honesty, §5)
+## Data freshness
 
 **None of these endpoints are live-to-the-second.** They all serve the same periodic **jlcparts snapshot**, which is synced from LCSC roughly daily, not a live feed from LCSC's warehouse.
 
@@ -78,16 +77,16 @@ Consequences:
 
 ---
 
-## Matcher-relevant fields (for Prompt 6)
+## Matcher-relevant fields
 
 The parametric endpoints give clean, filterable specs, the equivalent-matcher's core input:
 
 - **Resistor:** `resistance` (ohms), `tolerance_fraction`, `power_watts`, `package`. Filter via `?package=&resistance=`.
 - **Capacitor:** `capacitance_farads`, `voltage_rating` (V), `tolerance_fraction`, `temperature_coefficient` (dielectric, e.g. `X7R`), `package`. Filter via `?package=` only (see gotchas: value filter does NOT work).
 
-These map onto the §10 matcher rules (same package hard requirement; exact resistance/capacitance; equal-or-tighter tolerance; equal-or-higher power/voltage; equal-or-better dielectric).
+These map onto the matcher rules (same package hard requirement; exact resistance/capacitance; equal-or-tighter tolerance; equal-or-higher power/voltage; equal-or-better dielectric).
 
-### Verified upstream constraints (live-probed 2026-07-11, Prompt 6 de-risking)
+### Verified upstream constraints (live-probed 2026-07-11)
 
 These four facts hard-shape the matcher design, all confirmed against live upstream:
 
@@ -152,16 +151,14 @@ with individual claims of 82% (true 12%), 94% (true 32%) and 26% (true 3%).
 
 ---
 
-## Getting realtime data (upgrade paths: post-v1, out of scope §6)
+## Getting realtime data
 
-v1 deliberately trades live-to-the-second data for a free, open, no-approval, parametric source. When realtime is warranted, in order of fit:
+The LCSC side trades live-to-the-second data for a free, open, no-approval,
+parametric source. Ways to get live data, in order of fit:
 
-1. **Official LCSC API**: the intended swap. Live LCSC stock/price. Needs an LCSC **business account + application/evaluation** (slow; spec §7 says don't block on it). Drops in behind the `PartDataSource` abstraction (Prompt 3) without rewriting the backend.
-2. **Distributor / aggregator APIs**: genuinely realtime, but multi-distributor (explicitly **not** in v1, §6):
-   - **Digi-Key API**: free developer program, OAuth, real-time stock/price.
-   - **Mouser API**: free key, real-time search/stock/price.
-   - **Octopart / Nexar API (Altium)**: aggregates many distributors' live data in one call; free tier limited by monthly queries.
-3. **Scraping LCSC directly: do not.** Forbidden by spec §15; LCSC already bot-blocks (403).
+1. **Official LCSC API**: the intended swap. Live LCSC stock and price. Needs an LCSC business account and an application, which is slow, so nothing waits on it. It drops in behind the `DistributorAdapter` interface without rewriting the backend.
+2. **Distributor APIs**: Mouser and DigiKey already have their own adapters and answer in real time when credentials are set. **Octopart / Nexar (Altium)** aggregates many distributors in one call, with a free tier capped by monthly queries.
+3. **Scraping LCSC directly: do not.** LCSC already bot-blocks it (403).
 
 ---
 

@@ -41,9 +41,14 @@ test('lists the future plans that were already promised', () => {
   const { container } = wrap()
 
   expect(container.textContent).toMatch(/future plans/i)
-  for (const plan of [/price history/i, /savings/i]) {
-    expect(container.textContent).toMatch(plan)
-  }
+  expect(container.textContent).toMatch(/savings/i)
+})
+
+// Part pages chart price history now, so it is no longer a plan.
+test('no longer lists price history as a future plan', () => {
+  wrap()
+
+  expect(screen.queryByText('Price history')).toBeNull()
 })
 
 test('points spec-first visitors at browse', () => {

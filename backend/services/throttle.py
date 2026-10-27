@@ -1,4 +1,4 @@
-"""In-process cooldown guard for the ?refresh=true cache bypass (spec §7/harden).
+"""In-process cooldown guard for the ?refresh=true cache bypass.
 
 ?refresh=true is a deliberate bypass that hits the free community jlcsearch
 upstream directly. This bounds how often any one key may force that bypass, so

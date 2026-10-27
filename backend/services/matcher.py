@@ -1,10 +1,10 @@
-"""Equivalent-matcher logic (spec §10, v1, no ML).
+"""Equivalent-matcher logic (v1, no ML).
 
 Pure filter/rank helpers here reason over ParametricPart lists with no I/O,
 so they are unit-testable without a network. Orchestration (find_equivalent)
 is added on top and coordinates the datasource.
 
-Honesty (§5): a candidate is kept only when every checked spec is verified to
+Honesty: a candidate is kept only when every checked spec is verified to
 satisfy the rule. Missing specs are treated conservatively (rejected when the
 original constrains that spec).
 """
@@ -48,7 +48,7 @@ class MatcherSource(Protocol):
                               resistance_ohms: float | None = None
                               ) -> list[ParametricPart]: ...
 
-MATCH_MIN_STOCK = 100          # "healthy buffer", not just > 0 (design D5)
+MATCH_MIN_STOCK = 100          # "healthy buffer", not just > 0
 _REL_TOL = 1e-6                # float compare for resistance / capacitance
 VERIFY_LIMIT = 3               # candidates re-priced before publishing a claim
 
