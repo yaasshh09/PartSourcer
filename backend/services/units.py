@@ -99,6 +99,26 @@ def _cap_spelling(m: re.Match) -> str:
     return fmt_farads(farads).replace(" ", "")
 
 
+# A value as LCSC writes it in a description: 10kΩ, 100mΩ, 4.7uF, 1µF.
+# Case matters here (mΩ is milli, MΩ is mega), and one right after a ± is a
+# tolerance, not the part's value.
+_DESC_VALUE = {
+    "ohm": re.compile(r"(?<![\w.±])(\d+(?:\.\d+)?)([mkM]?)Ω"),
+    "F": re.compile(r"(?<![\w.±])(\d+(?:\.\d+)?)([pnuµm]?)F(?![a-zA-Z])"),
+}
+
+
+def value_in_description(description: str, unit: str) -> float | None:
+    """The one value a description names in this unit, or None.
+
+    Two different values means there is no telling which is the part's, so
+    that is None too rather than a guess.
+    """
+    found = {float(f"{float(n) * _PREFIX[p]:.9g}")
+             for n, p in _DESC_VALUE[unit].findall(description or "")}
+    return found.pop() if len(found) == 1 else None
+
+
 def spell_query(query: str) -> str:
     """Rewrite capacitances in a search the way LCSC lists them.
 

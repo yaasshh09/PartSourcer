@@ -18,7 +18,7 @@ from models.equivalent import EquivalentMatch, EquivalentResponse, OriginalRef, 
 from models.parametric import ParametricPart
 from models.part import PartDetail
 from services.matching import normalize_exact
-from services.units import fmt_farads, fmt_ohms
+from services.units import fmt_farads, fmt_ohms, value_in_description
 
 
 class MatcherSource(Protocol):
@@ -45,7 +45,7 @@ class MatcherSource(Protocol):
                              lcsc_code: str) -> PartDetail | None: ...
 
     async def list_parametric(self, category: str, package: str,
-                              resistance_ohms: float | None = None
+                              value: float | None = None
                               ) -> list[ParametricPart]: ...
 
 MATCH_MIN_STOCK = 100          # "healthy buffer", not just > 0
@@ -181,6 +181,27 @@ def _find(parts: list[ParametricPart], lcsc: str) -> ParametricPart | None:
         if p.lcsc == lcsc:
             return p
     return None
+
+
+async def _locate(ds: MatcherSource, category: str, original: PartDetail,
+                  unit: str) -> ParametricPart | None:
+    """The original's own row in a parametric list, or None.
+
+    Upstream stops every list at 100 rows, so the unfiltered package list
+    holds only the best-stocked sliver of an 0603 or 0402. The description
+    names the part's value, which picks the list it has to be in. That value
+    only chooses where to look: the specs used are the row upstream returns
+    for this exact code, so a misread description costs one extra request
+    and nothing else.
+    """
+    hint = value_in_description(original.description, unit)
+    if hint is not None:
+        found = _find(await ds.list_parametric(category, original.package,
+                                               value=hint), original.lcsc)
+        if found is not None:
+            return found
+    return _find(await ds.list_parametric(category, original.package),
+                 original.lcsc)
 
 
 def _percent_cheaper(orig_price: float, new_price: float) -> int:
@@ -451,8 +472,7 @@ async def find_equivalent(ds: MatcherSource,
         return _null(_NO_PRICE_REASON)
 
     # Classify as resistor?
-    resistors = await ds.list_parametric("resistors", original.package)
-    orig_r = _find(resistors, original.lcsc)
+    orig_r = await _locate(ds, "resistors", original, "ohm")
     if orig_r is not None:
         if (orig_r.specs.get("resistance") is None
                 or orig_r.specs.get("tolerance_fraction") is None
@@ -466,14 +486,13 @@ async def find_equivalent(ds: MatcherSource,
             return _null(_NO_PRICE_REASON)
         pool = await ds.list_parametric(
             "resistors", original.package,
-            resistance_ohms=orig_r.specs.get("resistance"))
+            value=orig_r.specs.get("resistance"))
         return await _publish(orig_r, pool, resistor_candidates,
                               _resistor_reason, _resistor_checks,
                               _resistor_upgrades)
 
     # Classify as capacitor?
-    caps = await ds.list_parametric("capacitors", original.package)
-    orig_c = _find(caps, original.lcsc)
+    orig_c = await _locate(ds, "capacitors", original, "F")
     if orig_c is not None:
         if (orig_c.specs.get("capacitance_farads") is None
                 or orig_c.specs.get("voltage_rating") is None
@@ -482,7 +501,12 @@ async def find_equivalent(ds: MatcherSource,
             return _null(_NO_TYPE_REASON)
         if orig_c.price_usd is None:
             return _null(_NO_PRICE_REASON)
-        return await _publish(orig_c, caps, capacitor_candidates,
+        # Narrowed to the value for the same reason the original was: the
+        # unfiltered list is 100 rows of every capacitance in the package.
+        pool = await ds.list_parametric(
+            "capacitors", original.package,
+            value=orig_c.specs.get("capacitance_farads"))
+        return await _publish(orig_c, pool, capacitor_candidates,
                               _capacitor_reason, _capacitor_checks,
                               _capacitor_upgrades)
 

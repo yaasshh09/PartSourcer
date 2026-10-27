@@ -52,7 +52,7 @@ def test_parametric_capable_is_a_runtime_checkable_protocol():
         pass
 
     class IsParametric:
-        async def list_parametric(self, category, package, resistance_ohms=None):
+        async def list_parametric(self, category, package, value=None):
             return []
 
     assert not isinstance(NotParametric(), ParametricCapable)

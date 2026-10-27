@@ -72,5 +72,5 @@ class DistributorAdapter(ABC):
 @runtime_checkable
 class ParametricCapable(Protocol):
     async def list_parametric(self, category: str, package: str,
-                              resistance_ohms: float | None = None
+                              value: float | None = None
                               ) -> list[ParametricPart]: ...

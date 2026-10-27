@@ -34,6 +34,20 @@ def _mentions_any(raw: dict, query: str) -> bool:
     return any(w in text for w in words)
 
 
+# Upstream wants raw ohms and raw farads: it reads 10k as 10 ohms and 100nF
+# as nothing at all (notes).
+_VALUE_FILTER = {"resistors": "resistance", "capacitors": "capacitance"}
+
+
+def plain_number(value: float) -> str:
+    """How a filter value is written upstream, and in the cache key for it.
+
+    Nine significant digits drops binary noise, so the 100nF read off a
+    description and the 1.0000000000000001e-07 in a spec row are one query.
+    """
+    return str(int(value)) if float(value).is_integer() else f"{value:.9g}"
+
+
 class LcscAdapter(DistributorAdapter):
     name = "lcsc"
 
@@ -135,14 +149,16 @@ class LcscAdapter(DistributorAdapter):
         return None
 
     async def list_parametric(self, category: str, package: str,
-                              resistance_ohms: float | None = None
+                              value: float | None = None
                               ) -> list[ParametricPart]:
+        """A package's parametric rows, narrowed to one value when given.
+
+        Upstream stops at 100 rows, so without the value an 0603 list holds
+        a sliver of the package and most parts are simply not in it.
+        """
         params: dict = {"package": package}
-        if resistance_ohms is not None:
-            # Upstream needs raw ohms; the '10k' suffix form is buggy (notes).
-            n = int(resistance_ohms) if float(resistance_ohms).is_integer() \
-                else resistance_ohms
-            params["resistance"] = n
+        if value is not None:
+            params[_VALUE_FILTER[category]] = plain_number(value)
         items = await self._fetch_json(f"/{category}/list.json", params, category)
         return [_to_parametric(raw, category) for raw in items]
 

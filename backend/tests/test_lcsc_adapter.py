@@ -176,3 +176,24 @@ async def test_lookup_mpn_is_not_filtered():
     async with client_returning({"components": [JUNK]}) as c:
         out = await LcscAdapter(c).lookup_mpn("STM32F103C8T6")
     assert [r.mpn for r in out] == ["CGA0402C0G9R0B500GT"]
+
+
+async def test_list_parametric_sends_the_value_as_the_category_names_it():
+    # Plain numbers only: upstream reads 10k as 10 ohms and 100nF as nothing.
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        key = request.url.path.split("/")[1]
+        return httpx.Response(200, json={key: []})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                                 base_url="https://jlcsearch.test") as c:
+        a = LcscAdapter(c)
+        await a.list_parametric("resistors", "0603", 10000.0)
+        await a.list_parametric("capacitors", "0603", 1.0000000000000001e-07)
+        await a.list_parametric("capacitors", "0603")
+
+    assert seen[0].url.params["resistance"] == "10000"
+    assert seen[1].url.params["capacitance"] == "1e-07"
+    assert "capacitance" not in seen[2].url.params

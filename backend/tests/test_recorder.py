@@ -49,7 +49,7 @@ class FakeDs:
             return self.canonical[lcsc_code]
         return self.parts.get(lcsc_code)
 
-    async def list_parametric(self, category, package, resistance_ohms=None):
+    async def list_parametric(self, category, package, value=None):
         return []
 
 

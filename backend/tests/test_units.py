@@ -7,7 +7,8 @@ browse filter from quietly showing the wrong parts.
 
 import pytest
 
-from services.units import fmt_farads, fmt_ohms, fmt_si, parse_si, spell_query
+from services.units import (fmt_farads, fmt_ohms, fmt_si, parse_si, spell_query,
+                           value_in_description)
 
 
 @pytest.mark.parametrize("text,unit,expected", [
@@ -99,3 +100,30 @@ def test_moved_formatters_are_unchanged():
 ])
 def test_spell_query_writes_capacitance_the_way_lcsc_lists_it(typed, sent):
     assert spell_query(typed) == sent
+
+
+# The matcher reads the value off a part's own description only to pick which
+# upstream list to ask for. A wrong or ambiguous reading must come back None,
+# so the lookup falls back to the unfiltered list rather than a wrong one.
+@pytest.mark.parametrize("description,unit,expected", [
+    ("100mW Thick Film Resistors 75V ±100ppm/℃ ±1% 10kΩ 0603 Chip Resistor - Surface Mount ROHS",
+     "ohm", 10000),
+    ("-55℃~+155℃ 0ppm/℃~+150ppm/℃ 100mΩ 250mW Thick Film Resistor ±1% 0603", "ohm", 0.1),
+    ("±1% 4.7kΩ 0402", "ohm", 4700),
+    ("±5% 1MΩ 0603", "ohm", 1_000_000),
+    ("0Ω 0603 Jumper", "ohm", 0),
+    ("100nF 50V X7R ±10% 0603 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS", "F", 1e-7),
+    ("4.7uF 10V X5R ±10% 0603", "F", 4.7e-6),
+    ("1µF 25V X5R 0402", "F", 1e-6),
+    ("10pF 50V C0G ±0.5pF 0402", "F", 1e-11),   # a ± value is a tolerance
+    ("Dual 10nF 100nF 0603", "F", None),         # two values, no guess
+    ("ARM MCU LQFP-48", "ohm", None),
+    ("30V 5.8A 50mΩ@10V,5.8A N Channel 1.4W SOT-23 MOSFETs", "F", None),
+    ("4 ±5% 22Ω 62.5mW ±200ppm/℃ 0603x4 Resistor Networks", "ohm", 22),
+])
+def test_value_in_description(description, unit, expected):
+    got = value_in_description(description, unit)
+    if expected is None:
+        assert got is None
+    else:
+        assert got == pytest.approx(expected, rel=1e-9)

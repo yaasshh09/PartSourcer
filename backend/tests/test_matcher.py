@@ -206,14 +206,19 @@ class FakeDS:
             return self._detail
         return None
 
-    async def list_parametric(self, category, package, resistance_ohms=None):
-        self.calls.append((category, package, resistance_ohms))
+    async def list_parametric(self, category, package, value=None):
+        # A (category, package, value) entry stands for upstream's filtered
+        # list; without one the filter is ignored, as most tests want.
+        self.calls.append((category, package, value))
+        if (category, package, value) in self._parametric:
+            return list(self._parametric[(category, package, value)])
         return list(self._parametric.get((category, package), []))
 
 
-def detail(lcsc="C100", package="0603", price=0.0010, stock=1000, mpn="R-orig"):
+def detail(lcsc="C100", package="0603", price=0.0010, stock=1000, mpn="R-orig",
+           description=""):
     return PartDetail(lcsc=lcsc, mpn=mpn, brand=None, package=package,
-                      description="", stock=stock, price_usd=price,
+                      description=description, stock=stock, price_usd=price,
                       price_breaks=None, stock_breakdown=None, is_basic=None,
                       is_preferred=None, datasheet_url=None,
                       as_of=datetime.now(timezone.utc))
@@ -754,3 +759,61 @@ async def test_a_part_read_for_both_lists_is_read_once():
     await find_equivalent(ds, "C100")
 
     assert ds.canonical_calls.count("C1") == 1
+
+
+# --- finding the original past upstream's 100-row cap ----------------------
+# Every parametric list stops at 100 rows, so an unfiltered 0603 list holds a
+# sliver of the package. The part's own description names its value, which
+# picks the filtered list it must be in. Specs still come from that list's
+# row for the part's own code, so a misread description only costs a fallback.
+
+
+@pytest.mark.anyio
+async def test_a_resistor_outside_the_unfiltered_top_100_is_still_found():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000,
+                       description="±1% 10kΩ 0603 Chip Resistor"),
+                {("resistors", "0603"): [rp("C9", price=0.01, stock=5)],
+                 ("resistors", "0603", 10000): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C100")
+    assert resp.equivalent is not None and resp.equivalent.lcsc == "C1"
+    # The unfiltered list was never needed.
+    assert ("resistors", "0603", None) not in ds.calls
+
+
+@pytest.mark.anyio
+async def test_a_capacitor_outside_the_unfiltered_top_100_is_still_found():
+    orig_row = cp("C200", price=0.0030, stock=1000)
+    cheaper = cp("C1", price=0.0012, stock=500000)
+    ds = FakeDS(detail("C200", "0402", 0.0030, 1000, mpn="C-orig",
+                       description="100nF 50V X7R ±10% 0402"),
+                {("capacitors", "0402"): [],
+                 ("capacitors", "0402", 1e-7): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C200")
+    assert resp.equivalent is not None and resp.equivalent.lcsc == "C1"
+
+
+@pytest.mark.anyio
+async def test_capacitor_candidates_come_from_the_value_filtered_list():
+    # Found in the unfiltered list (no value in the description), but the
+    # cheaper drop-in only shows up once the list is narrowed to 100nF.
+    orig_row = cp("C200", price=0.0030, stock=1000)
+    cheaper = cp("C1", price=0.0012, stock=500000)
+    ds = FakeDS(detail("C200", "0402", 0.0030, 1000, mpn="C-orig"),
+                {("capacitors", "0402"): [orig_row],
+                 ("capacitors", "0402", 1e-7): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C200")
+    assert resp.equivalent is not None and resp.equivalent.lcsc == "C1"
+
+
+@pytest.mark.anyio
+async def test_a_misread_description_falls_back_to_the_unfiltered_list():
+    orig_row = rp("C100", price=0.0010, stock=1000)
+    cheaper = rp("C1", price=0.0004, stock=900000)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000,
+                       description="±1% 22kΩ 0603"),   # wrong on purpose
+                {("resistors", "0603", 22000): [],
+                 ("resistors", "0603"): [orig_row, cheaper]})
+    resp = await find_equivalent(ds, "C100")
+    assert resp.equivalent is not None and resp.equivalent.lcsc == "C1"
