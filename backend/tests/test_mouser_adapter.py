@@ -156,3 +156,16 @@ async def test_lifecycle_is_mousers_own_words_or_absent():
     async with client_returning(body([{**PART, "LifecycleStatus": "End of Life"}, PART])) as c:
         rows = await MouserAdapter(c, "k").search("stm32", limit=10)
     assert [r.lifecycle for r in rows] == ["End of Life", None]
+
+
+async def test_a_price_in_another_currency_is_not_published_as_dollars():
+    # Every surface reads price_usd as dollars and converts from there, and
+    # a European account writes 2,94 € which reads as 294. Neither is a
+    # price we can stand behind, so the offer goes out unpriced.
+    eur = dict(PART, PriceBreaks=[
+        {"Quantity": 1, "Price": "2,94 €", "Currency": "EUR"},
+        {"Quantity": 100, "Price": "2,10 €", "Currency": "EUR"}])
+    async with client_returning(body([eur])) as c:
+        r = (await MouserAdapter(c, "k").search("stm32", limit=10))[0]
+    assert (r.price, r.price_breaks, r.currency) == (None, None, "EUR")
+    assert r.stock == 3150

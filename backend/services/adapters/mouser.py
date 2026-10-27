@@ -77,8 +77,14 @@ class MouserAdapter(DistributorAdapter):
         return data
 
     def _to_listing(self, part: dict, as_of: datetime, rank: int = 0) -> RawListing:
+        raw_breaks = part.get("PriceBreaks") or []
+        currency = str((raw_breaks or [{}])[0].get("Currency") or "USD").upper()
+        if currency != "USD":
+            # Every surface reads these as dollars, and an account billed in
+            # euros writes "2,94 €", which parses as 294. Unpriced beats wrong.
+            raw_breaks = []
         breaks = []
-        for b in part.get("PriceBreaks") or []:
+        for b in raw_breaks:
             parsed = parse_money(b.get("Price"))
             step = priced(parsed[0]) if parsed else None
             if step is not None:
@@ -86,10 +92,6 @@ class MouserAdapter(DistributorAdapter):
                                "price_usd": step})
         breaks.sort(key=lambda b: b["qty"])
         unit = breaks[0]["price_usd"] if breaks else None
-        currency = "USD"
-        first_raw = (part.get("PriceBreaks") or [{}])[0]
-        if first_raw.get("Currency"):
-            currency = str(first_raw["Currency"]).upper()
 
         stock = _parse_int(part.get("AvailabilityInStock"))
         return RawListing(
