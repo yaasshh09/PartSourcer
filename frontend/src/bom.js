@@ -76,10 +76,10 @@ export function parseBom(text) {
     const toks = row.filter(Boolean)
     const mpn = cols && sep ? row[cols.mpn] : toks.find((t) => !isQty(t))
     if (!mpn) { skipped.push(line); continue }
-    // With no quantity column, one part per designator is the count.
+    // With no quantity column, or a blank cell in it, one part per designator is the count.
     const q = !(cols && sep) ? toks.find(isQty)
       : isQty(row[cols.qty] || '') ? row[cols.qty]
-        : cols.qty < 0 && cols.ref >= 0 && refCount(row[cols.ref]) ? refCount(row[cols.ref]) : null
+        : !(row[cols.qty] || '').trim() && cols.ref >= 0 && refCount(row[cols.ref]) ? refCount(row[cols.ref]) : null
     const key = mpn.toUpperCase()
     const prev = byKey.get(key)
     const entry = { mpn: key, qty: (prev ? prev.qty : 0) + (q ? Number(q) : 1) }

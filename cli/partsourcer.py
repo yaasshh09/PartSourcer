@@ -89,10 +89,11 @@ def parse_bom(text):
             mpn = row[cols["mpn"]] if cols["mpn"] < len(row) else ""
             q = row[cols["qty"]] if 0 <= cols["qty"] < len(row) else ""
             if not _is_qty(q):
-                # With no quantity column, one part per designator is the count.
+                # With no quantity column, or a blank cell in it, one part
+                # per designator is the count.
                 refs = row[cols["ref"]] if 0 <= cols["ref"] < len(row) else ""
                 n = len([r for r in re.split(r"[\s,;]+", refs) if r])
-                q = str(n) if cols["qty"] < 0 and n else ""
+                q = str(n) if not q.strip() and n else ""
         else:
             mpn = next((t for t in toks if not _is_qty(t)), "")
             q = next((t for t in toks if _is_qty(t)), "")

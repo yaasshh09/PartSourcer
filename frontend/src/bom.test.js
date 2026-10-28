@@ -224,6 +224,11 @@ describe('parseBom reads EDA exports', () => {
     expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 2, refs: 'R1,R2' }])
   })
 
+  test('a blank quantity cell falls back to the designators', () => {
+    const csv = 'Reference,Qty,MPN\n"R1,R2,R3",,RC0603FR-0710KL'
+    expect(parseBom(csv).lines).toEqual([{ mpn: 'RC0603FR-0710KL', qty: 3, refs: 'R1,R2,R3' }])
+  })
+
   test('KiCad with an LCSC field and no quantity', () => {
     const csv = 'Reference\tValue\tLCSC Part #\nC1 C2\t100n\tC1525'
     expect(parseBom(csv).lines).toEqual([{ mpn: 'C1525', qty: 2, refs: 'C1,C2' }])

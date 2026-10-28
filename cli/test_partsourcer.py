@@ -31,6 +31,11 @@ def test_counts_designators_when_there_is_no_quantity_column():
     assert ps.parse_bom(text) == [{"mpn": "C25744", "qty": 3}]
 
 
+def test_a_blank_quantity_cell_falls_back_to_the_designators():
+    text = 'Designator,Qty,LCSC Part #\n"R1,R2,R3",,C25744\n'
+    assert ps.parse_bom(text) == [{"mpn": "C25744", "qty": 3}]
+
+
 def test_a_plain_list_in_either_order_and_repeats_add_up():
     assert ps.parse_bom("NE555P 4\n2 ne555p\n# note\nLM358\n") == [
         {"mpn": "NE555P", "qty": 6}, {"mpn": "LM358", "qty": 1}]
