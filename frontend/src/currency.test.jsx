@@ -27,6 +27,19 @@ test('switching converts every price and says at which dated rate', async () => 
   expect(screen.getByTestId('p')).toHaveTextContent('$1.00')
 })
 
+test('a rate that arrives after a newer choice does not override it', async () => {
+  let land
+  vi.spyOn(api, 'getFx').mockReturnValue(new Promise((ok) => { land = ok }))
+  page()
+  const pick = screen.getByRole('combobox', { name: 'Currency' })
+  fireEvent.change(pick, { target: { value: 'EUR' } })
+  fireEvent.change(pick, { target: { value: 'USD' } })
+  land({ base: 'USD', date: '2026-10-23', rates: { EUR: 0.9 } })
+  await new Promise((r) => setTimeout(r, 0))
+  expect(screen.getByTestId('p')).toHaveTextContent('$1.00')
+  expect(pick).toHaveValue('USD')
+})
+
 test('a remembered choice is restored on load', async () => {
   localStorage.setItem('ps-currency', 'GBP')
   vi.spyOn(api, 'getFx').mockResolvedValue({ base: 'USD', date: '2026-10-23', rates: { GBP: 0.75 } })

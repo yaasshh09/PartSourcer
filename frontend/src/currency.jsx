@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { getFx } from './api.js'
 import { setShownCurrency, C, fmtAsOf } from './theme.js'
 
@@ -23,8 +23,12 @@ const CurrencyContext = createContext(null)
  */
 export function CurrencyProvider({ children }) {
   const [state, setState] = useState({ code: 'USD', date: null, failed: false })
+  // Only the latest choice may apply its rates, so a slow answer for an
+  // earlier pick cannot switch prices away from what the picker now says.
+  const latest = useRef(0)
 
   const choose = useCallback((code) => {
+    const id = ++latest.current
     try { window.localStorage.setItem(STORAGE_KEY, code) } catch { /* convenience only */ }
     if (code === 'USD') {
       setShownCurrency('USD', 1)
@@ -32,11 +36,13 @@ export function CurrencyProvider({ children }) {
       return
     }
     getFx().then((fx) => {
+      if (id !== latest.current) return
       const rate = fx.rates && fx.rates[code]
       if (!rate) throw new Error('no rate')
       setShownCurrency(code, rate)
       setState({ code, date: fx.date, failed: false })
     }).catch(() => {
+      if (id !== latest.current) return
       setShownCurrency('USD', 1)
       setState({ code: 'USD', date: null, failed: true })
     })
