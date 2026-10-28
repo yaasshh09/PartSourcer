@@ -67,6 +67,11 @@ def dielectric_rank(tc: str | None) -> int | None:
 
 
 def _in_stock_ok(c: ParametricPart) -> bool:
+    # No count published is not a count of zero. It goes through to the
+    # re-read, which holds every candidate to the buffer on numbers it can
+    # publish, so an unknown never reaches a user as a stock claim.
+    if c.stock is None:
+        return True
     return bool(c.in_stock) and c.stock >= MATCH_MIN_STOCK
 
 
@@ -147,7 +152,7 @@ def rank_candidates(cands: list[ParametricPart]) -> list[ParametricPart]:
     publishable result: the winner still has to be re-priced before its
     saving is claimed.
     """
-    return sorted(cands, key=lambda c: (c.price_usd, -c.stock))
+    return sorted(cands, key=lambda c: (c.price_usd, -(c.stock or 0)))
 
 
 def rank_best(cands: list[ParametricPart]) -> ParametricPart | None:
@@ -400,7 +405,7 @@ async def find_equivalent(ds: MatcherSource,
                               math.nextafter(orig_row.price_usd, math.inf))
         ups = sorted(((c, u) for c in same_money
                       if (u := upgrades_fn(orig_row, c))),
-                     key=lambda t: (-len(t[1]), t[0].price_usd, -t[0].stock)
+                     key=lambda t: (-len(t[1]), t[0].price_usd, -(t[0].stock or 0))
                      )[:VERIFY_LIMIT]
         read = await _reread(ds, short + [c for c, _ in ups])
 

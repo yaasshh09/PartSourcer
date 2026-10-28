@@ -197,3 +197,22 @@ async def test_list_parametric_sends_the_value_as_the_category_names_it():
     assert seen[0].url.params["resistance"] == "10000"
     assert seen[1].url.params["capacitance"] == "1e-07"
     assert "capacitance" not in seen[2].url.params
+
+
+async def test_a_parametric_row_with_no_stock_count_is_unknown_not_empty():
+    # Upstream sends stock null with in_stock false on every value-filtered
+    # row, C25804 included. The flag only echoes the missing count.
+    rows = [{"lcsc": 25804, "mfr": "0603WAF1002T5E", "package": "0603",
+             "stock": None, "in_stock": False, "price1": 0.0012},
+            {"lcsc": 1, "mfr": "X", "package": "0603",
+             "stock": 0, "in_stock": False, "price1": 0.0012}]
+
+    def handler(request):
+        return httpx.Response(200, json={"resistors": rows})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                                 base_url="https://jlcsearch.test") as c:
+        unknown, empty = await LcscAdapter(c).list_parametric("resistors", "0603")
+
+    assert (unknown.stock, unknown.in_stock) == (None, None)
+    assert (empty.stock, empty.in_stock) == (0, False)

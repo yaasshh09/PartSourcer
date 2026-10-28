@@ -12,9 +12,9 @@ class ParametricPart(BaseModel):
     lcsc: str
     mpn: str
     package: str
-    stock: int
+    stock: int | None           # None when upstream sent no count
     price_usd: float | None
-    in_stock: bool
+    in_stock: bool | None       # None with it, since the flag only echoes the count
     is_basic: bool | None = None
     is_preferred: bool | None = None
     specs: dict

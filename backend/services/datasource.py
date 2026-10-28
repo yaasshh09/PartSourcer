@@ -44,13 +44,17 @@ def _to_parametric(raw: dict, category: str) -> ParametricPart:
     """Map one parametric row to ParametricPart (see docs/jlcsearch-notes.md)."""
     fields = _PARAMETRIC_SPEC_FIELDS.get(category, ())
     price = priced(raw.get("price1"))
+    # A null count is upstream not knowing, not a count of zero, and in_stock
+    # then reads false only because the count is missing. C25804, one of the
+    # deepest-stocked resistors LCSC has, comes back exactly that way.
+    stock = raw.get("stock")
     return ParametricPart(
         lcsc=f"C{raw['lcsc']}",
         mpn=raw.get("mfr") or "",
         package=raw.get("package") or "",
-        stock=raw.get("stock") or 0,
+        stock=stock,
         price_usd=None if price is None else round(price, 4),
-        in_stock=bool(raw.get("in_stock")),
+        in_stock=None if stock is None else bool(raw.get("in_stock")),
         is_basic=raw.get("is_basic"),
         is_preferred=raw.get("is_preferred"),
         specs={f: raw.get(f) for f in fields},

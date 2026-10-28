@@ -72,6 +72,15 @@ def test_resistor_rejects_candidate_with_different_package():
     assert resistor_candidates(ORIG_R, pool, ORIG_R.price_usd) == []
 
 
+def test_a_candidate_with_no_published_stock_goes_on_to_be_reread():
+    # Upstream's value-filtered lists carry no stock count at all right now,
+    # and reading that as zero threw out every candidate before the re-read
+    # that actually checks stock. An explicit zero is still out.
+    pool = [rp("C1", price=0.0005, stock=None, in_stock=None),
+            rp("C2", price=0.0005, stock=0, in_stock=False)]
+    assert [c.lcsc for c in resistor_candidates(ORIG_R, pool, ORIG_R.price_usd)] == ["C1"]
+
+
 def test_stock_buffer_boundary():
     below = [rp("C9", price=0.0005, stock=MATCH_MIN_STOCK - 1)]
     at = [rp("C10", price=0.0005, stock=MATCH_MIN_STOCK)]
@@ -368,6 +377,33 @@ async def test_a_candidate_with_thin_canonical_stock_is_not_offered():
     looks_deep = rp("C1", price=0.0004, stock=3441343)
     ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
                 {("resistors", "0603"): [orig_row, looks_deep]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0004, 19)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent is None
+    assert "did not confirm" in resp.reason
+
+
+@pytest.mark.anyio
+async def test_a_candidate_with_unknown_stock_is_offered_on_its_reread_stock():
+    orig_row = rp("C100", price=0.0010, stock=None, in_stock=None)
+    unknown = rp("C1", price=0.0004, stock=None, in_stock=None)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, unknown]},
+                canonical={"C100": (0.0010, 1000), "C1": (0.0004, 250000)})
+    resp = await find_equivalent(ds, "C100")
+
+    assert resp.equivalent.lcsc == "C1"
+    assert resp.equivalent.stock == 250000
+    assert "250,000 in stock" in resp.equivalent.match_reason
+
+
+@pytest.mark.anyio
+async def test_a_candidate_with_unknown_stock_still_needs_it_on_the_reread():
+    orig_row = rp("C100", price=0.0010, stock=None, in_stock=None)
+    unknown = rp("C1", price=0.0004, stock=None, in_stock=None)
+    ds = FakeDS(detail("C100", "0603", 0.0010, 1000),
+                {("resistors", "0603"): [orig_row, unknown]},
                 canonical={"C100": (0.0010, 1000), "C1": (0.0004, 19)})
     resp = await find_equivalent(ds, "C100")
 

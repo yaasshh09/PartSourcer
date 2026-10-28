@@ -60,7 +60,7 @@ Our search result maps from upstream as follows:
 - **`description` is usually empty**, so don't rely on it for display.
 - **`page` is ignored** by `/api/search`; only `limit` narrows the result set. Our `?page=N` pagination must be implemented in **our** layer (e.g. fetch with a limit and slice, or window client-side), not delegated upstream.
 - **`attributes` is a JSON-encoded *string***, not a nested object, so it requires a second `json.loads(...)`. Example (resistor): `"{\"Resistance\":\"10Ω\",\"Power(Watts)\":\"62.5mW\",...}"`.
-- **`in_stock`** (bool) accompanies parametric rows alongside the numeric `stock`.
+- **`in_stock`** (bool) accompanies parametric rows alongside the numeric `stock`. As of 2026-10-28 (see jlcsearch#611), nearly every value-filtered row carries `stock: null` with `in_stock: false`: 100 of 100 for 10k 0603 resistors, C25804 included, and 99 of 100 for 100n 0402 capacitors. The flag only echoes the missing count, so both are read as unknown. The matcher lets an unknown through to the canonical re-read, which enforces the stock buffer on numbers it can publish.
 - **Price field name differs:** `price` on search, `price1` on parametric endpoints.
 - **No per-part detail endpoint**, so `/api/part/<code>` assembles detail from the search/parametric data, not a dedicated upstream detail call.
 
