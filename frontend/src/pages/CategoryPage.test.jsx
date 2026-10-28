@@ -86,6 +86,12 @@ test('a capped answer says it is from the top 100 by stock', async () => {
   expect(screen.getByText(/LCSC snapshot, read Sep 27, 2026/)).toBeInTheDocument()
 })
 
+test('a capped answer with no stock counts does not claim a stock order', async () => {
+  vi.spyOn(api, 'browse').mockResolvedValue(answer({ capped: true, results: [row({ stock: null })] }))
+  renderAt('/browse/resistors')
+  expect(await screen.findByText('1 PARTS, THE MOST UPSTREAM RETURNS AT ONCE')).toBeInTheDocument()
+})
+
 test('an uncapped answer gives a plain count', async () => {
   vi.spyOn(api, 'browse').mockResolvedValue(answer())
   renderAt('/browse/resistors')

@@ -152,7 +152,10 @@ export default function CategoryPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between',
             gap: 8, paddingBottom: 12, borderBottom: `3px solid ${C.ink}`, marginBottom: 16 }}>
             <div style={{ fontFamily: ARCHIVO, fontWeight: 900, fontSize: 14 }}>
-              {data.capped ? `${data.count} PARTS FROM THE TOP 100 BY STOCK` : `${data.count} PARTS`}
+              {/* Upstream orders by stock, which means nothing when no row has a count. */}
+              {!data.capped ? `${data.count} PARTS`
+                : data.results.some((r) => r.stock != null) ? `${data.count} PARTS FROM THE TOP 100 BY STOCK`
+                  : `${data.count} PARTS, THE MOST UPSTREAM RETURNS AT ONCE`}
             </div>
             <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
               {`stock from the LCSC snapshot, read ${fmtAsOf(data.as_of)}`}
